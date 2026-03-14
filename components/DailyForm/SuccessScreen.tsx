@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { BRAND } from "./questions";
 import Screen from "./Screen";
 import Confetti from "./Confetti";
 
@@ -21,7 +20,7 @@ const FALLBACK_CITATIONS: Citation[] = [
   { quote: "Le seul moyen de faire du bon travail est d'aimer ce que vous faites.", author: "Steve Jobs" },
 ];
 
-export default function SuccessScreen({ answers, confetti, onReset, preloadedCitations }: Props) {
+export default function SuccessScreen({ confetti, preloadedCitations }: Props) {
   // Si les citations sont déjà prêtes on les affiche directement, sinon fallback
   const citations = (preloadedCitations && preloadedCitations.length > 0)
     ? preloadedCitations
@@ -53,7 +52,7 @@ export default function SuccessScreen({ answers, confetti, onReset, preloadedCit
         <img src="/africa-samurai-logo.png" alt="Africa Samurai" className="h-16 mx-auto mb-6" />
 
         <h2 className="text-4xl font-bold text-[#1A1A1A] mb-2">Rapport envoyé !</h2>
-        <p style={{ color: "#666" }} className="text-sm mb-8">Beau travail aujourd'hui.</p>
+        <p style={{ color: "#666" }} className="text-sm mb-8">Beau travail aujourd&apos;hui.</p>
 
         {/* Carousel citation — plus de loading, les citations sont déjà là */}
         <div
@@ -79,7 +78,7 @@ export default function SuccessScreen({ answers, confetti, onReset, preloadedCit
               }}
             >
               <p style={{ color: "#1A1A1A", fontStyle: "italic", lineHeight: 1.65 }} className="text-base mb-3 text-left">
-                "{current.quote}"
+                &quot;{current.quote}&quot;
               </p>
               <p style={{ color: "#6B1A2A" }} className="text-xs font-semibold uppercase tracking-widest text-left">
                 — {current.author}

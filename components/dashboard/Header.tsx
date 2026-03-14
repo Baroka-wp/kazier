@@ -267,7 +267,7 @@ export default function Header() {
   const page = PAGE_TITLES[pathname] ?? { title: "Dashboard", subtitle: "" };
   const date = capitalize(getFormattedDate());
   const userName = session?.user?.name ?? "";
-  const userRole = (session?.user as any)?.role ?? "";
+  const userRole = (session?.user as { role?: string })?.role ?? "";
   const initials = session
     ? userName
         .split(" ")

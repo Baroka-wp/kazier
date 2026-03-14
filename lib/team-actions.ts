@@ -4,7 +4,7 @@ import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
 import type { Task } from "@/lib/task-actions";
 
-function parseAssignedTo(value: any): number[] {
+function parseAssignedTo(value: unknown): number[] {
   if (!value) return [];
   if (Array.isArray(value)) return value;
   if (typeof value === "string") {
@@ -35,11 +35,23 @@ export type TeamMember = {
 
 // ── Helper : enrichir les tâches avec les noms des assignés ──────────────────
 
-async function enrichTasksWithNames(tasks: any[]): Promise<Task[]> {
-  // Collecter tous les IDs uniques en une seule requête au lieu d'une par tâche
-  const allIds = [...new Set(tasks.flatMap((t: any) => parseAssignedTo(t.assigned_to)))];
+type PrismaTask = {
+  id: number;
+  title: string | null;
+  description: string | null;
+  status: string | null;
+  priority: string | null;
+  project_id: number | null;
+  assigned_to: unknown;
+  due_date: Date | null;
+  created_at: Date;
+};
 
-  let namesMap: Record<number, string> = {};
+async function enrichTasksWithNames(tasks: PrismaTask[]): Promise<Task[]> {
+  // Collecter tous les IDs uniques en une seule requête au lieu d'une par tâche
+  const allIds = [...new Set(tasks.flatMap((t) => parseAssignedTo(t.assigned_to)))];
+
+  const namesMap: Record<number, string> = {};
   if (allIds.length > 0) {
     const members = await prisma.teams.findMany({
       where: {
@@ -59,11 +71,18 @@ async function enrichTasksWithNames(tasks: any[]): Promise<Task[]> {
     }
   }
 
-  return tasks.map((task: any) => {
+  return tasks.map((task) => {
     const assignedIds = parseAssignedTo(task.assigned_to);
     return {
-      ...task,
+      id: task.id,
+      title: task.title ?? '',
+      description: task.description ?? '',
+      status: (task.status as "à faire" | "en cours" | "review" | "terminée") ?? "à faire",
+      priority: (task.priority as "low" | "medium" | "high") ?? "medium",
+      project_id: task.project_id,
       assigned_to: assignedIds,
+      due_date: task.due_date ? task.due_date.toISOString().split('T')[0] : null,
+      created_at: task.created_at.toISOString(),
       assigned_to_names: assignedIds.map((id: number) => namesMap[id]).filter(Boolean),
     };
   });
@@ -108,7 +127,7 @@ export async function getProjectsWithTasksForTeamMember(teamMemberId: number): P
           },
         });
 
-        const enrichedTasks = await enrichTasksWithNames(tasksResult as any[]);
+        const enrichedTasks = await enrichTasksWithNames(tasksResult);
 
         // Membres du projet
         const members = await prisma.teams.findMany({
@@ -132,13 +151,20 @@ export async function getProjectsWithTasksForTeamMember(teamMemberId: number): P
           full_name: `${m.first_name || ''} ${m.last_name || ''}`.trim(),
         }));
 
-        return { ...project, team_members, tasks: enrichedTasks };
+        return {
+          id: project.id,
+          name: project.name || "Sans nom",
+          description: project.description || "Aucune description",
+          icon: project.icon,
+          team_members,
+          tasks: enrichedTasks
+        };
       })
     );
 
     return { success: true, projects: enrichedProjects };
-  } catch (err: any) {
-    console.error("[getProjectsWithTasksForTeamMember]", err);
+  } catch (err: unknown) {
+    console.error("[getProjectsWithTasksForTeamMember]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des projets." };
   }
 }
@@ -167,11 +193,11 @@ export async function getTasksByProject(projectId: number, teamMemberId: number)
       ],
     });
 
-    const enrichedTasks = await enrichTasksWithNames(result as any[]);
+    const enrichedTasks = await enrichTasksWithNames(result);
 
     return { success: true, tasks: enrichedTasks };
-  } catch (err: any) {
-    console.error("[getTasksByProject]", err);
+  } catch (err: unknown) {
+    console.error("[getTasksByProject]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des tâches." };
   }
 }
@@ -208,8 +234,8 @@ export async function assignTaskToSelf(taskId: number, teamMemberId: number): Pr
 
     revalidatePath("/dashboard/teams");
     return { success: true, task: enriched };
-  } catch (err: any) {
-    console.error("[assignTaskToSelf]", err);
+  } catch (err: unknown) {
+    console.error("[assignTaskToSelf]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de l'assignation." };
   }
 }
@@ -246,8 +272,8 @@ export async function unassignTaskFromSelf(taskId: number, teamMemberId: number)
 
     revalidatePath("/dashboard/teams");
     return { success: true, task: enriched };
-  } catch (err: any) {
-    console.error("[unassignTaskFromSelf]", err);
+  } catch (err: unknown) {
+    console.error("[unassignTaskFromSelf]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la désassignation." };
   }
 }
@@ -274,8 +300,8 @@ export async function updateTaskStatus(
 
     revalidatePath("/dashboard/teams");
     return { success: true, task: enriched };
-  } catch (err: any) {
-    console.error("[updateTaskStatus]", err);
+  } catch (err: unknown) {
+    console.error("[updateTaskStatus]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la mise à jour du statut." };
   }
 }
@@ -305,8 +331,8 @@ export async function getTeamsForAssignment(): Promise<{
     }));
 
     return { success: true, teams };
-  } catch (err: any) {
-    console.error("[getTeamsForAssignment]", err);
+  } catch (err: unknown) {
+    console.error("[getTeamsForAssignment]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des équipes." };
   }
 }

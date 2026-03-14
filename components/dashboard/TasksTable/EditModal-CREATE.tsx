@@ -38,7 +38,7 @@ function CreateTaskForm({
     });
   }, [values.project_id]);
 
-  function setField(key: string, value: any) {
+  function setField(key: string, value: string | number | string[] | null) {
     setValues(v => ({ ...v, [key]: value }));
     setServerError("");
   }
@@ -126,7 +126,7 @@ function CreateTaskForm({
         <small style={labelStyle}>Projet *</small>
         <select value={values.project_id || ""}
           onChange={e => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
-          style={{ ...inputStyle, appearance: "none" as any, cursor: "pointer" }}>
+          style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}>
           <option value="">Sélectionner un projet</option>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
@@ -174,8 +174,8 @@ function CreateTaskForm({
       {/* Priorité */}
       <div style={{ marginBottom: "10px" }}>
         <small style={labelStyle}>Priorité</small>
-        <select value={values.priority} onChange={e => setField("priority", e.target.value)}
-          style={{ ...inputStyle, appearance: "none" as any, cursor: "pointer" }}>
+        <select value={values.priority} onChange={e => setField("priority", e.target.value as "low" | "medium" | "high")}
+          style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}>
           <option value="low">Faible</option>
           <option value="medium">Moyen</option>
           <option value="high">Élevée</option>

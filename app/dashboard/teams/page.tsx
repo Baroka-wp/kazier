@@ -12,9 +12,9 @@ export default async function TeamProjectsPage() {
     redirect("/login");
   }
 
-  const user = session.user as any;
+  const user = session.user as { team_id?: string };
 
-const teamMemberId = parseInt(user.team_id);
+const teamMemberId = parseInt(user.team_id ?? "0");
 
   if (!teamMemberId || isNaN(teamMemberId)) {
     redirect("/login");
@@ -44,7 +44,7 @@ const teamMemberId = parseInt(user.team_id);
             Mes Projets
           </h1>
           <p style={{ fontSize: "0.9rem", color: "#666", margin: 0 }}>
-            {projects.length} projet{projects.length !== 1 ? "s" : ""} • Cliquez sur un projet pour gérer vos tâches
+            {projects.length} projet{projects.length !== 1 ? "s" : ""} &bull; Cliquez sur un projet pour gérer vos tâches
           </p>
         </div>
       </div>
@@ -65,7 +65,7 @@ const teamMemberId = parseInt(user.team_id);
             >
               <p style={{ fontSize: "1rem", marginBottom: "8px" }}>Aucun projet assigné</p>
               <p style={{ fontSize: "0.85rem" }}>
-                Vous n'êtes assigné à aucun projet pour le moment
+                Vous n&apos;êtes assigné à aucun projet pour le moment
               </p>
             </div>
           ) : (

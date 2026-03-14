@@ -14,8 +14,8 @@ async function requireReportPermission(permission: 'canEditReports' | 'canDelete
     throw new Error("Non authentifié");
   }
 
-  const userRole = (session.user as any).role as string | null | undefined;
-  const permissions = getPermissions(userRole);
+  const userRole = (session.user as { role?: string }).role;
+  const permissions = getPermissions(userRole ?? null);
 
   if (!permissions[permission]) {
     throw new Error("Non autorisé: permissions insuffisantes");
@@ -34,8 +34,8 @@ export type Report = {
   tomorrow_build: string | null;
   created_at: string;
   submitted_at?: string;
-  team_id: number;
-  project_id: number;
+  team_id: number | null;
+  project_id: number | null;
   full_name: string;
   role: string;
   project_name: string;
@@ -74,7 +74,15 @@ export async function updateReport(
     await requireReportPermission('canEditReports');
 
     // Filtrer les champs définis
-    const updateData: any = {};
+    type UpdateData = {
+      work_built?: string;
+      working_built?: string;
+      broken_features?: string;
+      validated_learning?: string;
+      needed_learning?: string;
+      tomorrow_build?: string;
+    };
+    const updateData: UpdateData = {};
     if (data.work_built !== undefined) updateData.work_built = data.work_built;
     if (data.working_built !== undefined) updateData.working_built = data.working_built;
     if (data.broken_features !== undefined) updateData.broken_features = data.broken_features;
@@ -112,7 +120,7 @@ export async function getReportsWithProjects(): Promise<{
     // Récupérer les rapports avec les infos utilisateur et projet
     const reportsResult = await prisma.rapports.findMany({
       include: {
-        teams: true,
+        team: true,
         project: {
           select: {
             name: true
@@ -158,19 +166,19 @@ export async function getReportsWithProjects(): Promise<{
       created_at: r.created_at.toISOString(),
       team_id: r.team_id,
       project_id: r.project_id,
-      full_name: r.teams ? `${r.teams.first_name} ${r.teams.last_name}` : "Unknown",
+      full_name: r.team ? `${r.team.first_name} ${r.team.last_name}` : "Unknown",
       role: usersByTeamId.get(r.team_id) || "T",
       project_name: r.project?.name || "Sans projet",
     }));
 
     const projects = projectsResult.map((p) => ({
       id: p.id,
-      name: p.name,
+      name: p.name || "Sans nom",
     }));
 
     return { success: true, reports, projects };
-  } catch (err: any) {
-    console.error("[getReportsWithProjects]", err);
+  } catch (err: unknown) {
+    console.error("[getReportsWithProjects]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des rapports." };
   }
 }

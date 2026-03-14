@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import React from "react";
+import { useState, useEffect } from "react";
 import DataTable from "@/components/dashboard/DataTable";
 import {
   deleteTask,
@@ -45,13 +44,14 @@ type Props = {
 
 // ✅ Pills — max 2 affichés + compteur "+N"
 function NamePills({ names }: { names?: string[] }) {
+  const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+
   if (!names?.length)
     return <span style={{ fontSize: "0.8rem", color: "#ccc" }}>—</span>;
 
   const visible = names.slice(0, 2);
   const extra = names.slice(2);
-  const [open, setOpen] = React.useState(false);
-  const [closing, setClosing] = React.useState(false);
 
   function handleClose() {
     setClosing(true);

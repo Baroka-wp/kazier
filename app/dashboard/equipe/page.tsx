@@ -56,7 +56,7 @@ export default function EquipePage() {
 
   return (
     <TeamsTable
-      members={(data?.data ?? []) as any}
+      members={data?.data ?? []}
       roles={data?.roles ?? []}
       loading={isLoading}
       // Pagination

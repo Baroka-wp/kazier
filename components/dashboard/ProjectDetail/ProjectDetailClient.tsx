@@ -27,7 +27,7 @@ type Report = {
   needed_learning: string;
   tomorrow_build: string;
   submitted_at: string;
-  project_id: number;
+  project_id: number | null;
   project_name: string;
   project_icon?: string;
 };
@@ -81,13 +81,13 @@ export default function ProjectDetailClient({ project }: Props) {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
 
-  const IconComponent = getIconComponent(project.icon);
+  const iconId = project.icon;
 
   // Charger les tâches du projet
   useEffect(() => {
     if (activeTab === "tasks") {
-      setLoadingTasks(true);
       (async () => {
+        setLoadingTasks(true);
         const res = await getTasks();
         if ('success' in res && res.success && 'tasks' in res && res.tasks) {
           const projectTasks = res.tasks.filter(t => t.project_id === project.id);
@@ -104,8 +104,8 @@ export default function ProjectDetailClient({ project }: Props) {
   // Charger les rapports du projet
   useEffect(() => {
     if (activeTab === "reports") {
-      setLoadingReports(true);
       (async () => {
+        setLoadingReports(true);
         const res = await getReportsWithProjects();
         if (res.success && res.reports) {
           // Mapper les champs de report-actions vers le type attendu par RapportsTable
@@ -180,7 +180,10 @@ export default function ProjectDetailClient({ project }: Props) {
                   color: "#6B1A2A",
                 }}
               >
-                <IconComponent size={28} />
+                {(() => {
+                  const IconComponent = getIconComponent(iconId);
+                  return IconComponent ? <IconComponent size={28} /> : null;
+                })()}
               </div>
             ) : null}
 

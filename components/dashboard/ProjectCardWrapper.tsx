@@ -2,7 +2,6 @@
 
 import ProjectCard from "./ProjectCard";
 import { type ProjectWithTasks } from "@/lib/team-actions";
-import type { Task } from "@/lib/task-actions";
 
 type Props = {
   project: ProjectWithTasks;

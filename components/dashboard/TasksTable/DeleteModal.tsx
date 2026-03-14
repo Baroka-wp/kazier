@@ -1,6 +1,6 @@
 "use client";
 
-import { X, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Task } from "./types";
 
 export function DeleteModal({ task, onConfirm, onCancel, loading }: {

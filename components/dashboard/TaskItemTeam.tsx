@@ -65,7 +65,6 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function TaskItemTeam({
-  id,
   title,
   description,
   status,

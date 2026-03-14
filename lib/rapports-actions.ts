@@ -1,27 +1,6 @@
 "use server";
 
 import { prisma } from "./prisma";
-import { auth } from "@/auth";
-import { getPermissions } from "@/lib/permissions";
-
-// ── Helper: Vérifier authentification et permissions ─────────────────────────
-
-async function requireReportPermission(permission: 'canEditReports' | 'canDeleteReports') {
-  const session = await auth();
-
-  if (!session?.user) {
-    throw new Error("Non authentifié");
-  }
-
-  const userRole = (session.user as any).role as string | null | undefined;
-  const permissions = getPermissions(userRole);
-
-  if (!permissions[permission]) {
-    throw new Error("Non autorisé: permissions insuffisantes");
-  }
-
-  return session.user;
-}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -79,7 +58,12 @@ export async function getRapportsData(params?: PaginationParams): Promise<Pagina
   const projectId = params?.projectId;
 
   // Construire les filtres WHERE
-  const where: any = {};
+  type WhereClause = {
+    full_name?: { contains: string; mode: 'insensitive' };
+    role?: string;
+    project_id?: number;
+  };
+  const where: WhereClause = {};
 
   if (search) {
     where.full_name = { contains: search, mode: 'insensitive' as const };

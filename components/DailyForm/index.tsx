@@ -207,7 +207,7 @@ export default function DailyForm() {
         answers={answers}
         selectedProjects={selectedProjects}
         selectedTaskIds={selectedTaskIds}
-        tasks={tasks as any}
+        tasks={tasks}
         onEdit={(questionIndex) => {
           setReviewing(false);
           setEditingFromReview(true);
@@ -235,7 +235,7 @@ export default function DailyForm() {
       projects={projects}
       selectedProjects={selectedProjects}
       onProjectToggle={handleProjectToggle}
-      tasks={tasks as any}
+      tasks={tasks}
       selectedTaskIds={selectedTaskIds}
       onTaskToggle={handleTaskToggle}
     />

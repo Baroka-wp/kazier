@@ -20,10 +20,20 @@ function ResetPasswordContent() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!token) { setView("invalid"); setTokenError("Lien invalide."); return; }
+    if (!token) {
+      Promise.resolve().then(() => {
+        setView("invalid");
+        setTokenError("Lien invalide.");
+      });
+      return;
+    }
     validateResetToken(token).then(res => {
-      if (!res.valid) { setView("invalid"); setTokenError(res.error || "Lien invalide."); }
-      else setView("form");
+      if (!res.valid) {
+        setView("invalid");
+        setTokenError(res.error || "Lien invalide.");
+      } else {
+        setView("form");
+      }
     });
   }, [token]);
 

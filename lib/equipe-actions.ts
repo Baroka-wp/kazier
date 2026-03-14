@@ -54,7 +54,11 @@ export async function getTeamsData(params?: PaginationParams): Promise<Paginated
   const role = params?.role;
 
   // Construire les filtres WHERE
-  const where: any = {};
+  type WhereClause = {
+    OR?: Array<{ first_name?: { contains: string; mode: 'insensitive' }; last_name?: { contains: string; mode: 'insensitive' }; email?: { contains: string; mode: 'insensitive' }; phone?: { contains: string; mode: 'insensitive' } }>;
+    role?: string;
+  };
+  const where: WhereClause = {};
 
   if (search) {
     where.OR = [
@@ -104,11 +108,6 @@ export async function getTeamsData(params?: PaginationParams): Promise<Paginated
       user_created_at: user ? new Date() : null
     };
   });
-
-  const totalMembers = members.length;
-  const bosses = members.filter(m => m.is_boss).length;
-  const withAccount = members.filter(m => m.user_id !== null).length;
-  const withoutAccount = totalMembers - withAccount;
 
   const roles = [
     ...new Set(members.map(m => m.role).filter(Boolean)),

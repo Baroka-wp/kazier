@@ -10,7 +10,8 @@ export function ClientOnly({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    // Defer state update to avoid sync setState in effect
+    Promise.resolve().then(() => setIsMounted(true));
   }, []);
 
   if (!isMounted) {

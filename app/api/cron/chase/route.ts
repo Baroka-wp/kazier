@@ -41,7 +41,7 @@ export async function GET() {
   }
 
   // Envoie un DM à chaque absent
-  const results = await Promise.all(
+  await Promise.all(
     missing.map(member =>
       fetch("https://slack.com/api/chat.postMessage", {
         method: "POST",

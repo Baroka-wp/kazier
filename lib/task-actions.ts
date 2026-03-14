@@ -78,7 +78,7 @@ export type PaginatedResult<T> = {
 
 // ── Helper: normaliser assigned_to — Neon retourne "{1,2}" en prod ────────────
 
-function parseAssignedTo(raw: any): number[] | null {
+function parseAssignedTo(raw: unknown): number[] | null {
   if (!raw) return null;
   if (Array.isArray(raw)) {
     const arr = raw.map(Number).filter(Boolean);
@@ -96,7 +96,7 @@ function parseAssignedTo(raw: any): number[] | null {
 
 // ── Helper: sérialiser due_date ───────────────────────────────────────────────
 
-function serializeDueDate(raw: any): string | null {
+function serializeDueDate(raw: unknown): string | null {
   if (!raw) return null;
   if (typeof raw === "string") {
     const match = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
@@ -182,8 +182,8 @@ export async function createTask(data: CreateTaskData): Promise<TaskResult> {
     }
 
     return { success: true, task: enriched };
-  } catch (err: any) {
-    console.error("[createTask]", err);
+  } catch (err: unknown) {
+    console.error("[createTask]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la création de la tâche." };
   }
 }
@@ -197,8 +197,8 @@ export async function getTask(id: number): Promise<TaskResult> {
     });
     if (!task) return { success: false, error: "Tâche non trouvée." };
     return { success: true, task: await enrichTask(task) };
-  } catch (err: any) {
-    console.error("[getTask]", err);
+  } catch (err: unknown) {
+    console.error("[getTask]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération de la tâche." };
   }
 }
@@ -224,7 +224,14 @@ export async function getTasks(params?: PaginationParams): Promise<PaginatedResu
   const assignedTo = params.assignedTo;
 
   // Construire les filtres WHERE
-  const where: any = {};
+  type WhereClause = {
+    OR?: Array<{ title?: { contains: string; mode: 'insensitive' }; description?: { contains: string; mode: 'insensitive' } }>;
+    status?: string;
+    priority?: string;
+    project_id?: number;
+    assigned_to?: { has: number };
+  };
+  const where: WhereClause = {};
 
   if (search) {
     where.OR = [
@@ -284,13 +291,13 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
     if (!existing) return { success: false, error: "Tâche non trouvée." };
 
     const mergedData: CreateTaskData = {
-      title:       data.title       ?? existing.title,
-      description: data.description ?? existing.description,
-      status:      data.status      ?? existing.status,
-      priority:    data.priority    ?? existing.priority,
+      title:       data.title       ?? existing.title ?? "Sans titre",
+      description: data.description ?? existing.description ?? undefined,
+      status:      data.status      ?? (existing.status as "à faire" | "en cours" | "review" | "terminée" | null) ?? undefined,
+      priority:    data.priority    ?? (existing.priority as "low" | "medium" | "high" | null) ?? undefined,
       project_id:  data.project_id  !== undefined ? data.project_id  : existing.project_id,
       assigned_to: data.assigned_to !== undefined ? data.assigned_to : parseAssignedTo(existing.assigned_to),
-      due_date:    data.due_date    !== undefined ? data.due_date    : existing.due_date,
+      due_date:    data.due_date    !== undefined ? data.due_date    : (existing.due_date ? existing.due_date.toISOString().split('T')[0] : null),
     };
 
     const validation = validateTask(mergedData);
@@ -345,8 +352,8 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
     }
 
     return { success: true, task: enriched };
-  } catch (err: any) {
-    console.error("[updateTask]", err);
+  } catch (err: unknown) {
+    console.error("[updateTask]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la modification de la tâche." };
   }
 }
@@ -364,15 +371,27 @@ export async function deleteTask(id: number): Promise<{ success: boolean; error?
     revalidatePath("/dashboard/tasks");
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (err: any) {
-    console.error("[deleteTask]", err);
+  } catch (err: unknown) {
+    console.error("[deleteTask]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la suppression de la tâche." };
   }
 }
 
 // ── Helper: Enrichir une tâche ────────────────────────────────────────────────
 
-async function enrichTask(task: any): Promise<Task> {
+type PrismaTask = {
+  id: number;
+  title: string | null;
+  description: string | null;
+  status: string | null;
+  priority: string | null;
+  project_id: number | null;
+  assigned_to: unknown;
+  due_date: Date | null;
+  created_at: Date;
+};
+
+async function enrichTask(task: PrismaTask): Promise<Task> {
   let assigned_to_names: string[] | undefined;
   let project_name: string | undefined;
 
@@ -406,7 +425,7 @@ async function enrichTask(task: any): Promise<Task> {
         where: { id: task.project_id },
         select: { name: true }
       });
-      if (project) project_name = project.name;
+      if (project) project_name = project.name || undefined;
     } catch (err) {
       console.error("[enrichTask] Error fetching project", err);
     }
@@ -414,10 +433,10 @@ async function enrichTask(task: any): Promise<Task> {
 
   return {
     id:                task.id,
-    title:             task.title,
-    description:       task.description,
-    status:            task.status,
-    priority:          task.priority,
+    title:             task.title ?? '',
+    description:       task.description ?? '',
+    status:            (task.status as "à faire" | "en cours" | "review" | "terminée") ?? "à faire",
+    priority:          (task.priority as "low" | "medium" | "high") ?? "medium",
     project_id:        task.project_id,
     assigned_to:       assignedIds,
     due_date:          serializeDueDate(task.due_date),
@@ -448,8 +467,8 @@ export async function getTeamsForAssignment(): Promise<{ success: boolean; teams
         full_name: `${t.first_name} ${t.last_name}`
       }))
     };
-  } catch (err: any) {
-    console.error("[getTeamsForAssignment]", err);
+  } catch (err: unknown) {
+    console.error("[getTeamsForAssignment]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des équipes." };
   }
 }
@@ -458,7 +477,7 @@ export async function getTeamsForAssignment(): Promise<{ success: boolean; teams
 
 export async function getProjectsForTasks(): Promise<{ success: boolean; projects?: Array<{ id: number; name: string }>; error?: string }> {
   try {
-    const projects = await prisma.project.findMany({
+    const projectsResult = await prisma.project.findMany({
       select: {
         id: true,
         name: true
@@ -467,9 +486,13 @@ export async function getProjectsForTasks(): Promise<{ success: boolean; project
         name: 'asc'
       }
     });
+    const projects = projectsResult.map(p => ({
+      id: p.id,
+      name: p.name || "Sans nom"
+    }));
     return { success: true, projects };
-  } catch (err: any) {
-    console.error("[getProjectsForTasks]", err);
+  } catch (err: unknown) {
+    console.error("[getProjectsForTasks]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des projets." };
   }
 }
@@ -513,8 +536,8 @@ export async function getTeamMembersByProject(projectId: number): Promise<{
         full_name: `${t.first_name} ${t.last_name}`
       })),
     };
-  } catch (err: any) {
-    console.error("[getTeamMembersByProject] Error:", err);
+  } catch (err: unknown) {
+    console.error("[getTeamMembersByProject]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des membres." };
   }
 }
@@ -543,8 +566,8 @@ export async function getTasksByMember(memberId: number): Promise<{
     });
     const enriched = await Promise.all(result.map(t => enrichTask(t)));
     return { success: true, tasks: enriched };
-  } catch (err: any) {
-    console.error("[getTasksByMember]", err);
+  } catch (err: unknown) {
+    console.error("[getTasksByMember]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des tâches." };
   }
 }

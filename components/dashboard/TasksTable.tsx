@@ -108,15 +108,6 @@ function PriorityBadge({ priority }: { priority: string }) {
 }
 
 // ── Avatars empilés + tooltip ─────────────────────────────────────────────────
-const AVATAR_COLORS = [
-  "#6B1A2A",
-  "#2563EB",
-  "#059669",
-  "#D97706",
-  "#7C3AED",
-  "#DC2626",
-];
-
 // ✅ Colle ce composant dans TasksTable.tsx en remplacement de NamePills
 function NamePills({ names }: { names?: string[] }) {
   if (!names?.length)
@@ -521,7 +512,7 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
 
   const { canViewTeam } = usePermissions();
 
-  React.useEffect(() => {
+  useEffect(() => {
     getProjectsForTasks().then((res) => {
       if (res.success && res.projects) setProjects(res.projects);
     });

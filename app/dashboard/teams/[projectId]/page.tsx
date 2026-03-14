@@ -23,7 +23,7 @@ export default async function TeamProjectsPage(props: {
     redirect("/auth/login");
   }
 
-  const teamMemberId = parseInt((session.user as any).team_id);
+  const teamMemberId = parseInt((session.user as { team_id?: string }).team_id ?? "0");
   const res = await getProjectsWithTasksForTeamMember(teamMemberId);
 
   if (!res.success || !res.projects) {

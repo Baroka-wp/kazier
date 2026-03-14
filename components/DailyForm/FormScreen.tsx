@@ -114,7 +114,7 @@ function TasksModal({ project, tasks, onClose }: {
 
 // ── Badge tâches ──────────────────────────────────────────────────────────────
 
-function TasksBadge({ tasks, project, onClick }: { tasks: Task[]; project: Project; onClick: () => void }) {
+function TasksBadge({ tasks, onClick }: { tasks: Task[]; onClick: () => void }) {
   if (tasks.length === 0) return null;
   const highCount = tasks.filter(t => t.priority === "high").length;
   return (

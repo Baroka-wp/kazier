@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, AlertCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import TaskItemTeam from "./TaskItemTeam";
 import {
   assignTaskToSelf,
@@ -279,7 +279,7 @@ export default function ProjectCard({
                       marginTop: "8px",
                     }}
                   >
-                    👤 Assignées à d'autres ({othersTasks.length})
+                    👤 Assignées à d&apos;autres ({othersTasks.length})
                   </div>
                   {othersTasks.map((task) => (
                     <TaskItemTeam

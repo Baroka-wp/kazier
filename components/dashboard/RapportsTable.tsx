@@ -25,7 +25,7 @@ type Report = {
   needed_learning: string;
   tomorrow_build: string;
   submitted_at: string;
-  project_id: number;
+  project_id: number | null;
   project_name: string;
   project_icon?: string;
 };
@@ -85,7 +85,8 @@ function groupReports(reports: Report[]): ReportGroup[] {
 function ProjectIcon({ name, size = 13, color = "#6B1A2A" }: { name?: string; size?: number; color?: string }) {
   if (!name) return <Folder size={size} color={color} />;
   const pascal = name.replace(/[-_](.)/g, (_, c: string) => c.toUpperCase()).replace(/^(.)/, (_, c: string) => c.toUpperCase());
-  const Icon = (LucideIcons as Record<string, any>)[pascal];
+  type LucideIconType = React.FC<{ size?: number; color?: string }>;
+  const Icon = (LucideIcons as Record<string, LucideIconType>)[pascal];
   if (!Icon) return <Folder size={size} color={color} />;
   return <Icon size={size} color={color} />;
 }
@@ -175,7 +176,11 @@ function DeleteModal({ group, onConfirm, onCancel, loading }: {
   function toggle(id: number) {
     setSelected(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }

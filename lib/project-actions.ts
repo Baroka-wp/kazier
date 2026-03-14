@@ -239,8 +239,8 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
     revalidatePath("/dashboard");
 
     return { success: true, project: typedProject };
-  } catch (err: any) {
-    console.error("[createProject]", err);
+  } catch (err: unknown) {
+    console.error("[createProject]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la création du projet." };
   }
 }
@@ -269,8 +269,8 @@ export async function getProject(id: number): Promise<ProjectResult> {
         team_members: members,
       },
     };
-  } catch (err: any) {
-    console.error("[getProject]", err);
+  } catch (err: unknown) {
+    console.error("[getProject]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération du projet." };
   }
 }
@@ -306,7 +306,10 @@ export async function getProjects(params?: PaginationParams): Promise<PaginatedR
   const search = params.search;
 
   // Construire les filtres WHERE
-  const where: any = {};
+  type WhereClause = {
+    OR?: Array<{ name?: { contains: string; mode: 'insensitive' }; description?: { contains: string; mode: 'insensitive' } }>;
+  };
+  const where: WhereClause = {};
 
   if (search) {
     where.OR = [
@@ -432,8 +435,8 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
     revalidatePath("/dashboard");
 
     return { success: true, project: typedProject };
-  } catch (err: any) {
-    console.error("[updateProject]", err);
+  } catch (err: unknown) {
+    console.error("[updateProject]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la modification du projet." };
   }
 }
@@ -451,8 +454,8 @@ export async function deleteProject(id: number): Promise<{ success: boolean; err
     revalidatePath("/dashboard/projets");
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (err: any) {
-    console.error("[deleteProject]", err);
+  } catch (err: unknown) {
+    console.error("[deleteProject]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la suppression du projet." };
   }
 }
@@ -481,8 +484,8 @@ export async function getTeams(): Promise<{ success: boolean; teams?: TeamMember
         full_name: `${t.first_name} ${t.last_name}`,
       })),
     };
-  } catch (err: any) {
-    console.error("[getTeams]", err);
+  } catch (err: unknown) {
+    console.error("[getTeams]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des équipes." };
   }
 }

@@ -6,7 +6,7 @@ import { updateTask, getTeamMembersByProject } from "@/lib/task-actions";
 import DateTimeInput from "@/components/dashboard/DateTimeInput";
 
 // ✅ Parse manuel — évite le bug de new Date("YYYY-MM-DD HH:mm") invalide en prod
-function formatDateForPicker(raw: any): string {
+function formatDateForPicker(raw: unknown): string {
   if (!raw) return "";
   try {
     // Cas 1 : string "YYYY-MM-DD HH:mm" ou "YYYY-MM-DD HH:mm:ss" → parse direct sans new Date()
@@ -69,7 +69,10 @@ function UpdateTaskForm({
 
   // Quand project_id change : recharger membres + reset assigned_to
   useEffect(() => {
-    if (!values.project_id) { setProjectMembers([]); return; }
+    if (!values.project_id) {
+      setProjectMembers([]);
+      return;
+    }
     setLoadingMembers(true);
     getTeamMembersByProject(values.project_id).then(res => {
       setLoadingMembers(false);
@@ -81,7 +84,7 @@ function UpdateTaskForm({
     });
   }, [values.project_id]);
 
-  function setField(key: string, value: any) {
+  function setField(key: string, value: string | number | string[] | null) {
     setValues(v => ({ ...v, [key]: value }));
     setServerError("");
   }
@@ -167,7 +170,7 @@ function UpdateTaskForm({
         <div>
           <small style={labelStyle}>Statut</small>
           <select value={values.status} onChange={e => setField("status", e.target.value)}
-            style={{ ...inputStyle, appearance: "none" as any, cursor: "pointer" }}>
+            style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}>
             <option value="à faire">À faire</option>
             <option value="en cours">En cours</option>
             <option value="terminée">Terminée</option>
@@ -176,7 +179,7 @@ function UpdateTaskForm({
         <div>
           <small style={labelStyle}>Priorité</small>
           <select value={values.priority} onChange={e => setField("priority", e.target.value)}
-            style={{ ...inputStyle, appearance: "none" as any, cursor: "pointer" }}>
+            style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}>
             <option value="low">Faible</option>
             <option value="medium">Moyen</option>
             <option value="high">Élevée</option>
@@ -189,7 +192,7 @@ function UpdateTaskForm({
         <small style={labelStyle}>Projet</small>
         <select value={values.project_id || ""}
           onChange={e => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
-          style={{ ...inputStyle, appearance: "none" as any, cursor: "pointer" }}>
+          style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}>
           <option value="">Aucun projet</option>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>

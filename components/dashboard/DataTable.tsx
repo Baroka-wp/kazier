@@ -48,8 +48,8 @@ type Props<T extends { id: number | string }> = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getNestedValue(obj: any, key: string): any {
-  return key.split(".").reduce((acc, k) => acc?.[k], obj);
+function getNestedValue(obj: Record<string, unknown>, key: string): unknown {
+  return key.split(".").reduce((acc: Record<string, unknown> | undefined, k: string) => (acc as Record<string, unknown> | undefined)?.[k] as Record<string, unknown> | undefined, obj);
 }
 
 // ── DataTable ─────────────────────────────────────────────────────────────────
@@ -331,7 +331,7 @@ function ActionButton({ icon, label, onClick }: { icon: "view" | "edit" | "delet
 
 // ── PageBtn ───────────────────────────────────────────────────────────────────
 
-function PageBtn({ children, active, disabled, onClick, ...rest }: { children: React.ReactNode; active?: boolean; disabled?: boolean; onClick: () => void; [key: string]: any }) {
+function PageBtn({ children, active, disabled, onClick }: { children: React.ReactNode; active?: boolean; disabled?: boolean; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button

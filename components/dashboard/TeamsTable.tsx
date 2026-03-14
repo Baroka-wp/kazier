@@ -197,7 +197,7 @@ function EditModal({ mode, member, onClose, onSaved }: {
   const [serverError, setServerError] = useState("");
   const [saving,      setSaving]      = useState(false);
 
-  function setField<K extends keyof RegisterData>(key: K, value: any) {
+  function setField<K extends keyof RegisterData>(key: K, value: RegisterData[K]) {
     setValues(v => ({ ...v, [key]: value }));
     setErrors(e => ({ ...e, [key]: "" }));
     setWarnings(w => ({ ...w, [key]: "" }));
@@ -240,8 +240,8 @@ function EditModal({ mode, member, onClose, onSaved }: {
       onSaved(updated, mode === "create");
       onClose();
     } else {
-      if ((result as any).field) setErrors(e => ({ ...e, [(result as any).field]: (result as any).error }));
-      else setServerError((result as any).error);
+      if ("field" in result && result.field) setErrors(e => ({ ...e, [result.field]: result.error }));
+      else if ("error" in result) setServerError(result.error);
     }
   }
 
@@ -357,7 +357,7 @@ function DeleteModal({ member, onConfirm, onCancel, loading }: {
           </div>
           <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A", marginBottom: "6px" }}>Supprimer ce membre ?</h3>
           <p style={{ fontSize: "0.82rem", color: "#888", marginBottom: "8px" }}>
-            Vous êtes sur le point de retirer <strong>{member.full_name}</strong> de l'équipe.
+            Vous êtes sur le point de retirer <strong>{member.full_name}</strong> de l&apos;équipe.
           </p>
           {member.user_id && (
             <p style={{ fontSize: "0.78rem", color: "#B7791F", marginBottom: "8px", fontWeight: 500 }}>

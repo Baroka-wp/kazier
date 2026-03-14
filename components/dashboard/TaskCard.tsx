@@ -63,7 +63,7 @@ function StatusSelect({ status, onStatusChange, disabled }: {
   );
 }
 
-export default function TaskCard({ task, index, isAssignedToMe, isFree, teamMemberId, onTaskUpdated, isDragging = false }: Props) {
+export default function TaskCard({ task, isAssignedToMe, isFree, teamMemberId, onTaskUpdated, isDragging = false }: Props) {
   const [loading, setLoading] = useState(false);
 
   const {

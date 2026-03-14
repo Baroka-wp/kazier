@@ -27,20 +27,20 @@ export async function withAuth<T>(
       return { success: false, error: "Non authentifié", code: "UNAUTHENTICATED" };
     }
 
-    const role = (session.user as any)?.role;
+    const role = (session.user as { role?: string })?.role;
 
     // Vérifier la permission
-    const hasPermission = getPermissionValue(permission, role);
+    const hasPermission = getPermissionValue(permission, role ?? null);
     if (!hasPermission) {
       return { success: false, error: "Accès refusé", code: "FORBIDDEN" };
     }
 
     // Exécuter la fonction
-    const data = await fn(role);
+    const data = await fn(role ?? null);
     return { success: true, data };
-  } catch (err: any) {
-    console.error("[withAuth]", err);
-    return { success: false, error: err.message || "Erreur serveur" };
+  } catch (err: unknown) {
+    console.error("[withAuth]", err instanceof Error ? err.message : String(err));
+    return { success: false, error: err instanceof Error ? err.message : "Erreur serveur" };
   }
 }
 
@@ -101,5 +101,5 @@ export async function checkAuth(): Promise<ActionResult<string | null>> {
   if (!session) {
     return { success: false, error: "Non authentifié", code: "UNAUTHENTICATED" };
   }
-  return { success: true, data: (session.user as any)?.role };
+  return { success: true, data: (session.user as { role?: string })?.role ?? null };
 }

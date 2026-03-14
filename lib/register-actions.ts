@@ -323,15 +323,18 @@ export async function registerUser(data: RegisterData): Promise<RegisterResult> 
       user: { id: team.id, full_name: `${first_name} ${last_name}`, email },
     };
 
-  } catch (err: any) {
-    console.error("[registerUser]", err);
-    if (err?.code === "23505" || err?.code === "P2002") {
-      if (err.meta?.target?.includes("email") || err.constraint?.includes("email"))
-        return { success: false, error: "Cette adresse e-mail est déjà utilisée.", field: "email" };
-      if (err.meta?.target?.includes("phone") || err.constraint?.includes("phone"))
-        return { success: false, error: "Ce numéro de téléphone est déjà utilisé.", field: "phone" };
-      if (err.meta?.target?.includes("slack_id") || err.constraint?.includes("slack_id"))
-        return { success: false, error: "Ce Slack ID est déjà associé à un membre.", field: "slack_id" };
+  } catch (err: unknown) {
+    console.error("[registerUser]", err instanceof Error ? err.message : String(err));
+    if (err && typeof err === 'object' && 'code' in err) {
+      const prismaErr = err as { code?: string; meta?: { target?: string[] }; constraint?: string };
+      if (prismaErr.code === "23505" || prismaErr.code === "P2002") {
+        if (prismaErr.meta?.target?.includes("email") || prismaErr.constraint?.includes("email"))
+          return { success: false, error: "Cette adresse e-mail est déjà utilisée.", field: "email" };
+        if (prismaErr.meta?.target?.includes("phone") || prismaErr.constraint?.includes("phone"))
+          return { success: false, error: "Ce numéro de téléphone est déjà utilisé.", field: "phone" };
+        if (prismaErr.meta?.target?.includes("slack_id") || prismaErr.constraint?.includes("slack_id"))
+          return { success: false, error: "Ce Slack ID est déjà associé à un membre.", field: "slack_id" };
+      }
     }
     return { success: false, error: "Une erreur est survenue. Veuillez réessayer." };
   }
@@ -419,15 +422,18 @@ export async function updateUser(
       user: { id: teamId, full_name: `${first_name} ${last_name}`, email },
     };
 
-  } catch (err: any) {
-    console.error("[updateUser]", err);
-    if (err?.code === "23505" || err?.code === "P2002") {
-      if (err.meta?.target?.includes("email") || err.constraint?.includes("email"))
-        return { success: false, error: "Cette adresse e-mail est déjà utilisée.", field: "email" };
-      if (err.meta?.target?.includes("phone") || err.constraint?.includes("phone"))
-        return { success: false, error: "Ce numéro de téléphone est déjà utilisé.", field: "phone" };
-      if (err.meta?.target?.includes("slack_id") || err.constraint?.includes("slack_id"))
-        return { success: false, error: "Ce Slack ID est déjà associé à un membre.", field: "slack_id" };
+  } catch (err: unknown) {
+    console.error("[updateUser]", err instanceof Error ? err.message : String(err));
+    if (err && typeof err === 'object' && 'code' in err) {
+      const prismaErr = err as { code?: string; meta?: { target?: string[] }; constraint?: string };
+      if (prismaErr.code === "23505" || prismaErr.code === "P2002") {
+        if (prismaErr.meta?.target?.includes("email") || prismaErr.constraint?.includes("email"))
+          return { success: false, error: "Cette adresse e-mail est déjà utilisée.", field: "email" };
+        if (prismaErr.meta?.target?.includes("phone") || prismaErr.constraint?.includes("phone"))
+          return { success: false, error: "Ce numéro de téléphone est déjà utilisé.", field: "phone" };
+        if (prismaErr.meta?.target?.includes("slack_id") || prismaErr.constraint?.includes("slack_id"))
+          return { success: false, error: "Ce Slack ID est déjà associé à un membre.", field: "slack_id" };
+      }
     }
     return { success: false, error: "Impossible de mettre à jour ce membre pour le moment." };
   }

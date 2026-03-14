@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get("content-type") ?? "";
 
     // Parser le body une seule fois
-    let payload: any;
+    let payload: { type?: string; challenge?: string; event?: { type?: string; user?: { id?: string; profile?: { email?: string } } }; actions?: Array<{ action_id?: string; value?: string }>; user?: { id?: string } };
     if (contentType.includes("application/json")) {
         payload = JSON.parse(rawBody);
     } else {

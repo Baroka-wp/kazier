@@ -86,10 +86,12 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
     const newMinute = parsed.minute;
 
     // Update state in a batch to avoid cascading renders
-    if (newDate !== selectedDate) setSelectedDate(newDate);
-    if (newHour !== selectedHour) setSelectedHour(newHour);
-    if (newMinute !== selectedMinute) setSelectedMinute(newMinute);
-  }, [value]);
+    Promise.resolve().then(() => {
+      if (newDate !== selectedDate) setSelectedDate(newDate);
+      if (newHour !== selectedHour) setSelectedHour(newHour);
+      if (newMinute !== selectedMinute) setSelectedMinute(newMinute);
+    });
+  }, [value, selectedDate, selectedHour, selectedMinute]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

@@ -1,11 +1,20 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+# Run quality checks and auto-fix before commit
+echo "🔍 Running quality checks with auto-fix..."
 
-# Run quality checks before commit
-echo "🔍 Running quality checks..."
+# 1. Auto-fix ESLint errors
+echo "🔧 ESLint auto-fix..."
+npm run lint:fix
 
-# Run lint-staged (ESLint + Prettier on staged files only)
-npx lint-staged
+# 2. Auto-format with Prettier
+echo "💅 Prettier auto-format..."
+npm run format
 
-echo "✅ Quality checks passed!"
-echo "💡 Tip: Run 'npm run type-check' manually to check TypeScript errors"
+# 3. TypeScript check
+echo "📘 TypeScript check..."
+npm run type-check
+
+# 4. Add auto-fixed files to commit
+echo "📝 Adding auto-fixed files..."
+git add -u
+
+echo "✅ All quality checks passed!"

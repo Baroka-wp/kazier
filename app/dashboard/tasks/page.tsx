@@ -1,6 +1,6 @@
 "use client";
 
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
 import { useState } from "react";
 import TasksTable from "@/components/dashboard/TasksTable/";
 
@@ -33,7 +33,6 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
-  const { mutate } = useSWRConfig();
 
   const params = new URLSearchParams({
     page: String(page),

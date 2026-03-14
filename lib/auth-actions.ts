@@ -24,7 +24,7 @@ export async function changePassword(userId: string, newPassword: string): Promi
 
 // ── Étape 1 : demande de reset (DÉSACTIVÉE) ───────────────────────────────────
 
-export async function requestPasswordReset(email: string): Promise<{
+export async function requestPasswordReset(_email: string): Promise<{
   success: boolean;
   error?: string;
 }> {
@@ -35,7 +35,7 @@ export async function requestPasswordReset(email: string): Promise<{
 
 // ── Étape 2 : valider le token (DÉSACTIVÉE) ───────────────────────────────────
 
-export async function validateResetToken(token: string): Promise<{
+export async function validateResetToken(_token: string): Promise<{
   valid: boolean;
   error?: string;
 }> {
@@ -44,7 +44,7 @@ export async function validateResetToken(token: string): Promise<{
 
 // ── Étape 3 : appliquer le nouveau mot de passe (DÉSACTIVÉE) ──────────────────
 
-export async function resetPassword(token: string, newPassword: string): Promise<{
+export async function resetPassword(_token: string, _newPassword: string): Promise<{
   success: boolean;
   error?: string;
 }> {

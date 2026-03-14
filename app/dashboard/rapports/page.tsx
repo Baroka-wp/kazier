@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import RapportsTable from "@/components/dashboard/RapportsTable";
 
 type Report = {

@@ -34,7 +34,7 @@ export async function GET() {
 
     // 3. Traduit toutes les citations en parallèle
     const translated = await Promise.all(
-      selected.map(async (item: any) => ({
+      selected.map(async (item: { q: string; a: string }) => ({
         quote: await translate(item.q),
         author: item.a,
       }))

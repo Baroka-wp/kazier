@@ -41,14 +41,6 @@ type EditMode = "create" | "update";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-// ── Helper: Get icon component ───────────────────────────────────────────────
-
-function getIconComponent(iconId: string | null) {
-  if (!iconId) return null;
-  const icon = AVAILABLE_ICONS.find(i => i.id === iconId);
-  return icon?.component || null;
-}
-
 // ── Toast ─────────────────────────────────────────────────────────────────────
 
 function ToastNotification({ toast, onClose }: { toast: Toast; onClose: () => void }) {
@@ -222,7 +214,7 @@ function EditModal({ mode, project, teams, onClose, onSaved }: {
   const [serverError, setServerError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  function setField(key: string, value: any) {
+  function setField(key: string, value: string | number[] | null) {
     setValues(v => ({ ...v, [key]: value }));
     setErrors(e => ({ ...e, [key]: "" }));
     setServerError("");
@@ -607,6 +599,7 @@ function ProjectCard({ project, onEdit, onDelete, canManage, onClick }: {
   onClick: () => void;
 }) {
   const iconId = project.icon;
+  const IconComp = AVAILABLE_ICONS.find(i => i.id === iconId)?.component;
 
   return (
     <div
@@ -637,32 +630,29 @@ function ProjectCard({ project, onEdit, onDelete, canManage, onClick }: {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
-          {(() => {
-            const IconComp = getIconComponent(iconId);
-            return IconComp ? (
-              <div style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "10px",
-                background: "rgba(107,26,42,0.1)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#6B1A2A",
-                flexShrink: 0,
-              }}>
-                <IconComp size={24} />
-              </div>
-            ) : (
-              <div style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "10px",
-                background: "#F5F2ED",
-                flexShrink: 0,
-              }} />
-            );
-          })()}
+          {IconComp ? (
+            <div style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "10px",
+              background: "rgba(107,26,42,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#6B1A2A",
+              flexShrink: 0,
+            }}>
+              <IconComp size={24} />
+            </div>
+          ) : (
+            <div style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "10px",
+              background: "#F5F2ED",
+              flexShrink: 0,
+            }} />
+          )}
           <div style={{ minWidth: 0 }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#1A1A1A", marginBottom: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {project.name}
@@ -715,7 +705,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
 
-  const { canManageTeam, canViewTeam } = usePermissions();
+  const { canManageTeam } = usePermissions();
 
   // SWR pour fetch les projets
   const { data, error, mutate } = useSWR<{ data: Project[] }>('/api/projects', fetcher, {

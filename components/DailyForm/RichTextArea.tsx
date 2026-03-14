@@ -82,8 +82,9 @@ function RichTextArea({
       if (!res.ok) throw new Error(data.error ?? "Erreur upload");
 
       editor.chain().focus().setImage({ src: data.url }).run();
-    } catch (err: any) {
-      alert(err.message ?? "Erreur lors de l'upload de l'image");
+    } catch (err) {
+      const error = err as Error;
+      alert(error.message ?? "Erreur lors de l'upload de l'image");
     } finally {
       setUploadingImage(false);
     }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ClipboardEdit } from "lucide-react";
-import { BRAND, QUESTIONS_GLOBAL } from "./questions";
+import { BRAND } from "./questions";
 import Screen from "./Screen";
 import SubmitButton from "./SubmitButton";
 import type { Project } from "./index";

@@ -55,11 +55,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     // Stocker toutes les infos dans le JWT
     async jwt({ token, user }) {
       if (user) {
-        token.id        = (user as any).id;        // ✅ Ajouter l'ID
-        token.role      = (user as any).role;
-        token.team_id   = (user as any).team_id;
-        token.first_name = (user as any).first_name;
-        token.last_name = (user as any).last_name;
+        const customUser = user as { id?: string; role?: string; team_id?: number; first_name?: string; last_name?: string; name?: string };
+        token.id        = customUser.id;        // ✅ Ajouter l'ID
+        token.role      = customUser.role;
+        token.team_id   = customUser.team_id;
+        token.first_name = customUser.first_name;
+        token.last_name = customUser.last_name;
         token.name      = user.name;
       }
       return token;
@@ -67,11 +68,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     // Exposer toutes les infos dans la session
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id        = token.id;         // ✅ Ajouter l'ID
-        (session.user as any).role      = token.role;
-        (session.user as any).team_id   = token.team_id;
-        (session.user as any).first_name = token.first_name;
-        (session.user as any).last_name = token.last_name;
+        type ExtendedUser = { id?: string; role?: string; team_id?: number; first_name?: string; last_name?: string };
+        (session.user as ExtendedUser).id        = token.id as string;         // ✅ Ajouter l'ID
+        (session.user as ExtendedUser).role      = token.role as string;
+        (session.user as ExtendedUser).team_id   = token.team_id as number;
+        (session.user as ExtendedUser).first_name = token.first_name as string;
+        (session.user as ExtendedUser).last_name = token.last_name as string;
         session.user.name = token.name as string;
       }
       return session;

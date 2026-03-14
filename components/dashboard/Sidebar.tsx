@@ -7,8 +7,22 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { usePermissions } from "@/hooks/usePermissions";
-import { CheckSquare, LayoutDashboard, FileText, Users, Briefcase, Users2, ChevronLeft, ChevronRight, Menu, KeyRound, Eye, EyeOff, X, Check } from "lucide-react";
 import { changePassword } from "@/lib/auth-actions";
+import {
+  FileText,
+  Users,
+  Briefcase,
+  CheckSquare,
+  Users2,
+  KeyRound,
+  X,
+  Check,
+  EyeOff,
+  Eye,
+  Menu,
+  ChevronRight,
+  ChevronLeft,
+} from "lucide-react";
 
 type NavItem = {
   id: string;
@@ -268,10 +282,11 @@ export default function Sidebar() {
   const { data: session } = useSession();
   const permissions = usePermissions();
 
-  const firstName = (session?.user as any)?.first_name ?? "";
-  const lastName  = (session?.user as any)?.last_name  ?? "";
-  const userRole  = (session?.user as any)?.role       ?? "";
-  const userId    = (session?.user as any)?.id         ?? "";
+  type ExtendedUser = { first_name?: string; last_name?: string; role?: string; id?: string };
+  const firstName = (session?.user as ExtendedUser)?.first_name ?? "";
+  const lastName  = (session?.user as ExtendedUser)?.last_name  ?? "";
+  const userRole  = (session?.user as ExtendedUser)?.role       ?? "";
+  const userId    = (session?.user as ExtendedUser)?.id         ?? "";
   const initials  = session
     ? `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase() || "?"
     : "";
@@ -289,7 +304,9 @@ export default function Sidebar() {
   }, []);
 
   useEffect(() => {
-    if (isMobile) setMobileOpen(false);
+    if (isMobile) {
+      Promise.resolve().then(() => setMobileOpen(false));
+    }
   }, [pathname, isMobile]);
 
   const isOpen = isMobile ? mobileOpen : !collapsed;
