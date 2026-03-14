@@ -1,0 +1,413 @@
+"use server";
+
+import { prisma } from "./prisma";
+import { notifyTaskAssigned } from "./notify-task";
+import { revalidatePath } from "next/cache";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type Task = {
+  id: number;
+  title: string;
+  description: string;
+  status: "à faire" | "en cours" | "review" | "terminée";
+  priority: "low" | "medium" | "high";
+  project_id: number | null;
+  assigned_to: number[] | null;
+  due_date: string | null;
+  created_at: string;
+  assigned_to_names?: string[];
+  project_name?: string;
+};
+
+export type CreateTaskData = {
+  title: string;
+  description?: string;
+  status?: "à faire" | "en cours" | "review" | "terminée";
+  priority?: "low" | "medium" | "high";
+  project_id?: number | null;
+  assigned_to?: number[] | null;
+  due_date?: string | null;
+};
+
+export type UpdateTaskData = Partial<CreateTaskData>;
+
+export type TaskResult =
+  | { success: true; task: Task }
+  | { success: false; error: string };
+
+// ── Helper: normaliser assigned_to — Neon retourne "{1,2}" en prod ────────────
+
+function parseAssignedTo(raw: any): number[] | null {
+  if (!raw) return null;
+  if (Array.isArray(raw)) {
+    const arr = raw.map(Number).filter(Boolean);
+    return arr.length ? arr : null;
+  }
+  if (typeof raw === "string") {
+    const cleaned = raw.replace(/[{}]/g, "").trim();
+    if (!cleaned) return null;
+    const arr = cleaned.split(",").map(Number).filter(Boolean);
+    return arr.length ? arr : null;
+  }
+  return null;
+}
+
+
+// ── Helper: sérialiser due_date ───────────────────────────────────────────────
+
+function serializeDueDate(raw: any): string | null {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    const match = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+    if (match) return `${match[1]} ${match[2]}`;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return `${raw} 00:00`;
+    return null;
+  }
+  if (raw instanceof Date) {
+    const y  = raw.getUTCFullYear();
+    const mo = String(raw.getUTCMonth() + 1).padStart(2, "0");
+    const d  = String(raw.getUTCDate()).padStart(2, "0");
+    const h  = String(raw.getUTCHours()).padStart(2, "0");
+    const mi = String(raw.getUTCMinutes()).padStart(2, "0");
+    return `${y}-${mo}-${d} ${h}:${mi}`;
+  }
+  return null;
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+function validateTask(data: CreateTaskData): { valid: true } | { valid: false; error: string } {
+  const title = data.title?.trim();
+  if (!title || title.length < 2)
+    return { valid: false, error: "Le titre doit contenir au moins 2 caractères." };
+  if (title.length > 100)
+    return { valid: false, error: "Le titre est trop long (100 caractères max)." };
+  return { valid: true };
+}
+
+// ── CREATE ────────────────────────────────────────────────────────────────────
+
+export async function createTask(data: CreateTaskData): Promise<TaskResult> {
+  try {
+    const validation = validateTask(data);
+    if (!validation.valid) return { success: false, error: validation.error };
+
+    const task = await prisma.tasks.create({
+      data: {
+        title: data.title.trim(),
+        description: data.description?.trim() || "",
+        status: data.status || "à faire",
+        priority: data.priority || "medium",
+        project_id: data.project_id || null,
+        assigned_to: data.assigned_to || [],
+        due_date: data.due_date || null,
+      }
+    });
+
+    const enriched = await enrichTask(task);
+    revalidatePath("/dashboard/tasks");
+    revalidatePath("/dashboard");
+
+    // Notifier les membres assignés via Slack
+    if (enriched.assigned_to?.length) {
+      notifyTaskAssigned({
+        assignedIds: enriched.assigned_to,
+        taskTitle: enriched.title,
+        taskDescription: enriched.description,
+        projectName: enriched.project_name,
+        dueDate: enriched.due_date,
+      }).catch(err => console.error("[createTask] Slack notify error:", err));
+    }
+
+    return { success: true, task: enriched };
+  } catch (err: any) {
+    console.error("[createTask]", err);
+    return { success: false, error: "Erreur lors de la création de la tâche." };
+  }
+}
+
+// ── READ (GET ONE) ────────────────────────────────────────────────────────────
+
+export async function getTask(id: number): Promise<TaskResult> {
+  try {
+    const task = await prisma.tasks.findUnique({
+      where: { id }
+    });
+    if (!task) return { success: false, error: "Tâche non trouvée." };
+    return { success: true, task: await enrichTask(task) };
+  } catch (err: any) {
+    console.error("[getTask]", err);
+    return { success: false, error: "Erreur lors de la récupération de la tâche." };
+  }
+}
+
+// ── READ (GET ALL) ────────────────────────────────────────────────────────────
+
+export async function getTasks(): Promise<{ success: boolean; tasks?: Task[]; error?: string }> {
+  try {
+    const tasks = await prisma.tasks.findMany({
+      orderBy: { created_at: 'desc' }
+    });
+    const enriched = await Promise.all(tasks.map(t => enrichTask(t)));
+    return { success: true, tasks: enriched };
+  } catch (err: any) {
+    console.error("[getTasks]", err);
+    return { success: false, error: "Erreur lors de la récupération des tâches." };
+  }
+}
+
+// ── UPDATE ────────────────────────────────────────────────────────────────────
+
+export async function updateTask(id: number, data: UpdateTaskData): Promise<TaskResult> {
+  try {
+    const existing = await prisma.tasks.findUnique({
+      where: { id }
+    });
+    if (!existing) return { success: false, error: "Tâche non trouvée." };
+
+    const mergedData: CreateTaskData = {
+      title:       data.title       ?? existing.title,
+      description: data.description ?? existing.description,
+      status:      data.status      ?? existing.status,
+      priority:    data.priority    ?? existing.priority,
+      project_id:  data.project_id  !== undefined ? data.project_id  : existing.project_id,
+      assigned_to: data.assigned_to !== undefined ? data.assigned_to : parseAssignedTo(existing.assigned_to),
+      due_date:    data.due_date    !== undefined ? data.due_date    : existing.due_date,
+    };
+
+    const validation = validateTask(mergedData);
+    if (!validation.valid) return { success: false, error: validation.error };
+
+    const updated = await prisma.tasks.update({
+      where: { id },
+      data: {
+        title: mergedData.title!.trim(),
+        description: mergedData.description?.trim() || "",
+        status: mergedData.status!,
+        priority: mergedData.priority!,
+        project_id: mergedData.project_id ?? null,
+        assigned_to: mergedData.assigned_to || [],
+        due_date: mergedData.due_date ?? null,
+      }
+    });
+
+    const enriched = await enrichTask(updated);
+    revalidatePath("/dashboard/tasks");
+    revalidatePath("/dashboard");
+
+    // Notifier uniquement les membres nouvellement assignés
+    const prevIds = parseAssignedTo(existing.assigned_to) ?? [];
+    const newIds = enriched.assigned_to ?? [];
+    const addedIds = newIds.filter(id => !prevIds.includes(id));
+    if (addedIds.length) {
+      notifyTaskAssigned({
+        assignedIds: addedIds,
+        taskTitle: enriched.title,
+        taskDescription: enriched.description,
+        projectName: enriched.project_name,
+        dueDate: enriched.due_date,
+      }).catch(err => console.error("[updateTask] Slack notify error:", err));
+    }
+
+    return { success: true, task: enriched };
+  } catch (err: any) {
+    console.error("[updateTask]", err);
+    return { success: false, error: "Erreur lors de la modification de la tâche." };
+  }
+}
+
+// ── DELETE ────────────────────────────────────────────────────────────────────
+
+export async function deleteTask(id: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    await prisma.tasks.delete({
+      where: { id }
+    });
+    revalidatePath("/dashboard/tasks");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    console.error("[deleteTask]", err);
+    return { success: false, error: "Erreur lors de la suppression de la tâche." };
+  }
+}
+
+// ── Helper: Enrichir une tâche ────────────────────────────────────────────────
+
+async function enrichTask(task: any): Promise<Task> {
+  let assigned_to_names: string[] | undefined;
+  let project_name: string | undefined;
+
+  const assignedIds = parseAssignedTo(task.assigned_to);
+
+  if (assignedIds?.length) {
+    try {
+      const members = await prisma.teams.findMany({
+        where: {
+          id: { in: assignedIds }
+        },
+        select: {
+          first_name: true,
+          last_name: true
+        },
+        orderBy: {
+          first_name: 'asc'
+        }
+      });
+      if (members.length) {
+        assigned_to_names = members.map((m) => `${m.first_name} ${m.last_name}`);
+      }
+    } catch (err) {
+      console.error("[enrichTask] Error fetching assigned members", err);
+    }
+  }
+
+  if (task.project_id) {
+    try {
+      const project = await prisma.project.findUnique({
+        where: { id: task.project_id },
+        select: { name: true }
+      });
+      if (project) project_name = project.name;
+    } catch (err) {
+      console.error("[enrichTask] Error fetching project", err);
+    }
+  }
+
+  return {
+    id:                task.id,
+    title:             task.title,
+    description:       task.description,
+    status:            task.status,
+    priority:          task.priority,
+    project_id:        task.project_id,
+    assigned_to:       assignedIds,
+    due_date:          serializeDueDate(task.due_date),
+    created_at:        typeof task.created_at === 'string' ? task.created_at : task.created_at.toISOString(),
+    assigned_to_names,
+    project_name,
+  };
+}
+
+// ── GET TEAMS ─────────────────────────────────────────────────────────────────
+
+export async function getTeamsForAssignment(): Promise<{ success: boolean; teams?: Array<{ id: number; full_name: string }>; error?: string }> {
+  try {
+    const teams = await prisma.teams.findMany({
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true
+      },
+      orderBy: {
+        first_name: 'asc'
+      }
+    });
+    return {
+      success: true,
+      teams: teams.map(t => ({
+        id: t.id,
+        full_name: `${t.first_name} ${t.last_name}`
+      }))
+    };
+  } catch (err: any) {
+    console.error("[getTeamsForAssignment]", err);
+    return { success: false, error: "Erreur lors de la récupération des équipes." };
+  }
+}
+
+// ── GET PROJECTS ──────────────────────────────────────────────────────────────
+
+export async function getProjectsForTasks(): Promise<{ success: boolean; projects?: Array<{ id: number; name: string }>; error?: string }> {
+  try {
+    const projects = await prisma.project.findMany({
+      select: {
+        id: true,
+        name: true
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+    return { success: true, projects };
+  } catch (err: any) {
+    console.error("[getProjectsForTasks]", err);
+    return { success: false, error: "Erreur lors de la récupération des projets." };
+  }
+}
+
+// ── GET TEAM MEMBERS BY PROJECT ───────────────────────────────────────────────
+
+export async function getTeamMembersByProject(projectId: number): Promise<{
+  success: boolean;
+  members?: Array<{ id: number; full_name: string }>;
+  error?: string;
+}> {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { team_ids: true }
+    });
+
+    if (!project) return { success: true, members: [] };
+
+    const teamIds = parseAssignedTo(project.team_ids);
+    if (!teamIds?.length) return { success: true, members: [] };
+
+    const result = await prisma.teams.findMany({
+      where: {
+        id: { in: teamIds }
+      },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true
+      },
+      orderBy: {
+        first_name: 'asc'
+      }
+    });
+
+    return {
+      success: true,
+      members: result.map(t => ({
+        id: t.id,
+        full_name: `${t.first_name} ${t.last_name}`
+      })),
+    };
+  } catch (err: any) {
+    console.error("[getTeamMembersByProject] Error:", err);
+    return { success: false, error: "Erreur lors de la récupération des membres." };
+  }
+}
+
+// ── GET TASKS BY MEMBER ───────────────────────────────────────────────────────
+
+export async function getTasksByMember(memberId: number): Promise<{
+  success: boolean;
+  tasks?: Task[];
+  error?: string;
+}> {
+  try {
+    const result = await prisma.tasks.findMany({
+      where: {
+        assigned_to: { has: memberId },
+        status: { not: 'done' }
+      },
+      include: {
+        project: {
+          select: { name: true }
+        }
+      },
+      orderBy: [
+        { due_date: 'asc' }
+      ]
+    });
+    const enriched = await Promise.all(result.map(t => enrichTask(t)));
+    return { success: true, tasks: enriched };
+  } catch (err: any) {
+    console.error("[getTasksByMember]", err);
+    return { success: false, error: "Erreur lors de la récupération des tâches." };
+  }
+}

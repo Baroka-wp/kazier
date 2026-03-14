@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Models ────────────────────────────────────────────────────────────────────
+
+model teams {
+  id         Int       @id @default(autoincrement())
+  first_name String?
+  last_name  String?
+  role       String?
+  email      String?
+  phone      String?
+  age        Int?
+  slack_id   String?
+  is_boss    Boolean   @default(false)
+  created_at DateTime  @default(now())
+
+  // Relations
+  users      users[]
+  rapports   rapports[]
+}
+
+model users {
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
+  password String
+  role     String?
+  team_id  Int?
+
+  // Relations
+  team     teams?  @relation(fields: [team_id], references: [id])
+}
+
+model project {
+  id          Int     @id @default(autoincrement())
+  name        String?
+  description String?
+  icon        String?
+  team_ids    Int[]
+
+  // Relations
+  tasks       tasks[]
+  rapports    rapports[]
+}
+
+model tasks {
+  id          Int       @id @default(autoincrement())
+  title       String?
+  description String?
+  status      String?
+  priority    String?
+  project_id  Int?
+  assigned_to Int[]
+  due_date    DateTime? @db.Date
+  created_at  DateTime  @default(now())
+
+  // Relations
+  project     project?  @relation(fields: [project_id], references: [id])
+}
+
+model rapports {
+  id                 Int       @id @default(autoincrement())
+  team_id            Int?
+  project_id         Int?
+  work_built         String?
+  working_built      String?
+  validated_learning String?
+  broken_features    String?
+  needed_learning    String?
+  tomorrow_build     String?
+  created_at         DateTime  @default(now())
+
+  // Relations
+  team               teams?    @relation(fields: [team_id], references: [id])
+  project            project?  @relation(fields: [project_id], references: [id])
+}

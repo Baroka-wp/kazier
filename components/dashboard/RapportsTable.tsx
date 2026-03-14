@@ -1,0 +1,584 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { FileDown, X, ChevronDown, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+import { Folder } from "lucide-react";
+import DataTable from "@/components/dashboard/DataTable";
+import { deleteReport, updateReport } from "@/lib/report-actions";
+import { usePermissions } from "@/hooks/usePermissions";
+import dynamic from "next/dynamic";
+
+const RichTextArea = dynamic(() => import("@/components/DailyForm/RichTextArea"), { ssr: false });
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Report = {
+  id: number;
+  full_name: string;
+  role: string;
+  built: string;
+  working_built: string;
+  blocked: string;
+  validated_learning: string;
+  needed_learning: string;
+  tomorrow_build: string;
+  submitted_at: string;
+  project_id: number;
+  project_name: string;
+  project_icon?: string;
+};
+
+// Groupe : une ligne par utilisateur par jour
+type ReportGroup = {
+  id: string;       // ← requis par DataTable (= même valeur que key)
+  key: string;
+  full_name: string;
+  role: string;
+  submitted_at: string;
+  reports: Report[]; // un par projet
+};
+
+type Props = {
+  reports: Report[];
+  roles: string[];
+  projects: Array<{ id: number; name: string }>;
+};
+
+type Toast = { id: number; type: "success" | "error"; message: string };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function isHtmlContent(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.trimStart().startsWith("<");
+}
+
+function groupReports(reports: Report[]): ReportGroup[] {
+  const map = new Map<string, ReportGroup>();
+  for (const r of reports) {
+    const day = new Date(r.submitted_at).toISOString().split("T")[0];
+    const key = `${r.full_name}__${day}`;
+    if (!map.has(key)) {
+      map.set(key, { id: key, key, full_name: r.full_name, role: r.role, submitted_at: r.submitted_at, reports: [] });
+    }
+    map.get(key)!.reports.push(r);
+  }
+  return Array.from(map.values());
+}
+
+// ── Icône Lucide dynamique ────────────────────────────────────────────────────
+
+function ProjectIcon({ name, size = 13, color = "#6B1A2A" }: { name?: string; size?: number; color?: string }) {
+  if (!name) return <Folder size={size} color={color} />;
+  const pascal = name.replace(/[-_](.)/g, (_, c: string) => c.toUpperCase()).replace(/^(.)/, (_, c: string) => c.toUpperCase());
+  const Icon = (LucideIcons as Record<string, any>)[pascal];
+  if (!Icon) return <Folder size={size} color={color} />;
+  return <Icon size={size} color={color} />;
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+
+function RoleBadge({ role }: { role: string }) {
+  const map: Record<string, { label: string; bg: string; color: string }> = {
+    "T":  { label: "Team",         bg: "rgba(16,185,129,0.1)",  color: "#10b981" },
+    "TM": { label: "Team Manager", bg: "rgba(59,130,246,0.1)",  color: "#3b82f6" },
+    "SA": { label: "Super Admin",  bg: "rgba(107,26,42,0.1)",   color: "#6B1A2A" },
+  };
+  const s = map[role] ?? { label: role, bg: "rgba(107,26,42,0.07)", color: "#6B1A2A" };
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: "20px", fontSize: "0.67rem", fontWeight: 600, background: s.bg, color: s.color }}>
+      {s.label}
+    </span>
+  );
+}
+
+function Avatar({ name }: { name: string }) {
+  const initials = name?.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+  return (
+    <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "rgba(107,26,42,0.07)", border: "1.5px solid rgba(107,26,42,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, color: "#6B1A2A", flexShrink: 0 }}>
+      {initials}
+    </div>
+  );
+}
+
+// ── Styles contenu riche ──────────────────────────────────────────────────────
+
+const RICH_CONTENT_STYLES = `
+  .report-content img        { max-width: 100%; border-radius: 8px; display: block; margin-top: 8px; }
+  .report-content ul         { list-style-type: disc;    padding-left: 20px; }
+  .report-content ol         { list-style-type: decimal; padding-left: 20px; }
+  .report-content li         { margin-bottom: 2px; }
+  .report-content h1         { font-size: 18px; font-weight: 700; color: #1A1A1A; }
+  .report-content h2         { font-size: 15px; font-weight: 700; color: #1A1A1A; }
+  .report-content code       { background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+  .report-content pre        { background: rgba(0,0,0,0.06); padding: 12px; border-radius: 8px; overflow-x: auto; }
+  .report-content pre code   { background: none; padding: 0; }
+  .report-content blockquote { border-left: 3px solid #6B1A2A; padding-left: 12px; color: #666; }
+  .report-content p          { margin: 0; }
+  .report-content > * + *    { margin-top: 8px; }
+`;
+
+function ReportField({ value }: { value: string | null | undefined }) {
+  const html = isHtmlContent(value);
+  return html ? (
+    <>
+      <style>{RICH_CONTENT_STYLES}</style>
+      <div className="report-content" style={{ fontSize: "0.83rem", color: "#1A1A1A", background: "#F5F2ED", borderRadius: "10px", padding: "10px 14px", lineHeight: 1.6 }}
+        dangerouslySetInnerHTML={{ __html: value! }} />
+    </>
+  ) : (
+    <div style={{ fontSize: "0.83rem", color: value ? "#1A1A1A" : "#ccc", background: "#F5F2ED", borderRadius: "10px", padding: "10px 14px", lineHeight: 1.6 }}>
+      {value || "Non renseigné"}
+    </div>
+  );
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+
+function ToastNotification({ toast, onClose }: { toast: Toast; onClose: () => void }) {
+  const ok = toast.type === "success";
+  return (
+    <div style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 200, display: "flex", alignItems: "center", gap: "10px", background: "#fff", border: `1.5px solid ${ok ? "rgba(45,122,79,0.2)" : "rgba(229,62,62,0.2)"}`, borderRadius: "12px", padding: "12px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.1)", minWidth: "280px", animation: "slideIn 0.25s ease" }}>
+      {ok ? <CheckCircle2 size={18} color="#2D7A4F" /> : <XCircle size={18} color="#e53e3e" />}
+      <span style={{ fontSize: "0.83rem", fontWeight: 500, color: "#1A1A1A", flex: 1 }}>{toast.message}</span>
+      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", display: "flex", padding: "2px" }}><X size={14} /></button>
+      <style>{`@keyframes slideIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }`}</style>
+    </div>
+  );
+}
+
+// ── Modal suppression ─────────────────────────────────────────────────────────
+
+function DeleteModal({ group, onConfirm, onCancel, loading }: {
+  group: ReportGroup;
+  onConfirm: (reportIds: number[]) => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  // Par défaut tous les projets sont sélectionnés
+  const [selected, setSelected] = useState<Set<number>>(new Set(group.reports.map(r => r.id)));
+
+  function toggle(id: number) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  const allSelected = selected.size === group.reports.length;
+  const noneSelected = selected.size === 0;
+
+  return (
+    <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: "20px", width: "100%", maxWidth: "420px", overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.15)", animation: "popIn 0.2s ease" }}>
+        <div style={{ padding: "24px 24px 0", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+          <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "rgba(229,62,62,0.08)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+            <AlertTriangle size={22} color="#e53e3e" />
+          </div>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A", marginBottom: "8px" }}>Supprimer des rapports</h3>
+
+          {/* Identité */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#F5F2ED", borderRadius: "10px", padding: "8px 14px", marginBottom: "14px", width: "100%" }}>
+            <Avatar name={group.full_name} />
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontSize: "0.83rem", fontWeight: 600, color: "#1A1A1A" }}>{group.full_name}</div>
+              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{new Date(group.submitted_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>
+            </div>
+          </div>
+
+          {/* Sélection rapports — seulement si plusieurs */}
+          {group.reports.length > 1 ? (
+            <div style={{ width: "100%", marginBottom: "12px" }}>
+              <p style={{ fontSize: "0.75rem", color: "#888", marginBottom: "8px" }}>Sélectionnez les rapports à supprimer :</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {group.reports.map(r => (
+                  <label key={r.id} onClick={() => toggle(r.id)}
+                    style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", borderRadius: "10px", border: `1.5px solid ${selected.has(r.id) ? "rgba(229,62,62,0.3)" : "rgba(0,0,0,0.07)"}`, background: selected.has(r.id) ? "rgba(229,62,62,0.04)" : "#F5F2ED", cursor: "pointer", transition: "all 0.15s" }}>
+                    <div style={{ width: "16px", height: "16px", borderRadius: "4px", border: `2px solid ${selected.has(r.id) ? "#e53e3e" : "#ccc"}`, background: selected.has(r.id) ? "#e53e3e" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
+                      {selected.has(r.id) && <span style={{ color: "white", fontSize: "0.6rem", fontWeight: 700 }}>✓</span>}
+                    </div>
+                    <ProjectIcon name={r.project_icon} size={13} color={selected.has(r.id) ? "#e53e3e" : "#888"} />
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: selected.has(r.id) ? "#e53e3e" : "#555" }}>
+                        Rapport — {r.project_name}
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "#aaa" }}>
+                        {new Date(r.submitted_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {/* Tout sélectionner / désélectionner */}
+              <button onClick={() => setSelected(allSelected ? new Set() : new Set(group.reports.map(r => r.id)))}
+                style={{ marginTop: "8px", background: "none", border: "none", cursor: "pointer", fontSize: "0.72rem", color: "#aaa", textDecoration: "underline", fontFamily: "inherit" }}>
+                {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
+              </button>
+            </div>
+          ) : (
+            <p style={{ fontSize: "0.82rem", color: "#888", lineHeight: 1.6, marginBottom: "12px" }}>
+              Le rapport du projet <strong style={{ color: "#1A1A1A" }}>{group.reports[0]?.project_name}</strong> sera supprimé.
+            </p>
+          )}
+
+          <p style={{ fontSize: "0.78rem", color: "#e53e3e", fontWeight: 500, marginBottom: "4px" }}>Cette action est irréversible.</p>
+        </div>
+
+        <div style={{ display: "flex", gap: "10px", padding: "16px 24px 24px" }}>
+          <button onClick={onCancel} disabled={loading} style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "1.5px solid rgba(0,0,0,0.08)", background: "#F5F2ED", color: "#666", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Annuler</button>
+          <button onClick={() => onConfirm(Array.from(selected))} disabled={loading || noneSelected}
+            style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", background: loading || noneSelected ? "rgba(229,62,62,0.4)" : "#e53e3e", color: "white", fontSize: "0.85rem", fontWeight: 600, cursor: loading || noneSelected ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            {loading ? "Suppression..." : `Supprimer${selected.size > 1 ? ` (${selected.size})` : ""}`}
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes popIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }`}</style>
+    </div>
+  );
+}
+
+// ── Modal vue rapport — navigation projet + onglets questions ─────────────────
+
+const TABS = [
+  { key: "working_built",      short: "En cours",    label: "En cours de construction"   },
+  { key: "blocked",            short: "Bloqué",      label: "Ce qui est cassé / bloqué"  },
+  { key: "validated_learning", short: "Validé",      label: "Apprentissages validés"     },
+  { key: "needed_learning",    short: "À apprendre", label: "Apprentissages nécessaires" },
+  { key: "tomorrow_build",     short: "Demain",      label: "Construction de demain"     },
+];
+
+function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => void }) {
+  const [activeProject, setActiveProject] = useState(0);
+  const [activeTab, setActiveTab]         = useState(0);
+
+  const report  = group.reports[activeProject];
+  const tab     = TABS[activeTab];
+  const value   = report?.[tab.key as keyof Report] as string ?? "";
+
+  function goToProject(i: number) { setActiveProject(i); setActiveTab(0); }
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: "20px", width: "100%", maxWidth: "600px", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 60px rgba(0,0,0,0.15)", animation: "popIn 0.2s ease" }}>
+
+        {/* ── Header utilisateur ── */}
+        <div style={{ padding: "18px 24px", borderBottom: "1px solid rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <Avatar name={group.full_name} />
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1A1A1A" }}>{group.full_name}</div>
+              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>
+                {new Date(group.submitted_at).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                {" · "}{new Date(group.submitted_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <RoleBadge role={group.role} />
+            <button onClick={onClose} style={{ width: "30px", height: "30px", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.08)", background: "#F5F2ED", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#888" }}>
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Navigation projets ── */}
+        <div style={{ background: "rgba(107,26,42,0.04)", borderBottom: "1px solid rgba(107,26,42,0.08)", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <button onClick={() => goToProject(Math.max(0, activeProject - 1))} disabled={activeProject === 0}
+            style={{ width: "24px", height: "24px", borderRadius: "6px", border: "1.5px solid rgba(0,0,0,0.08)", background: activeProject === 0 ? "transparent" : "#fff", color: activeProject === 0 ? "#ddd" : "#6B1A2A", fontSize: "0.9rem", cursor: activeProject === 0 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>‹</button>
+
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+            <ProjectIcon name={report?.project_icon} size={13} color="#6B1A2A" />
+            <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#6B1A2A" }}>{report?.project_name}</span>
+          </div>
+
+          <span style={{ fontSize: "0.65rem", color: "#bbb", flexShrink: 0 }}>{activeProject + 1}/{group.reports.length}</span>
+          <button onClick={() => goToProject(Math.min(group.reports.length - 1, activeProject + 1))} disabled={activeProject === group.reports.length - 1}
+            style={{ width: "24px", height: "24px", borderRadius: "6px", border: "1.5px solid rgba(0,0,0,0.08)", background: activeProject === group.reports.length - 1 ? "transparent" : "#fff", color: activeProject === group.reports.length - 1 ? "#ddd" : "#6B1A2A", fontSize: "0.9rem", cursor: activeProject === group.reports.length - 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>›</button>
+        </div>
+
+        {/* Pastilles projets */}
+        {group.reports.length > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", gap: "5px", padding: "6px 16px 0", background: "#fff" }}>
+            {group.reports.map((_, i) => (
+              <button key={i} type="button" onClick={() => goToProject(i)}
+                style={{ width: i === activeProject ? "18px" : "6px", height: "6px", borderRadius: "3px", border: "none", background: i === activeProject ? "#6B1A2A" : "rgba(0,0,0,0.12)", cursor: "pointer", padding: 0, transition: "all 0.2s" }} />
+            ))}
+          </div>
+        )}
+
+        {/* ── Onglets questions ── */}
+        <div style={{ display: "flex", gap: "2px", overflowX: "auto", scrollbarWidth: "none", padding: "0 16px", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#fff" }}>
+          {TABS.map((t, i) => {
+            const val = report?.[t.key as keyof Report] as string;
+            const isActive = i === activeTab;
+            return (
+              <button key={t.key} onClick={() => setActiveTab(i)}
+                style={{ flexShrink: 0, padding: "8px 12px", borderRadius: "8px 8px 0 0", border: "none", background: "transparent", color: isActive ? "#6B1A2A" : "#aaa", fontSize: "0.75rem", fontWeight: isActive ? 700 : 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", borderBottom: isActive ? "2px solid #6B1A2A" : "2px solid transparent", transition: "all 0.15s", display: "flex", alignItems: "center", gap: "4px" }}>
+                {t.short}
+                <span style={{ width: "5px", height: "5px", borderRadius: "50%", flexShrink: 0, background: val ? (isActive ? "#6B1A2A" : "rgba(107,26,42,0.3)") : "rgba(0,0,0,0.1)" }} />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Contenu ── */}
+        <div style={{ overflowY: "auto", padding: "16px 24px", flex: 1, minHeight: "160px" }}>
+          <div style={{ fontSize: "0.63rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "8px" }}>{tab.label}</div>
+          <ReportField value={value} />
+        </div>
+
+        {/* ── Navigation questions ── */}
+        <div style={{ padding: "10px 24px", borderTop: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <button onClick={() => setActiveTab(i => Math.max(0, i - 1))} disabled={activeTab === 0}
+            style={{ padding: "6px 14px", borderRadius: "8px", border: "1.5px solid rgba(0,0,0,0.08)", background: "#F5F2ED", color: activeTab === 0 ? "#ccc" : "#666", fontSize: "0.78rem", fontWeight: 600, cursor: activeTab === 0 ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            ← Précédent
+          </button>
+          <span style={{ fontSize: "0.7rem", color: "#bbb" }}>{activeTab + 1} / {TABS.length}</span>
+          <button onClick={() => setActiveTab(i => Math.min(TABS.length - 1, i + 1))} disabled={activeTab === TABS.length - 1}
+            style={{ padding: "6px 14px", borderRadius: "8px", border: "1.5px solid rgba(0,0,0,0.08)", background: "#F5F2ED", color: activeTab === TABS.length - 1 ? "#ccc" : "#666", fontSize: "0.78rem", fontWeight: 600, cursor: activeTab === TABS.length - 1 ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            Suivant →
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes popIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }`}</style>
+    </div>
+  );
+}
+
+// ── Modal édition ─────────────────────────────────────────────────────────────
+
+function EditModal({ report, onClose, onSave, loading }: { report: Report; onClose: () => void; onSave: (data: Partial<Report>) => Promise<void>; loading: boolean }) {
+  const [formData, setFormData] = useState({
+    working_built: report.working_built || "", blocked: report.blocked || "",
+    validated_learning: report.validated_learning || "", needed_learning: report.needed_learning || "",
+    tomorrow_build: report.tomorrow_build || "",
+  });
+  const fields = [
+    { key: "working_built", label: "En cours de construction" }, { key: "blocked", label: "Ce qui est cassé / bloqué" },
+    { key: "validated_learning", label: "Apprentissages validés" }, { key: "needed_learning", label: "Apprentissages nécessaires" },
+    { key: "tomorrow_build", label: "Construction de demain" },
+  ];
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: "20px", width: "100%", maxWidth: "560px", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 60px rgba(0,0,0,0.15)", animation: "popIn 0.2s ease" }}>
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(0,0,0,0.07)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <Avatar name={report.full_name} />
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1A1A1A" }}>Modifier le rapport</div>
+              <div style={{ fontSize: "0.7rem", color: "#aaa", display: "flex", alignItems: "center", gap: "5px" }}>
+                {report.full_name}
+                <span style={{ color: "#ddd" }}>·</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#6B1A2A", fontWeight: 600 }}>
+                  <ProjectIcon name={report.project_icon} size={11} color="#6B1A2A" />
+                  {report.project_name}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width: "30px", height: "30px", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.08)", background: "#F5F2ED", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#888" }}><X size={14} /></button>
+        </div>
+        <div style={{ overflowY: "auto", padding: "20px 24px", flex: 1 }}>
+          {fields.map(({ key, label }) => (
+            <div key={key} style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "6px" }}>{label}</label>
+              <div style={{ fontSize: "0.83rem" }} className="rich-editor-compact">
+                <RichTextArea
+                  value={formData[key as keyof typeof formData]}
+                  onChange={(val) => setFormData({ ...formData, [key]: val })}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: "10px", padding: "20px 24px", borderTop: "1px solid rgba(0,0,0,0.07)" }}>
+          <button onClick={onClose} disabled={loading} style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "1.5px solid rgba(0,0,0,0.08)", background: "#F5F2ED", color: "#666", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Annuler</button>
+          <button onClick={() => onSave(formData).then(onClose)} disabled={loading} style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", background: loading ? "rgba(107,26,42,0.5)" : "#6B1A2A", color: "white", fontSize: "0.85rem", fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            {loading ? "Enregistrement..." : "Enregistrer"}
+          </button>
+        </div>
+      </div>
+      <style>{`
+        @keyframes popIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+        .rich-editor-compact .ProseMirror { min-height: 70px !important; padding: 10px 14px !important; font-size: 0.83rem !important; }
+        .rich-editor-compact .flex.flex-wrap.items-center { padding: 4px 8px !important; gap: 2px !important; }
+        .rich-editor-compact button { padding: 3px 6px !important; font-size: 0.75rem !important; }
+        .rich-editor-compact .w-px { margin: 0 2px !important; }
+      `}</style>
+    </div>
+  );
+}
+
+// ── Export CSV ────────────────────────────────────────────────────────────────
+
+function exportCSV(reports: Report[]) {
+  const headers = ["Nom", "Rôle", "Projet", "En cours", "Bloqué", "Apprentissages validés", "Apprentissages nécessaires", "Demain", "Date"];
+  const rows = reports.map((r) => [
+    r.full_name, r.role, r.project_name, r.working_built, r.blocked,
+    r.validated_learning, r.needed_learning, r.tomorrow_build,
+    new Date(r.submitted_at).toLocaleDateString("fr-FR"),
+  ]);
+  const csv = [headers, ...rows].map((row) => row.map((v) => `"${(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = `rapports-${new Date().toISOString().split("T")[0]}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Composant principal ───────────────────────────────────────────────────────
+
+export default function RapportsTable({ reports: initialReports, roles, projects }: Props) {
+  const [reports, setReports]             = useState<Report[]>(initialReports);
+  const [roleFilter, setRoleFilter]       = useState("");
+  const [projectFilter, setProjectFilter] = useState("");
+  const [dateFilter, setDateFilter]       = useState("today");
+  const [selectedGroup, setSelected]      = useState<ReportGroup | null>(null);
+  const [editingReport, setEditing]       = useState<Report | null>(null);
+  const [toDelete, setToDelete]           = useState<ReportGroup | null>(null);
+  const [deleting, setDeleting]           = useState(false);
+  const [saving, setSaving]               = useState(false);
+  const [toasts, setToasts]               = useState<Toast[]>([]);
+
+  const { canEditReports, canDeleteReports } = usePermissions();
+
+  function addToast(type: Toast["type"], message: string) {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
+  }
+
+  async function handleDelete(reportIds: number[]) {
+    if (!toDelete) return;
+    setDeleting(true);
+    const results = await Promise.all(reportIds.map(id => deleteReport(id)));
+    setDeleting(false);
+    setToDelete(null);
+    if (results.every(r => r.success)) {
+      const ids = new Set(reportIds);
+      setReports((prev) => prev.filter((r) => !ids.has(r.id)));
+      addToast("success", `${reportIds.length > 1 ? `${reportIds.length} rapports supprimés` : "Rapport supprimé"} pour ${toDelete.full_name}.`);
+    } else {
+      addToast("error", "Erreur lors de la suppression.");
+    }
+  }
+
+  async function handleEdit(data: Partial<Report>) {
+    if (!editingReport) return;
+    setSaving(true);
+    const result = await updateReport(editingReport.id, {
+      working_built:      data.working_built,
+      broken_features:    data.blocked,
+      validated_learning: data.validated_learning,
+      needed_learning:    data.needed_learning,
+      tomorrow_build:     data.tomorrow_build,
+    });
+    setSaving(false);
+    if (result.success) {
+      setReports((prev) => prev.map((r) => r.id === editingReport.id ? { ...r, ...data } : r));
+      addToast("success", `Rapport modifié.`);
+      setEditing(null);
+    } else {
+      addToast("error", result.error ?? "Erreur lors de la modification.");
+    }
+  }
+
+  // Filtre d'abord les rapports bruts, puis groupe
+  const groups = useMemo(() => {
+    let data = reports;
+    if (roleFilter)    data = data.filter((r) => r.role === roleFilter);
+    if (projectFilter) data = data.filter((r) => r.project_id === parseInt(projectFilter, 10));
+    if (dateFilter) {
+      const now = new Date();
+      data = data.filter((r) => {
+        const d = new Date(r.submitted_at);
+        if (dateFilter === "today") return d.toISOString().split("T")[0] === now.toISOString().split("T")[0];
+        if (dateFilter === "week")  { const w = new Date(); w.setDate(w.getDate() - 7);  return d >= w; }
+        if (dateFilter === "month") { const m = new Date(); m.setDate(m.getDate() - 30); return d >= m; }
+        return true;
+      });
+    }
+    return groupReports(data);
+  }, [reports, roleFilter, projectFilter, dateFilter]);
+
+  const filterSlot = (
+    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+      {[
+        { value: projectFilter, onChange: setProjectFilter, placeholder: "Tous les projets", options: projects.map(p => ({ value: String(p.id), label: p.name })) },
+        { value: roleFilter,    onChange: setRoleFilter,    placeholder: "Tous les rôles",   options: roles.map(r => ({ value: r, label: r })) },
+        { value: dateFilter,    onChange: setDateFilter,    placeholder: "",                  options: [{ value: "today", label: "Aujourd'hui" }, { value: "week", label: "Cette semaine" }, { value: "month", label: "Ce mois" }] },
+      ].map((f, idx) => (
+        <div key={idx} style={{ position: "relative" }}>
+          <select value={f.value} onChange={e => f.onChange(e.target.value)} style={{ appearance: "none", paddingLeft: "12px", paddingRight: "28px", paddingTop: "8px", paddingBottom: "8px", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: "10px", background: "#F5F2ED", fontSize: "0.82rem", fontFamily: "'DM Sans', sans-serif", color: f.value ? "#1A1A1A" : "#aaa", outline: "none", cursor: "pointer" }}>
+            {f.placeholder && <option value="">{f.placeholder}</option>}
+            {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <ChevronDown size={12} style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none" }} />
+        </div>
+      ))}
+      <button onClick={() => exportCSV(reports)} style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto", padding: "8px 14px", borderRadius: "10px", border: "1.5px solid rgba(0,0,0,0.08)", background: "#F5F2ED", color: "#666", fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}
+        onMouseEnter={e => { e.currentTarget.style.background = "rgba(107,26,42,0.07)"; e.currentTarget.style.color = "#6B1A2A"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "#F5F2ED"; e.currentTarget.style.color = "#666"; }}>
+        <FileDown size={14} /> CSV
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <DataTable
+        columns={[
+          {
+            key: "full_name", label: "Membre", sortable: true,
+            render: (g: ReportGroup) => (
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Avatar name={g.full_name} />
+                <span style={{ fontWeight: 500, fontSize: "0.83rem" }}>{g.full_name}</span>
+              </div>
+            ),
+          },
+          {
+            key: "projects", label: "Projets",
+            render: (g: ReportGroup) => (
+              <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                {g.reports.map(r => (
+                  <span key={r.id} style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.68rem", fontWeight: 600, color: "#6B1A2A", background: "rgba(107,26,42,0.07)", padding: "2px 8px", borderRadius: "20px", border: "1px solid rgba(107,26,42,0.1)" }}>
+                    <ProjectIcon name={r.project_icon} size={11} color="#6B1A2A" />
+                    {r.project_name}
+                  </span>
+                ))}
+              </div>
+            ),
+          },
+          { key: "role", label: "Rôle", sortable: true, render: (g: ReportGroup) => <RoleBadge role={g.role} /> },
+          {
+            key: "submitted_at", label: "Date", sortable: true,
+            render: (g: ReportGroup) => (
+              <span style={{ fontSize: "0.75rem", color: "#aaa", whiteSpace: "nowrap" }}>
+                {new Date(g.submitted_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                {" "}<span style={{ color: "#ccc" }}>{new Date(g.submitted_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+              </span>
+            ),
+          },
+        ]}
+        data={groups}
+        actions={[
+          { icon: "view", label: "Voir le rapport", onClick: (g: ReportGroup) => setSelected(g) },
+          ...(canEditReports   ? [{ icon: "edit"   as const, label: "Modifier",  onClick: (g: ReportGroup) => setEditing(g.reports[0]) }] : []),
+          ...(canDeleteReports ? [{ icon: "delete" as const, label: "Supprimer", onClick: (g: ReportGroup) => setToDelete(g) }] : []),
+        ]}
+        pageSize={10}
+        searchPlaceholder="Rechercher un membre..."
+        emptyMessage="Aucun rapport trouvé."
+        filters={filterSlot}
+      />
+
+      {selectedGroup && <GroupModal group={selectedGroup} onClose={() => setSelected(null)} />}
+      {editingReport  && <EditModal report={editingReport} onClose={() => setEditing(null)} onSave={handleEdit} loading={saving} />}
+      {toDelete       && <DeleteModal group={toDelete} onConfirm={handleDelete} onCancel={() => setToDelete(null)} loading={deleting} />}
+      {toasts.map((t) => <ToastNotification key={t.id} toast={t} onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))} />)}
+    </>
+  );
+}
