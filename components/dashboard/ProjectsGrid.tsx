@@ -28,7 +28,7 @@ const AVAILABLE_ICONS = [
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Props = {
-  projects?: Project[]; // Optionnel avec SWR
+  projects?: Project[];
 };
 
 type Toast = {
@@ -656,9 +656,9 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
     const res = await deleteProject(toDelete.id);
     setDeleting(false);
     if (res.success) {
-      await mutate(); // ✅ Refresh via SWR
       addToast("success", `Projet "${toDelete.name}" supprimé.`);
       setToDelete(null);
+      await mutate();
     } else {
       addToast("error", res.error ?? "Erreur lors de la suppression.");
     }
@@ -667,16 +667,8 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
   return (
     <>
       <div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
-        {/* Header */}
+        {/* Header avec Toggle et Bouton Ajouter */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", gap: "12px" }}>
-          <div>
-            <h1 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#1A1A1A", marginBottom: "4px" }}>
-              Projets
-            </h1>
-            <p style={{ fontSize: "0.9rem", color: "#666" }}>
-              {projects.length} projet{projects.length !== 1 ? "s" : ""}
-            </p>
-          </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             {/* Toggle View Mode */}
             <div
@@ -759,32 +751,33 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                 <span style={{ fontSize: "0.75rem" }}>Tableau</span>
               </button>
             </div>
-
-            {canManageTeam && (
-              <button
-                onClick={() => {
-                  setEditMode("create");
-                  setIsModalOpen(true);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "10px 16px",
-                  borderRadius: "10px",
-                  border: "none",
-                  background: "#6B1A2A",
-                  color: "white",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                }}
-              >
-                <Plus size={16} /> Ajouter projet
-              </button>
-            )}
           </div>
+
+          {canManageTeam && (
+            <button
+              onClick={() => {
+                setEditMode("create");
+                setIsModalOpen(true);
+                setEditTarget(null);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "10px 16px",
+                borderRadius: "10px",
+                border: "none",
+                background: "#6B1A2A",
+                color: "white",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              <Plus size={16} /> Ajouter projet
+            </button>
+          )}
         </div>
 
         {/* Content - Grid or Table view */}
@@ -934,7 +927,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
               addToast("success", `"${updated.name}" mis à jour.`);
             }
             setIsModalOpen(false);
-            await mutate(); // ✅ Refresh via SWR
+            await mutate();
           }}
         />
       )}
