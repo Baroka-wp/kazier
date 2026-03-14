@@ -99,6 +99,10 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
   function handleDateSelect(day: number) {
     const newDate = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     setSelectedDate(newDate);
+    // Auto-confirm avec l'heure actuelle si aucune heure n'est sélectionnée
+    const newDateTime = formatDateTimeValue(newDate, selectedHour, selectedMinute);
+    onChange(newDateTime);
+    setShowCalendar(false);
   }
 
   function handleConfirm() {
@@ -297,6 +301,15 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
           <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
             <button onClick={handleToday} style={{ flex: 1, padding: "6px 10px", borderRadius: "8px", border: "1px solid rgba(107,26,42,0.2)", background: "rgba(107,26,42,0.05)", color: "#6B1A2A", fontSize: "0.7rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
               Maintenant
+            </button>
+            <button
+              onClick={() => {
+                setSelectedHour("18");
+                setSelectedMinute("00");
+              }}
+              style={{ flex: 1, padding: "6px 10px", borderRadius: "8px", border: "1px solid rgba(107,26,42,0.2)", background: "rgba(107,26,42,0.05)", color: "#6B1A2A", fontSize: "0.7rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+            >
+              18:00
             </button>
           </div>
 

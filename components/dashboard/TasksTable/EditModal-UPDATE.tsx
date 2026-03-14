@@ -104,6 +104,15 @@ function UpdateTaskForm({
     if (!values.title.trim()) { setServerError("Le titre est obligatoire."); return; }
     setLoading(true);
 
+    // Formater la date avec l'heure si seulement la date est sélectionnée
+    let finalDueDate = values.due_date;
+    if (finalDueDate && finalDueDate.length === 10) {
+      // Seulement la date (YYYY-MM-DD), ajouter 23:59 comme heure par défaut
+      finalDueDate = `${finalDueDate} 23:59`;
+    }
+
+    console.log("[UpdateTaskForm] due_date avant envoi:", finalDueDate);
+
     const data = {
       title:       values.title.trim(),
       description: values.description,
@@ -111,11 +120,13 @@ function UpdateTaskForm({
       priority:    values.priority,
       project_id:  values.project_id,
       assigned_to: values.assigned_to.length ? values.assigned_to : null,
-      due_date:    values.due_date || null,
+      due_date:    finalDueDate || null,
     };
 
     const result = await updateTask(task.id, data);
     setLoading(false);
+
+    console.log("[UpdateTaskForm] résultat:", result);
 
     if (result.success) {
       onSaved(result.task!, false);

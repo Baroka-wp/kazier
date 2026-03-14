@@ -64,6 +64,15 @@ function CreateTaskForm({
     }
     setLoading(true);
 
+    // Formater la date avec l'heure si seulement la date est sélectionnée
+    let finalDueDate = values.due_date;
+    if (finalDueDate && finalDueDate.length === 10) {
+      // Seulement la date (YYYY-MM-DD), ajouter 23:59 comme heure par défaut
+      finalDueDate = `${finalDueDate} 23:59`;
+    }
+
+    console.log("[CreateTaskForm] due_date avant envoi:", finalDueDate);
+
     const data = {
       title:       values.title,
       description: values.description,
@@ -71,11 +80,13 @@ function CreateTaskForm({
       priority:    values.priority,
       project_id:  values.project_id,
       assigned_to: values.assigned_to.length ? values.assigned_to : null, // ✅ Tableau direct
-      due_date:    values.due_date || null,
+      due_date:    finalDueDate || null,
     };
 
     const result = await createTask(data);
     setLoading(false);
+
+    console.log("[CreateTaskForm] résultat:", result);
 
     if (result.success) {
       onSaved(result.task!, true);
