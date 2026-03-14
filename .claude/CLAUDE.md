@@ -461,3 +461,4 @@ const tasks = await prisma.tasks.findMany({
 - **Database ORM**: We use Prisma exclusively - all schemas are defined in `prisma/schema.prisma`
 - **NO Drizzle**: Drizzle ORM has been removed from the project
 - **Architecture**: Pages NEVER query the database directly - always use Server Actions from `lib/`
+- Architecture preference pour les flows métier (CRUD) : 1) Server Actions avec auth() + permissions (requireTeamManagement), 2) Validation inputs côté server, 3) Pagination serveur avec params, 4) API route pour SWR, 5) Client avec useSWR + mutate() pour refresh auto, 6) Pages jamais de DB direct - toujours via Server Actions. Pattern appliqué : Equipe, Rapports, Tasks, Projects.

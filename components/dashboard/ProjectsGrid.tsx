@@ -667,119 +667,6 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
   return (
     <>
       <div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
-        {/* Header avec Toggle et Bouton Ajouter */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", gap: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {/* Toggle View Mode */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "4px",
-                borderRadius: "10px",
-                background: "#F5F2ED",
-                border: "1.5px solid rgba(0,0,0,0.08)",
-              }}
-            >
-              <button
-                onClick={() => setViewMode("grid")}
-                title="Vue Grille"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 10px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: viewMode === "grid" ? "#6B1A2A" : "transparent",
-                  color: viewMode === "grid" ? "white" : "#666",
-                  fontSize: "0.8rem",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                  transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  if (viewMode !== "grid") {
-                    e.currentTarget.style.background = "rgba(107,26,42,0.07)";
-                    e.currentTarget.style.color = "#6B1A2A";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (viewMode !== "grid") {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#666";
-                  }
-                }}
-              >
-                <LayoutGrid size={14} />
-                <span style={{ fontSize: "0.75rem" }}>Grille</span>
-              </button>
-              <button
-                onClick={() => setViewMode("table")}
-                title="Vue Tableau"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 10px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: viewMode === "table" ? "#6B1A2A" : "transparent",
-                  color: viewMode === "table" ? "white" : "#666",
-                  fontSize: "0.8rem",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                  transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  if (viewMode !== "table") {
-                    e.currentTarget.style.background = "rgba(107,26,42,0.07)";
-                    e.currentTarget.style.color = "#6B1A2A";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (viewMode !== "table") {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#666";
-                  }
-                }}
-              >
-                <List size={14} />
-                <span style={{ fontSize: "0.75rem" }}>Tableau</span>
-              </button>
-            </div>
-          </div>
-
-          {canManageTeam && (
-            <button
-              onClick={() => {
-                setEditMode("create");
-                setIsModalOpen(true);
-                setEditTarget(null);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "10px 16px",
-                borderRadius: "10px",
-                border: "none",
-                background: "#6B1A2A",
-                color: "white",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-            >
-              <Plus size={16} /> Ajouter projet
-            </button>
-          )}
-        </div>
-
         {/* Content - Grid or Table view */}
         {viewMode === "table" ? (
           <DataTable
@@ -847,32 +734,116 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
             searchPlaceholder="Rechercher un projet..."
             emptyMessage={isEmpty ? "Aucun projet pour le moment. Commencez par en ajouter un !" : "Aucun projet trouvé."}
             filters={
-              canManageTeam && (
-                <button
-                  onClick={() => {
-                    setEditMode("create");
-                    setIsModalOpen(true);
-                    setEditTarget(null);
-                  }}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {/* Toggle View Mode */}
+                <div
                   style={{
-                    marginLeft: "auto",
                     display: "flex",
                     alignItems: "center",
-                    gap: "6px",
-                    padding: "8px 14px",
+                    gap: "4px",
+                    padding: "4px",
                     borderRadius: "10px",
-                    border: "none",
-                    background: "#6B1A2A",
-                    color: "white",
-                    fontSize: "0.82rem",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    fontFamily: "'DM Sans', sans-serif",
+                    background: "#F5F2ED",
+                    border: "1.5px solid rgba(0,0,0,0.08)",
                   }}
                 >
-                  <Plus size={14} /> Ajouter projet
-                </button>
-              )
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    title="Vue Grille"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      border: "none",
+                      background: viewMode === "grid" ? "#6B1A2A" : "transparent",
+                      color: viewMode === "grid" ? "white" : "#666",
+                      fontSize: "0.8rem",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      fontFamily: "'DM Sans', sans-serif",
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (viewMode !== "grid") {
+                        e.currentTarget.style.background = "rgba(107,26,42,0.07)";
+                        e.currentTarget.style.color = "#6B1A2A";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (viewMode !== "grid") {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "#666";
+                      }
+                    }}
+                  >
+                    <LayoutGrid size={14} />
+                    <span style={{ fontSize: "0.75rem" }}>Grille</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode("table")}
+                    title="Vue Tableau"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      border: "none",
+                      background: viewMode === "table" ? "#6B1A2A" : "transparent",
+                      color: viewMode === "table" ? "white" : "#666",
+                      fontSize: "0.8rem",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      fontFamily: "'DM Sans', sans-serif",
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (viewMode !== "table") {
+                        e.currentTarget.style.background = "rgba(107,26,42,0.07)";
+                        e.currentTarget.style.color = "#6B1A2A";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (viewMode !== "table") {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "#666";
+                      }
+                    }}
+                  >
+                    <List size={14} />
+                    <span style={{ fontSize: "0.75rem" }}>Tableau</span>
+                  </button>
+                </div>
+
+                {canManageTeam && (
+                  <button
+                    onClick={() => {
+                      setEditMode("create");
+                      setIsModalOpen(true);
+                      setEditTarget(null);
+                    }}
+                    style={{
+                      marginLeft: "auto",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 14px",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: "#6B1A2A",
+                      color: "white",
+                      fontSize: "0.82rem",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    <Plus size={14} /> Ajouter projet
+                  </button>
+                )}
+              </div>
             }
             loading={isLoading}
           />
