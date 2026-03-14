@@ -114,6 +114,95 @@ function MemberAvatar({ name }: { name: string }) {
   );
 }
 
+// ── Badges pour les membres (similaire à TasksTable) ─────────────────────────
+
+function NamePills({ names }: { names?: string[] }) {
+  if (!names?.length)
+    return <span style={{ fontSize: "0.8rem", color: "#ccc" }}>—</span>;
+
+  const visible = names.slice(0, 2);
+  const extra = names.length - 2;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
+      {visible.map((name, i) => {
+        const parts = name.trim().split(" ").filter(Boolean);
+        const initials = parts
+          .slice(0, 2)
+          .map((w) => w[0].toUpperCase())
+          .join("");
+        const first = parts[0] ?? name;
+        return (
+          <div
+            key={i}
+            title={name}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              padding: "3px 8px 3px 3px",
+              borderRadius: "20px",
+              background: "rgba(107,26,42,0.07)",
+              border: "1px solid rgba(107,26,42,0.12)",
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: "18px",
+                height: "18px",
+                borderRadius: "50%",
+                background: "#6B1A2A",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.48rem",
+                fontWeight: 700,
+                color: "white",
+                flexShrink: 0,
+              }}
+            >
+              {initials}
+            </div>
+            <span
+              style={{
+                fontSize: "0.72rem",
+                fontWeight: 500,
+                color: "#6B1A2A",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {first}
+            </span>
+          </div>
+        );
+      })}
+      {extra > 0 && (
+        <div
+          title={names.slice(2).join(", ")}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: "26px",
+            height: "24px",
+            padding: "0 7px",
+            borderRadius: "20px",
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            background: "rgba(107,26,42,0.12)",
+            color: "#6B1A2A",
+            border: "1px solid rgba(107,26,42,0.2)",
+            flexShrink: 0,
+          }}
+        >
+          +{extra}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Modal Edit / Create avec Sélection Icônes ────────────────────────────────
 
 function EditModal({ mode, project, teams, onClose, onSaved }: {
@@ -858,9 +947,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                 key: "team_members",
                 label: "Équipes",
                 render: (p) => (
-                  <span style={{ fontSize: "0.75rem", color: "#aaa" }}>
-                    {p.team_members?.map((m) => m.first_name).join(", ") || "—"}
-                  </span>
+                  <NamePills names={p.team_members?.map((m) => m.full_name)} />
                 ),
               },
             ]}

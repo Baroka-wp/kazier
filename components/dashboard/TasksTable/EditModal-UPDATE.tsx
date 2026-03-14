@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Task, TeamMember, Project } from "./types";
 import { updateTask, getTeamMembersByProject } from "@/lib/task-actions";
-import DatePicker from "@/components/dashboard/DatePicker";
+import DateTimeInput from "@/components/dashboard/DateTimeInput";
 
 // ✅ Parse manuel — évite le bug de new Date("YYYY-MM-DD HH:mm") invalide en prod
 function formatDateForPicker(raw: any): string {
@@ -104,15 +104,6 @@ function UpdateTaskForm({
     if (!values.title.trim()) { setServerError("Le titre est obligatoire."); return; }
     setLoading(true);
 
-    // Formater la date avec l'heure si seulement la date est sélectionnée
-    let finalDueDate = values.due_date;
-    if (finalDueDate && finalDueDate.length === 10) {
-      // Seulement la date (YYYY-MM-DD), ajouter 23:59 comme heure par défaut
-      finalDueDate = `${finalDueDate} 23:59`;
-    }
-
-    console.log("[UpdateTaskForm] due_date avant envoi:", finalDueDate);
-
     const data = {
       title:       values.title.trim(),
       description: values.description,
@@ -120,13 +111,11 @@ function UpdateTaskForm({
       priority:    values.priority,
       project_id:  values.project_id,
       assigned_to: values.assigned_to.length ? values.assigned_to : null,
-      due_date:    finalDueDate || null,
+      due_date:    values.due_date || null,
     };
 
     const result = await updateTask(task.id, data);
     setLoading(false);
-
-    console.log("[UpdateTaskForm] résultat:", result);
 
     if (result.success) {
       onSaved(result.task!, false);
@@ -250,8 +239,8 @@ function UpdateTaskForm({
 
       {/* Due Date */}
       <div style={{ marginBottom: "10px" }}>
-        <small style={labelStyle}>Date limite (avec heure)</small>
-        <DatePicker value={values.due_date} onChange={e => setField("due_date", e)} placeholder="Sélectionner date et heure" />
+        <small style={labelStyle}>Date limite</small>
+        <DateTimeInput value={values.due_date} onChange={e => setField("due_date", e)} placeholder="Sélectionner date et heure" />
       </div>
 
       {/* Actions */}

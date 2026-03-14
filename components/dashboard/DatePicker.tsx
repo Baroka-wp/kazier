@@ -99,8 +99,18 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
   function handleDateSelect(day: number) {
     const newDate = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     setSelectedDate(newDate);
-    // Auto-confirm avec l'heure actuelle si aucune heure n'est sélectionnée
-    const newDateTime = formatDateTimeValue(newDate, selectedHour, selectedMinute);
+
+    // Utiliser l'heure actuelle par défaut si aucune heure n'est sélectionnée
+    const now = new Date();
+    const defaultHour = selectedHour === "00" && selectedMinute === "00"
+      ? String(now.getHours()).padStart(2, "0")
+      : selectedHour;
+    const defaultMinute = selectedHour === "00" && selectedMinute === "00"
+      ? String(now.getMinutes()).padStart(2, "0")
+      : selectedMinute;
+
+    // Auto-confirm avec l'heure
+    const newDateTime = formatDateTimeValue(newDate, defaultHour, defaultMinute);
     onChange(newDateTime);
     setShowCalendar(false);
   }
