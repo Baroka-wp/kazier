@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import useSWR from "swr";
-import { X, AlertTriangle, Plus, CheckCircle2, XCircle, MoreVertical, Database, Settings, Users, Zap, Briefcase, BarChart3, Target, Lock, Layers, Cpu, Workflow, Boxes } from "lucide-react";
+import { X, AlertTriangle, Plus, CheckCircle2, XCircle, MoreVertical, Database, Settings, Users, Zap, Briefcase, BarChart3, Target, Lock, Layers, Cpu, Workflow, Boxes, LayoutGrid, List } from "lucide-react";
 import { createProject, updateProject, deleteProject, getTeams, type Project, type TeamMember } from "@/lib/project-actions";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useRouter } from "next/navigation";
+import ProjectsTable from "@/components/dashboard/ProjectsTable";
 
 // ── Icons disponibles ────────────────────────────────────────────────────────
 
@@ -620,6 +621,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
   const [toDelete, setToDelete] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
   const { canManageTeam, canViewTeam } = usePermissions();
 
@@ -630,6 +632,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
 
   const projects = data?.data ?? initialProjects ?? [];
   const isLoading = !data && !error;
+  const isEmpty = !isLoading && projects.length === 0;
 
   // Charger les équipes au montage
   useEffect(() => {
@@ -665,7 +668,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
     <>
       <div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", gap: "12px" }}>
           <div>
             <h1 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#1A1A1A", marginBottom: "4px" }}>
               Projets
@@ -674,50 +677,152 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
               {projects.length} projet{projects.length !== 1 ? "s" : ""}
             </p>
           </div>
-          {canManageTeam && (
-            <button
-              onClick={() => { setEditMode("create"); setIsModalOpen(true); }}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Toggle View Mode */}
+            <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "6px",
-                padding: "10px 16px",
+                gap: "4px",
+                padding: "4px",
                 borderRadius: "10px",
-                border: "none",
-                background: "#6B1A2A",
-                color: "white",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "'DM Sans', sans-serif",
+                background: "#F5F2ED",
+                border: "1.5px solid rgba(0,0,0,0.08)",
               }}
             >
-              <Plus size={16} /> Ajouter projet
-            </button>
-          )}
+              <button
+                onClick={() => setViewMode("grid")}
+                title="Vue Grille"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 10px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: viewMode === "grid" ? "#6B1A2A" : "transparent",
+                  color: viewMode === "grid" ? "white" : "#666",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  if (viewMode !== "grid") {
+                    e.currentTarget.style.background = "rgba(107,26,42,0.07)";
+                    e.currentTarget.style.color = "#6B1A2A";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (viewMode !== "grid") {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "#666";
+                  }
+                }}
+              >
+                <LayoutGrid size={14} />
+                <span style={{ fontSize: "0.75rem" }}>Grille</span>
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                title="Vue Tableau"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 10px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: viewMode === "table" ? "#6B1A2A" : "transparent",
+                  color: viewMode === "table" ? "white" : "#666",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  if (viewMode !== "table") {
+                    e.currentTarget.style.background = "rgba(107,26,42,0.07)";
+                    e.currentTarget.style.color = "#6B1A2A";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (viewMode !== "table") {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "#666";
+                  }
+                }}
+              >
+                <List size={14} />
+                <span style={{ fontSize: "0.75rem" }}>Tableau</span>
+              </button>
+            </div>
+
+            {canManageTeam && (
+              <button
+                onClick={() => {
+                  setEditMode("create");
+                  setIsModalOpen(true);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "10px 16px",
+                  borderRadius: "10px",
+                  border: "none",
+                  background: "#6B1A2A",
+                  color: "white",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                <Plus size={16} /> Ajouter projet
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Grid */}
-        {projects.length === 0 ? (
-          <div style={{
-            textAlign: "center",
-            padding: "60px 20px",
-            color: "#999",
-          }}>
+        {/* Content - Grid or Table view */}
+        {viewMode === "table" ? (
+          <ProjectsTable
+            projects={projects}
+            loading={isLoading}
+            isEmpty={isEmpty}
+            onRefresh={() => mutate()}
+          />
+        ) : projects.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "60px 20px",
+              color: "#999",
+            }}
+          >
             <p style={{ fontSize: "1rem", marginBottom: "8px" }}>Aucun projet</p>
             <p style={{ fontSize: "0.85rem" }}>Commencez par en ajouter un</p>
           </div>
         ) : (
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "16px",
-          }}>
-            {projects.map(project => (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+              gap: "16px",
+            }}
+          >
+            {projects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
-                onEdit={(p) => { setEditMode("update"); setEditTarget(p); setIsModalOpen(true); }}
+                onEdit={(p) => {
+                  setEditMode("update");
+                  setEditTarget(p);
+                  setIsModalOpen(true);
+                }}
                 onDelete={(p) => setToDelete(p)}
                 canManage={canManageTeam}
                 onClick={() => router.push(`/dashboard/projects/${project.id}`)}
