@@ -856,7 +856,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                 sortable: true,
                 render: (p) => (
                   <div
-                    onClick={() => setSelected(p)}
+                    onClick={() => router.push(`/dashboard/projects/${p.id}`)}
                     style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
                   >
                     <div
@@ -972,7 +972,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                 }}
                 onDelete={(p) => setToDelete(p)}
                 canManage={canManageTeam}
-                onClick={() => setSelected(project)}
+                onClick={() => router.push(`/dashboard/projects/${project.id}`)}
               />
             ))}
           </div>
