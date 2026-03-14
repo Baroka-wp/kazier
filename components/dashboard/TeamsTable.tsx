@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { mutate } from "swr";
 import DataTable from "@/components/dashboard/DataTable";
 import {
   registerUser,
@@ -35,7 +36,20 @@ type Action = {
   onClick: (m: TeamMember) => void;
 };
 
-type Props    = { members: TeamMember[]; roles: string[] };
+type Props    = {
+  members: TeamMember[];
+  roles: string[];
+  loading?: boolean;
+  // Pagination serveur
+  onPageChange?: (page: number) => void;
+  onSearch?: (search: string) => void;
+  totalItems?: number;
+  totalPages?: number;
+  currentPage?: number;
+  // Filtres
+  roleFilter?: string;
+  onRoleFilter?: (role: string) => void;
+};
 type Toast    = { id: number; type: "success" | "error"; message: string };
 type EditMode = "create" | "update";
 
@@ -369,23 +383,32 @@ function DeleteModal({ member, onConfirm, onCancel, loading }: {
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export default function TeamsTable({ members: initialMembers, roles }: Props) {
-  const [data, setData]             = useState<TeamMember[]>(initialMembers);
-  const [roleFilter, setRoleFilter] = useState("");
-  const [selected, setSelected]     = useState<TeamMember | null>(null);
+export default function TeamsTable({
+  members,
+  roles,
+  loading: loadingProp,
+  onPageChange,
+  onSearch,
+  totalItems,
+  totalPages,
+  currentPage,
+  roleFilter: roleFilterProp,
+  onRoleFilter,
+}: Props) {
+  const [selected, setSelected] = useState<TeamMember | null>(null);
   const [editTarget, setEditTarget] = useState<TeamMember | null>(null);
-  const [editMode, setEditMode]     = useState<EditMode>("update");
-  const [toDelete, setToDelete]     = useState<TeamMember | null>(null);
-  const [deleting, setDeleting]     = useState(false);
-  const [toasts, setToasts]         = useState<Toast[]>([]);
+  const [editMode, setEditMode] = useState<EditMode>("update");
+  const [toDelete, setToDelete] = useState<TeamMember | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
-  // ✅ Utiliser les permissions
   const { canManageTeam } = usePermissions();
 
-  const filtered = useMemo(() =>
-    roleFilter ? data.filter(m => (m.role ?? "") === roleFilter) : data,
-    [data, roleFilter]
-  );
+  // Utiliser le filtre externe (serveur) ou local
+  const roleFilter = roleFilterProp ?? "";
+
+  // Pas de filtrage client pour la pagination serveur
+  const filtered = members;
 
   function addToast(type: Toast["type"], message: string) {
     const id = Date.now();
@@ -399,9 +422,10 @@ export default function TeamsTable({ members: initialMembers, roles }: Props) {
     const res = await deleteUser(toDelete.id);
     setDeleting(false);
     if (res.success) {
-      setData(prev => prev.filter(m => m.id !== toDelete.id));
       addToast("success", `Membre "${toDelete.full_name}" supprimé.`);
       setToDelete(null);
+      // ✅ Refresh optimiste des données
+      await mutate((key) => typeof key === 'string' && key.startsWith('/api/equipe'));
     } else {
       addToast("error", res.error ?? "Erreur lors de la suppression.");
     }
@@ -410,14 +434,14 @@ export default function TeamsTable({ members: initialMembers, roles }: Props) {
   const filtersSlot = (
     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
       <div style={{ position: "relative" }}>
-        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} style={{ appearance: "none", paddingLeft: "12px", paddingRight: "28px", paddingTop: "8px", paddingBottom: "8px", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: "10px", background: "#F5F2ED", fontSize: "0.82rem", fontFamily: "'DM Sans', sans-serif", color: roleFilter ? "#1A1A1A" : "#aaa", outline: "none", cursor: "pointer" }}>
+        <select value={roleFilter} onChange={e => onRoleFilter?.(e.target.value)} style={{ appearance: "none", paddingLeft: "12px", paddingRight: "28px", paddingTop: "8px", paddingBottom: "8px", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: "10px", background: "#F5F2ED", fontSize: "0.82rem", fontFamily: "'DM Sans', sans-serif", color: roleFilter ? "#1A1A1A" : "#aaa", outline: "none", cursor: "pointer" }}>
           <option value="">Tous les rôles</option>
           {roles.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
 
       {roleFilter && (
-        <button onClick={() => setRoleFilter("")} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "8px 12px", borderRadius: "10px", border: "1.5px solid rgba(107,26,42,0.2)", background: "rgba(107,26,42,0.05)", color: "#6B1A2A", fontSize: "0.78rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+        <button onClick={() => onRoleFilter?.("")} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "8px 12px", borderRadius: "10px", border: "1.5px solid rgba(107,26,42,0.2)", background: "rgba(107,26,42,0.05)", color: "#6B1A2A", fontSize: "0.78rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
           <X size={12} /> Réinitialiser
         </button>
       )}
@@ -481,6 +505,13 @@ export default function TeamsTable({ members: initialMembers, roles }: Props) {
         searchPlaceholder="Rechercher un membre..."
         emptyMessage="Aucun membre dans l'équipe."
         filters={filtersSlot}
+        loading={loadingProp}
+        // Pagination serveur
+        onPageChange={onPageChange}
+        onSearch={onSearch}
+        totalItems={totalItems}
+        totalPages={totalPages}
+        currentPage={currentPage}
       />
 
       {selected && <ViewModal member={selected} onClose={() => setSelected(null)} />}
@@ -490,14 +521,14 @@ export default function TeamsTable({ members: initialMembers, roles }: Props) {
           mode={editMode}
           member={editTarget}
           onClose={() => { setEditTarget(null); setEditMode("update"); }}
-          onSaved={(updated, created) => {
+          onSaved={async (updated, created) => {
             if (created) {
-              setData(prev => [updated, ...prev]);
               addToast("success", `"${updated.full_name}" ajouté à l'équipe.`);
             } else {
-              setData(prev => prev.map(m => m.id === updated.id ? updated : m));
               addToast("success", `Profil de "${updated.full_name}" mis à jour.`);
             }
+            // ✅ Refresh optimiste des données
+            await mutate((key) => typeof key === 'string' && key.startsWith('/api/equipe'));
           }}
         />
       )}

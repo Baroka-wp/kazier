@@ -25,7 +25,21 @@ import { DeleteModal } from "./DeleteModal";
 import { EditModal } from "./EditModal-Wrapper";
 import { FilterSlot } from "./Filters";
 
-type Props = { tasks: Task[] };
+type Props = {
+  tasks: Task[];
+  loading?: boolean;
+  // Pagination serveur
+  onPageChange?: (page: number) => void;
+  onSearch?: (search: string) => void;
+  totalItems?: number;
+  totalPages?: number;
+  currentPage?: number;
+  // Filtres
+  statusFilter?: string;
+  onStatusFilter?: (status: string) => void;
+  priorityFilter?: string;
+  onPriorityFilter?: (priority: string) => void;
+};
 
 // ✅ Pills — max 2 affichés + compteur "+N"
 function NamePills({ names }: { names?: string[] }) {
@@ -359,12 +373,22 @@ function formatDeadline(raw: string | null): string {
   }
 }
 
-export default function TasksTable({ tasks: initialTasks }: Props) {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+export default function TasksTable({
+  tasks: initialTasks,
+  loading: loadingProp,
+  onPageChange,
+  onSearch,
+  totalItems,
+  totalPages,
+  currentPage,
+  statusFilter: statusFilterProp,
+  onStatusFilter,
+  priorityFilter: priorityFilterProp,
+  onPriorityFilter,
+}: Props) {
+  const [tasks] = useState<Task[]>(initialTasks);
   const [teams, setTeams] = useState<TeamMember[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
   const [editTarget, setEditTarget] = useState<Task | null>(null);
   const [editMode, setEditMode] = useState<EditMode>("update");
   const [toDelete, setToDelete] = useState<Task | null>(null);
@@ -372,6 +396,10 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const { canViewTeam } = usePermissions();
+
+  // Utiliser les filtres externes (serveur) ou locaux
+  const statusFilter = statusFilterProp ?? "";
+  const priorityFilter = priorityFilterProp ?? "";
 
   useEffect(() => {
     (async () => {
@@ -385,13 +413,8 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
     })();
   }, []);
 
-  const filtered = useMemo(() => {
-    let data = tasks;
-    if (statusFilter) data = data.filter((t) => t.status === statusFilter);
-    if (priorityFilter)
-      data = data.filter((t) => t.priority === priorityFilter);
-    return data;
-  }, [tasks, statusFilter, priorityFilter]);
+  // Pas de filtrage client pour pagination serveur
+  const filtered = tasks;
 
   function addToast(type: Toast["type"], message: string) {
     const id = Date.now();
@@ -408,9 +431,9 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
     const res = await deleteTask(toDelete.id);
     setDeleting(false);
     if (res.success) {
-      setTasks((prev) => prev.filter((t) => t.id !== toDelete.id));
       addToast("success", `Tâche "${toDelete.title}" supprimée.`);
       setToDelete(null);
+      // Le refresh SWR se fera automatiquement
     } else {
       addToast("error", res.error ?? "Erreur lors de la suppression.");
     }
@@ -419,9 +442,9 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
   const filterSlot = (
     <FilterSlot
       statusFilter={statusFilter}
-      setStatusFilter={setStatusFilter}
+      setStatusFilter={(v) => onStatusFilter?.(v)}
       priorityFilter={priorityFilter}
-      setPriorityFilter={setPriorityFilter}
+      setPriorityFilter={(v) => onPriorityFilter?.(v)}
       onAddTask={() => {
         setEditMode("create");
         setEditTarget(null);
@@ -517,6 +540,13 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
         searchPlaceholder="Rechercher une tâche..."
         emptyMessage="Aucune tâche trouvée."
         filters={filterSlot}
+        loading={loadingProp}
+        // Pagination serveur
+        onPageChange={onPageChange}
+        onSearch={onSearch}
+        totalItems={totalItems}
+        totalPages={totalPages}
+        currentPage={currentPage}
       />
 
       {(editMode === "create" || editTarget) && (
@@ -531,14 +561,11 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
           }}
           onSaved={(updated, created) => {
             if (created) {
-              setTasks((prev) => [updated, ...prev]);
               addToast("success", `"${updated.title}" ajoutée.`);
             } else {
-              setTasks((prev) =>
-                prev.map((t) => (t.id === updated.id ? updated : t)),
-              );
               addToast("success", `"${updated.title}" mise à jour.`);
             }
+            // Le refresh SWR se fera automatiquement
           }}
         />
       )}

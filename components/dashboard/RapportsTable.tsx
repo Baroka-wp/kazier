@@ -43,6 +43,19 @@ type Props = {
   reports: Report[];
   roles: string[];
   projects: Array<{ id: number; name: string }>;
+  loading?: boolean;
+  // Pagination serveur
+  onPageChange?: (page: number) => void;
+  onSearch?: (search: string) => void;
+  totalItems?: number;
+  totalPages?: number;
+  currentPage?: number;
+  // Filtres
+  roleFilter?: string;
+  onRoleFilter?: (role: string) => void;
+  projectFilter?: number | undefined;
+  onProjectFilter?: (projectId: number | undefined) => void;
+  refreshKey?: string;
 };
 
 type Toast = { id: number; type: "success" | "error"; message: string };
@@ -430,19 +443,35 @@ function exportCSV(reports: Report[]) {
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export default function RapportsTable({ reports: initialReports, roles, projects }: Props) {
-  const [reports, setReports]             = useState<Report[]>(initialReports);
-  const [roleFilter, setRoleFilter]       = useState("");
-  const [projectFilter, setProjectFilter] = useState("");
-  const [dateFilter, setDateFilter]       = useState("today");
-  const [selectedGroup, setSelected]      = useState<ReportGroup | null>(null);
-  const [editingReport, setEditing]       = useState<Report | null>(null);
-  const [toDelete, setToDelete]           = useState<ReportGroup | null>(null);
-  const [deleting, setDeleting]           = useState(false);
-  const [saving, setSaving]               = useState(false);
-  const [toasts, setToasts]               = useState<Toast[]>([]);
+export default function RapportsTable({
+  reports: initialReports,
+  roles,
+  projects,
+  loading: loadingProp,
+  onPageChange,
+  onSearch,
+  totalItems,
+  totalPages,
+  currentPage,
+  roleFilter: roleFilterProp,
+  onRoleFilter,
+  projectFilter: projectFilterProp,
+  onProjectFilter,
+}: Props) {
+  const [reports] = useState<Report[]>(initialReports);
+  const [dateFilter, setDateFilter] = useState("today");
+  const [selectedGroup, setSelected] = useState<ReportGroup | null>(null);
+  const [editingReport, setEditing] = useState<Report | null>(null);
+  const [toDelete, setToDelete] = useState<ReportGroup | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const { canEditReports, canDeleteReports } = usePermissions();
+
+  // Utiliser les filtres externes (serveur) ou locaux
+  const roleFilter = roleFilterProp ?? "";
+  const projectFilter = projectFilterProp !== undefined ? String(projectFilterProp ?? "") : "";
 
   function addToast(type: Toast["type"], message: string) {
     const id = Date.now();
@@ -457,9 +486,8 @@ export default function RapportsTable({ reports: initialReports, roles, projects
     setDeleting(false);
     setToDelete(null);
     if (results.every(r => r.success)) {
-      const ids = new Set(reportIds);
-      setReports((prev) => prev.filter((r) => !ids.has(r.id)));
       addToast("success", `${reportIds.length > 1 ? `${reportIds.length} rapports supprimés` : "Rapport supprimé"} pour ${toDelete.full_name}.`);
+      // Le refresh SWR se fera automatiquement
     } else {
       addToast("error", "Erreur lors de la suppression.");
     }
@@ -477,9 +505,9 @@ export default function RapportsTable({ reports: initialReports, roles, projects
     });
     setSaving(false);
     if (result.success) {
-      setReports((prev) => prev.map((r) => r.id === editingReport.id ? { ...r, ...data } : r));
       addToast("success", `Rapport modifié.`);
       setEditing(null);
+      // Le refresh SWR se fera automatiquement
     } else {
       addToast("error", result.error ?? "Erreur lors de la modification.");
     }
@@ -488,8 +516,7 @@ export default function RapportsTable({ reports: initialReports, roles, projects
   // Filtre d'abord les rapports bruts, puis groupe
   const groups = useMemo(() => {
     let data = reports;
-    if (roleFilter)    data = data.filter((r) => r.role === roleFilter);
-    if (projectFilter) data = data.filter((r) => r.project_id === parseInt(projectFilter, 10));
+    // Les filtres role et project sont gérés côté serveur
     if (dateFilter) {
       const now = new Date();
       data = data.filter((r) => {
@@ -501,13 +528,13 @@ export default function RapportsTable({ reports: initialReports, roles, projects
       });
     }
     return groupReports(data);
-  }, [reports, roleFilter, projectFilter, dateFilter]);
+  }, [reports, dateFilter]);
 
   const filterSlot = (
     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
       {[
-        { value: projectFilter, onChange: setProjectFilter, placeholder: "Tous les projets", options: projects.map(p => ({ value: String(p.id), label: p.name })) },
-        { value: roleFilter,    onChange: setRoleFilter,    placeholder: "Tous les rôles",   options: roles.map(r => ({ value: r, label: r })) },
+        { value: projectFilter, onChange: (v: string) => onProjectFilter?.(v ? parseInt(v) : undefined), placeholder: "Tous les projets", options: projects.map(p => ({ value: String(p.id), label: p.name })) },
+        { value: roleFilter,    onChange: (v: string) => onRoleFilter?.(v),    placeholder: "Tous les rôles",   options: roles.map(r => ({ value: r, label: r })) },
         { value: dateFilter,    onChange: setDateFilter,    placeholder: "",                  options: [{ value: "today", label: "Aujourd'hui" }, { value: "week", label: "Cette semaine" }, { value: "month", label: "Ce mois" }] },
       ].map((f, idx) => (
         <div key={idx} style={{ position: "relative" }}>
@@ -573,6 +600,13 @@ export default function RapportsTable({ reports: initialReports, roles, projects
         searchPlaceholder="Rechercher un membre..."
         emptyMessage="Aucun rapport trouvé."
         filters={filterSlot}
+        loading={loadingProp}
+        // Pagination serveur
+        onPageChange={onPageChange}
+        onSearch={onSearch}
+        totalItems={totalItems}
+        totalPages={totalPages}
+        currentPage={currentPage}
       />
 
       {selectedGroup && <GroupModal group={selectedGroup} onClose={() => setSelected(null)} />}

@@ -36,6 +36,25 @@ export type TaskResult =
   | { success: true; task: Task }
   | { success: false; error: string };
 
+// Type pour la pagination
+export type PaginationParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  priority?: string;
+  projectId?: number;
+  assignedTo?: number;
+};
+
+export type PaginatedResult<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 // ── Helper: normaliser assigned_to — Neon retourne "{1,2}" en prod ────────────
 
 function parseAssignedTo(raw: any): number[] | null {
@@ -144,17 +163,70 @@ export async function getTask(id: number): Promise<TaskResult> {
 
 // ── READ (GET ALL) ────────────────────────────────────────────────────────────
 
-export async function getTasks(): Promise<{ success: boolean; tasks?: Task[]; error?: string }> {
-  try {
+export async function getTasks(params?: PaginationParams): Promise<PaginatedResult<Task> | { success: boolean; tasks?: Task[]; error?: string }> {
+  // Si pas de params, retourner l'ancienne version pour compatibilité
+  if (!params) {
     const tasks = await prisma.tasks.findMany({
       orderBy: { created_at: 'desc' }
     });
     const enriched = await Promise.all(tasks.map(t => enrichTask(t)));
     return { success: true, tasks: enriched };
-  } catch (err: any) {
-    console.error("[getTasks]", err);
-    return { success: false, error: "Erreur lors de la récupération des tâches." };
   }
+
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 10;
+  const search = params.search;
+  const status = params.status;
+  const priority = params.priority;
+  const projectId = params.projectId;
+  const assignedTo = params.assignedTo;
+
+  // Construire les filtres WHERE
+  const where: any = {};
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' as const } },
+      { description: { contains: search, mode: 'insensitive' as const } },
+    ];
+  }
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (priority) {
+    where.priority = priority;
+  }
+
+  if (projectId) {
+    where.project_id = projectId;
+  }
+
+  if (assignedTo) {
+    where.assigned_to = { has: assignedTo };
+  }
+
+  // Récupérer le total
+  const total = await prisma.tasks.count({ where });
+
+  // Récupérer les tâches paginées
+  const tasks = await prisma.tasks.findMany({
+    where,
+    orderBy: { created_at: 'desc' },
+    skip: (page - 1) * limit,
+    take: limit
+  });
+
+  const enriched = await Promise.all(tasks.map(t => enrichTask(t)));
+
+  return {
+    data: enriched,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
 }
 
 // ── UPDATE ────────────────────────────────────────────────────────────────────

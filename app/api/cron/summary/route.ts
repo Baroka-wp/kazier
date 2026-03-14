@@ -30,13 +30,13 @@ export async function GET() {
   });
 
   // IDs des membres ayant soumis
-  const submittedIds = submitted.map(r => r.team_id).filter(Boolean);
+  const submittedIds = submitted.map(r => r.team_id).filter((id): id is number => id !== null);
 
   // Membres qui n'ont pas soumis
   const missing = await prisma.teams.findMany({
     where: {
       is_boss: false,
-      id: { notIn: submittedIds },
+      ...(submittedIds.length > 0 ? { id: { notIn: submittedIds } } : {}),
     },
     select: {
       first_name: true,

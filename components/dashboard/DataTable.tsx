@@ -38,6 +38,12 @@ type Props<T extends { id: number | string }> = {
   loading?: boolean;
   filters?: React.ReactNode;
   refreshable?: boolean;
+  // Callbacks pour pagination serveur
+  onPageChange?: (page: number) => void;
+  onSearch?: (search: string) => void;
+  totalItems?: number;
+  totalPages?: number;
+  currentPage?: number;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -59,13 +65,22 @@ export default function DataTable<T extends { id: number | string }>({
   loading = false,
   filters,
   refreshable = true,
+  onPageChange,
+  onSearch,
+  totalItems,
+  totalPages: serverTotalPages,
+  currentPage,
 }: Props<T>) {
   const router = useRouter();
   const [search, setSearch]         = useState("");
   const [sortKey, setSortKey]       = useState<string | null>(null);
   const [sortDir, setSortDir]       = useState<SortDir>(null);
-  const [page, setPage]             = useState(1);
+  const [page, setPage]             = useState(currentPage ?? 1);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Utiliser pagination serveur ou client
+  const isServerPagination = !!onPageChange;
+  const totalPages = serverTotalPages ?? Math.max(1, Math.ceil((totalItems ?? data.length) / pageSize));
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -73,29 +88,21 @@ export default function DataTable<T extends { id: number | string }>({
     setTimeout(() => setRefreshing(false), 800);
   }
 
-  const searched = useMemo(() => {
-    if (!search.trim()) return data;
-    const q = search.toLowerCase();
-    return data.filter((row) =>
-      columns.some((col) => {
-        const val = getNestedValue(row, col.key as string);
-        return String(val ?? "").toLowerCase().includes(q);
-      })
-    );
-  }, [data, search, columns]);
-
+  // Pagination serveur : pas de tri/filter client
   const sorted = useMemo(() => {
-    if (!sortKey || !sortDir) return searched;
-    return [...searched].sort((a, b) => {
+    if (isServerPagination) return data;
+    if (!sortKey || !sortDir) return data;
+    return [...data].sort((a, b) => {
       const av = getNestedValue(a, sortKey);
       const bv = getNestedValue(b, sortKey);
       const cmp = String(av ?? "").localeCompare(String(bv ?? ""), "fr", { numeric: true });
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [searched, sortKey, sortDir]);
+  }, [data, sortKey, sortDir, isServerPagination]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const paginated  = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const paginated = isServerPagination
+    ? data
+    : sorted.slice((page - 1) * pageSize, page * pageSize);
 
   function handleSort(key: string) {
     if (sortKey !== key) { setSortKey(key); setSortDir("asc"); }
@@ -107,6 +114,10 @@ export default function DataTable<T extends { id: number | string }>({
   function handleSearch(val: string) {
     setSearch(val);
     setPage(1);
+    // Callback serveur
+    if (onSearch) {
+      onSearch(val);
+    }
   }
 
   function getPageRange() {
@@ -121,6 +132,17 @@ export default function DataTable<T extends { id: number | string }>({
     if (totalPages > 1) range.push(totalPages);
     return range;
   }
+
+  function handlePageChange(newPage: number) {
+    setPage(newPage);
+    if (onPageChange) {
+      onPageChange(newPage);
+    }
+  }
+
+  // Pagination serveur : utiliser totalItems au lieu de sorted.length
+  const displayTotal = isServerPagination ? (totalItems ?? 0) : sorted.length;
+  const displayTotalPages = isServerPagination ? (serverTotalPages ?? 1) : totalPages;
 
   return (
     <div style={{ background: "#fff", borderRadius: "16px", border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden" }}>
@@ -197,9 +219,9 @@ export default function DataTable<T extends { id: number | string }>({
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
-                  {columns.map((col) => (
+                  {columns.map((col, colIdx) => (
                     <td key={col.key as string} style={{ padding: "14px 20px" }}>
-                      <div style={{ height: "14px", borderRadius: "6px", background: "linear-gradient(90deg, #f0ede8 25%, #e8e4df 50%, #f0ede8 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", width: `${60 + Math.random() * 30}%` }} />
+                      <div style={{ height: "14px", borderRadius: "6px", background: "linear-gradient(90deg, #f0ede8 25%, #e8e4df 50%, #f0ede8 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", width: `${60 + ((i * columns.length + colIdx) * 7) % 30}%` }} />
                     </td>
                   ))}
                   {actions && <td style={{ padding: "14px 20px" }}><div style={{ height: "14px", width: "80px", borderRadius: "6px", background: "#f0ede8" }} /></td>}
@@ -252,26 +274,24 @@ export default function DataTable<T extends { id: number | string }>({
       </div>
 
       {/* ── Footer pagination ── */}
-      {!loading && sorted.length > 0 && (
+      {!loading && displayTotal > 0 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid rgba(0,0,0,0.06)", flexWrap: "wrap", gap: "8px" }}>
           <span style={{ fontSize: "0.73rem", color: "#aaa" }}>
-            {sorted.length === data.length
-              ? `${data.length} entrée${data.length > 1 ? "s" : ""} au total`
-              : `${sorted.length} résultat${sorted.length > 1 ? "s" : ""} sur ${data.length}`}
-            {" · "}page {page} / {totalPages}
+            {displayTotal} entrée{displayTotal > 1 ? "s" : ""} au total
+            {" · "}page {page} / {displayTotalPages}
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <PageBtn onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} aria-label="Page précédente">
+            <PageBtn onClick={() => handlePageChange(Math.max(1, page - 1))} disabled={page === 1} aria-label="Page précédente">
               <ChevronLeft size={14} />
             </PageBtn>
             {getPageRange().map((p, i) =>
               p === "…" ? (
                 <span key={`ellipsis-${i}`} style={{ padding: "0 4px", color: "#aaa", fontSize: "0.8rem" }}>…</span>
               ) : (
-                <PageBtn key={p} active={p === page} onClick={() => setPage(p as number)}>{p}</PageBtn>
+                <PageBtn key={p} active={p === page} onClick={() => handlePageChange(p as number)}>{p}</PageBtn>
               )
             )}
-            <PageBtn onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} aria-label="Page suivante">
+            <PageBtn onClick={() => handlePageChange(Math.min(displayTotalPages, page + 1))} disabled={page === displayTotalPages} aria-label="Page suivante">
               <ChevronRight size={14} />
             </PageBtn>
           </div>

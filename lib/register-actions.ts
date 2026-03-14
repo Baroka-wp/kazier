@@ -4,6 +4,8 @@ import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import nodemailer from "nodemailer";
+import { auth } from "@/auth";
+import { getPermissions } from "@/lib/permissions";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -230,10 +232,31 @@ export async function checkDuplicate(
   }
 }
 
+// ── Helper: Vérifier authentification et permissions ─────────────────────────
+
+async function requireTeamManagement() {
+  const session = await auth();
+
+  if (!session?.user) {
+    throw new Error("Non authentifié");
+  }
+
+  const permissions = getPermissions(session.user.role);
+
+  if (!permissions.canManageTeam) {
+    throw new Error("Non autorisé: permissions insuffisantes");
+  }
+
+  return session.user;
+}
+
 // ── Créer un membre ───────────────────────────────────────────────────────────
 
 export async function registerUser(data: RegisterData): Promise<RegisterResult> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireTeamManagement();
+
     const validation = validateData(data);
     if (!validation.valid)
       return { success: false, error: validation.error, field: validation.field };
@@ -321,6 +344,9 @@ export async function updateUser(
   data: RegisterData
 ): Promise<RegisterResult> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireTeamManagement();
+
     const validation = validateData(data);
     if (!validation.valid)
       return { success: false, error: validation.error, field: validation.field };
@@ -413,6 +439,9 @@ export async function deleteUser(
   teamId: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireTeamManagement();
+
     await prisma.users.deleteMany({
       where: { team_id: teamId }
     });

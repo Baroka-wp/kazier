@@ -1,14 +1,103 @@
-import { getRapportsData } from "@/lib/rapports-actions";
+"use client";
+
+import useSWR from "swr";
+import { useState, useMemo } from "react";
 import RapportsTable from "@/components/dashboard/RapportsTable";
 
-export const revalidate = 0;
+type Report = {
+  id: number;
+  full_name: string;
+  role: string;
+  built: string;
+  working_built: string;
+  blocked: string;
+  validated_learning: string;
+  needed_learning: string;
+  tomorrow_build: string;
+  submitted_at: string;
+  project_id: number;
+  project_name: string;
+  project_icon?: string;
+};
 
-export default async function RapportsPage() {
-  const { allReports, roles, projects } = await getRapportsData();
+type ApiResponse = {
+  data: Report[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  roles: string[];
+  projects: Array<{ id: number; name: string }>;
+};
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export default function RapportsPage() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [projectFilter, setProjectFilter] = useState<number | undefined>();
+
+  // Construire l'URL avec les paramètres
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: "10",
+  });
+
+  if (search) params.set("search", search);
+  if (roleFilter) params.set("role", roleFilter);
+  if (projectFilter) params.set("projectId", String(projectFilter));
+
+  const { data, error, mutate } = useSWR<ApiResponse>(
+    `/api/rapports?${params.toString()}`,
+    fetcher,
+    {
+      keepPreviousData: true,
+      dedupingInterval: 500,
+    }
+  );
+
+  const isLoading = !data && !error;
+
+  // Handlers pour les filtres
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setPage(1); // Reset page on search
+  };
+
+  const handleRoleFilter = (value: string) => {
+    setRoleFilter(value);
+    setPage(1);
+  };
+
+  const handleProjectFilter = (value: number | undefined) => {
+    setProjectFilter(value);
+    setPage(1);
+  };
 
   return (
-    <div>
-      <RapportsTable reports={allReports as any} roles={roles} projects={projects} />
-    </div>
+    <RapportsTable
+      reports={data?.data ?? []}
+      roles={data?.roles ?? []}
+      projects={data?.projects ?? []}
+      loading={isLoading}
+      // Pagination
+      onPageChange={handlePageChange}
+      onSearch={handleSearch}
+      totalItems={data?.total ?? 0}
+      totalPages={data?.totalPages ?? 1}
+      currentPage={data?.page ?? 1}
+      // Filtres
+      roleFilter={roleFilter}
+      onRoleFilter={handleRoleFilter}
+      projectFilter={projectFilter}
+      onProjectFilter={handleProjectFilter}
+      // Refresh
+      refreshKey={JSON.stringify({ page, search, roleFilter, projectFilter })}
+    />
   );
 }

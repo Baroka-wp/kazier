@@ -119,7 +119,7 @@ function ViewModal({ project, onClose }: { project: Project; onClose: () => void
         {/* Header */}
         <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <ProjectAvatar name={project.name} icon={project.icon} />
+            <ProjectAvatar name={project.name ?? ""} icon={project.icon} />
             <div>
               <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1A1A1A" }}>
                 {project.name}
@@ -413,7 +413,7 @@ export default function ProjectsTable({ projects: initialProjects }: Props) {
             sortable: true,
             render: (p) => (
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <ProjectAvatar name={p.name} icon={p.icon} />
+                <ProjectAvatar name={p.name ?? ""} icon={p.icon} />
                 <div>
                   <div style={{ fontWeight: 500, fontSize: "0.83rem" }}>
                     {p.name}

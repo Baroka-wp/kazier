@@ -19,14 +19,14 @@ export async function GET() {
     distinct: ['team_id'],
   });
 
-  const submittedIds = submittedToday.map(r => r.team_id).filter(Boolean);
+  const submittedIds = submittedToday.map(r => r.team_id).filter((id): id is number => id !== null);
 
   // Récupère les membres qui n'ont pas soumis aujourd'hui
   const missing = await prisma.teams.findMany({
     where: {
       slack_id: { not: null },
       is_boss: false,
-      id: { notIn: submittedIds },
+      ...(submittedIds.length > 0 ? { id: { notIn: submittedIds } } : {}),
     },
     select: {
       id: true,

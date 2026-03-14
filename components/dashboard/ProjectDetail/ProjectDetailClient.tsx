@@ -89,8 +89,11 @@ export default function ProjectDetailClient({ project }: Props) {
       setLoadingTasks(true);
       (async () => {
         const res = await getTasks();
-        if (res.success && res.tasks) {
+        if ('success' in res && res.success && 'tasks' in res && res.tasks) {
           const projectTasks = res.tasks.filter(t => t.project_id === project.id);
+          setTasks(projectTasks);
+        } else if ('data' in res) {
+          const projectTasks = res.data.filter(t => t.project_id === project.id);
           setTasks(projectTasks);
         }
         setLoadingTasks(false);
@@ -130,7 +133,7 @@ export default function ProjectDetailClient({ project }: Props) {
           setRoles(uniqueRoles);
 
           // Passer le projet courant pour le filtre
-          setProjects([{ id: project.id, name: project.name }]);
+          setProjects([{ id: project.id, name: project.name ?? "" }]);
         }
         setLoadingReports(false);
       })();
@@ -307,15 +310,15 @@ export default function ProjectDetailClient({ project }: Props) {
                             fontWeight: 700,
                           }}
                         >
-                          {member.first_name[0]}
-                          {member.last_name[0]}
+                          {member.first_name?.[0] ?? ''}
+                          {member.last_name?.[0] ?? ''}
                         </div>
                         <div>
                           <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}>
                             {member.full_name}
                           </div>
                           <div style={{ fontSize: "0.7rem", color: "#999" }}>
-                            {member.first_name}
+                            {member.first_name ?? ''}
                           </div>
                         </div>
                       </div>

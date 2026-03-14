@@ -7,15 +7,15 @@ import { revalidatePath } from "next/cache";
 
 export type TeamMember = {
   id: number;
-  first_name: string;
-  last_name: string;
+  first_name: string | null;
+  last_name: string | null;
   full_name: string;
 };
 
 export type Project = {
   id: number;
-  name: string;
-  description: string;
+  name: string | null;
+  description: string | null;
   icon: string | null;
   team_ids: number[];
   team_members?: TeamMember[];
@@ -178,7 +178,7 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
         membersWithSlack.map((m) =>
           sendSlackProjectAssignment({
             slack_id: m.slack_id!,
-            first_name: m.first_name,
+            first_name: m.first_name ?? "",
             project_name: name,
             project_icon: icon || "",
           })
@@ -280,8 +280,8 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
 
     // Fusionner avec les données existantes
     const mergedData: CreateProjectData = {
-      name: data.name ?? existing.name,
-      description: data.description ?? existing.description,
+      name: data.name ?? existing.name ?? "",
+      description: data.description ?? existing.description ?? "",
       icon: data.icon !== undefined ? data.icon : existing.icon,
       team_ids: data.team_ids ?? oldTeamIds,
     };
@@ -321,7 +321,7 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
         newMembers.map((m) =>
           sendSlackProjectAssignment({
             slack_id: m.slack_id!,
-            first_name: m.first_name,
+            first_name: m.first_name ?? "",
             project_name: mergedData.name.trim(),
             project_icon: mergedData.icon || "",
           })
