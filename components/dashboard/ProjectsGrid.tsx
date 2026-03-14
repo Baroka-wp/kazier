@@ -667,72 +667,13 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
   return (
     <>
       <div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
-        {/* Content - Grid or Table view */}
-        {viewMode === "table" ? (
+        {/* Toolbar - Toujours visible */}
+        <div style={{ marginBottom: "24px" }}>
           <DataTable
-            columns={[
-              {
-                key: "name",
-                label: "Projet",
-                sortable: true,
-                render: (p) => (
-                  <div
-                    onClick={() => router.push(`/dashboard/projects/${p.id}`)}
-                    style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
-                  >
-                    <div
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "10px",
-                        background: "rgba(107,26,42,0.1)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "1.2rem",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {(() => {
-                        const IconComp = AVAILABLE_ICONS.find(i => i.id === p.icon)?.component;
-                        return IconComp ? <IconComp size={20} color="#6B1A2A" /> : null;
-                      })()}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 500, fontSize: "0.83rem" }}>{p.name}</div>
-                      <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{p.team_members?.length ?? 0} équipes</div>
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                key: "description",
-                label: "Description",
-                render: (p) => <span style={{ fontSize: "0.8rem", color: "#666" }}>{p.description}</span>,
-              },
-              {
-                key: "team_members",
-                label: "Équipes",
-                render: (p) => (
-                  <span style={{ fontSize: "0.75rem", color: "#aaa" }}>
-                    {p.team_members?.map((m) => m.first_name).join(", ") || "—"}
-                  </span>
-                ),
-              },
-            ]}
-            data={projects}
-            actions={[
-              { icon: "view", label: "Voir", onClick: (p: Project) => router.push(`/dashboard/projects/${p.id}`) },
-              ...(canManageTeam ? [{ icon: "edit" as const, label: "Modifier", onClick: (p: Project) => {
-                setEditMode("update");
-                setEditTarget(p);
-                setIsModalOpen(true);
-              }}] : []),
-              ...(canManageTeam ? [{ icon: "delete" as const, label: "Supprimer", onClick: (p: Project) => setToDelete(p) }] : []),
-            ]}
-            pageSize={10}
+            columns={[]}
+            data={[]}
+            actions={[]}
             searchPlaceholder="Rechercher un projet..."
-            emptyMessage={isEmpty ? "Aucun projet pour le moment. Commencez par en ajouter un !" : "Aucun projet trouvé."}
             filters={
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 {/* Toggle View Mode */}
@@ -845,7 +786,83 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                 )}
               </div>
             }
+            searchable={true}
+            refreshable={false}
+          />
+        </div>
+
+        {/* Content - Grid or Table view */}
+        {viewMode === "table" ? (
+          <DataTable
+            columns={[
+              {
+                key: "name",
+                label: "Projet",
+                sortable: true,
+                render: (p) => (
+                  <div
+                    onClick={() => router.push(`/dashboard/projects/${p.id}`)}
+                    style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
+                  >
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "10px",
+                        background: "rgba(107,26,42,0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "1.2rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {(() => {
+                        const IconComp = AVAILABLE_ICONS.find(i => i.id === p.icon)?.component;
+                        return IconComp ? <IconComp size={20} color="#6B1A2A" /> : null;
+                      })()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 500, fontSize: "0.83rem" }}>{p.name}</div>
+                      <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{p.team_members?.length ?? 0} équipes</div>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "description",
+                label: "Description",
+                render: (p) => <span style={{ fontSize: "0.8rem", color: "#666" }}>{p.description}</span>,
+              },
+              {
+                key: "team_members",
+                label: "Équipes",
+                render: (p) => (
+                  <span style={{ fontSize: "0.75rem", color: "#aaa" }}>
+                    {p.team_members?.map((m) => m.first_name).join(", ") || "—"}
+                  </span>
+                ),
+              },
+            ]}
+            data={projects}
+            actions={[
+              { icon: "view", label: "Voir", onClick: (p: Project) => router.push(`/dashboard/projects/${p.id}`) },
+              ...(canManageTeam ? [{ icon: "edit" as const, label: "Modifier", onClick: (p: Project) => {
+                setEditMode("update");
+                setEditTarget(p);
+                setIsModalOpen(true);
+              }}] : []),
+              ...(canManageTeam ? [{ icon: "delete" as const, label: "Supprimer", onClick: (p: Project) => setToDelete(p) }] : []),
+            ]}
+            pageSize={10}
+            searchPlaceholder="Rechercher un projet..."
+            emptyMessage={isEmpty ? "Aucun projet pour le moment. Commencez par en ajouter un !" : "Aucun projet trouvé."}
             loading={isLoading}
+            onPageChange={undefined}
+            onSearch={undefined}
+            totalItems={undefined}
+            totalPages={undefined}
+            currentPage={undefined}
           />
         ) : projects.length === 0 ? (
           <div
