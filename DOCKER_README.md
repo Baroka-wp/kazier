@@ -43,21 +43,25 @@ L'application sera accessible sur http://localhost:3000
 Avant chaque build Docker, les checks suivants sont automatiquement exécutés :
 
 ### 1. **ESLint** - Vérification du code
+
 ```bash
 npm run lint
 ```
 
 ### 2. **TypeScript** - Vérification des types
+
 ```bash
 npm run type-check
 ```
 
 ### 3. **Prettier** - Vérification du formatage
+
 ```bash
 npm run format:check
 ```
 
 ### 4. **Tous les checks ensemble**
+
 ```bash
 npm run quality
 ```
@@ -120,6 +124,7 @@ npx prisma studio
 ### docker-compose.yml
 
 Services inclus :
+
 - **app** : Application Next.js
 - **db** : PostgreSQL (optionnel pour dev local)
 - **adminer** : Interface web DB (http://localhost:8080)
@@ -127,6 +132,7 @@ Services inclus :
 ## 🔄 CI/CD - GitHub Actions
 
 Le workflow `.github/workflows/ci.yml` s'exécute automatiquement sur :
+
 - Chaque Pull Request vers `main` ou `develop`
 - Chaque push sur `main` ou `develop`
 
@@ -202,10 +208,28 @@ ports:
 - [ESLint](https://eslint.org/docs/latest/)
 - [Prettier](https://prettier.io/docs/en/)
 
+## 🪝 Git Hooks (Automatique)
+
+Un hook Git **pre-commit** est configuré avec Husky pour exécuter automatiquement les quality checks avant chaque commit :
+
+1. **Lint-staged** : ESLint + Prettier sur les fichiers modifiés
+2. **Type-check** : Vérification TypeScript complète
+
+```bash
+# Le hook s'exécute automatiquement à chaque commit
+git commit -m "Mon message"
+
+# Si vous devez bypasser (déconseillé)
+git commit -m "WIP" --no-verify
+```
+
+**Documentation complète** : Voir `.husky/README.md`
+
 ## 🎯 Bonnes pratiques
 
-1. ✅ Toujours exécuter `npm run quality` avant de commit
-2. ✅ Utiliser `npm run format` pour formater le code
-3. ✅ Tester le build Docker localement avant de push
-4. ✅ Vérifier que les tests CI passent sur GitHub
-5. ✅ Garder les images Docker légères (utiliser .dockerignore)
+1. ✅ Le hook pre-commit s'exécute automatiquement (pas besoin de lancer manuellement)
+2. ✅ Utiliser `npm run format` pour formater tout le code d'un coup
+3. ✅ Corriger les erreurs ESLint avec `npm run lint:fix`
+4. ✅ Tester le build Docker localement avant de push
+5. ✅ Vérifier que les tests CI passent sur GitHub
+6. ✅ Garder les images Docker légères (utiliser .dockerignore)
