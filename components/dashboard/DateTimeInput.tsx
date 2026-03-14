@@ -38,19 +38,10 @@ export default function DateTimeInput({ value, onChange, placeholder }: Props) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = fromDateTimeLocal(e.target.value);
-    console.log("[DateTimeInput] handleChange:", {
-      raw: e.target.value,
-      converted: newValue,
-    });
     onChange(newValue);
   };
 
   const inputValue = toDateTimeLocal(value);
-
-  console.log("[DateTimeInput] render:", {
-    value,
-    inputValue,
-  });
 
   return (
     <div
