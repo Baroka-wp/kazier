@@ -621,7 +621,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
   const [toDelete, setToDelete] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
 
   const { canManageTeam, canViewTeam } = usePermissions();
 
