@@ -15,8 +15,8 @@ async function requireTeamManagement() {
     throw new Error("Non authentifié");
   }
 
-  const userRole = (session.user as any).role as string | null | undefined;
-  const permissions = getPermissions(userRole);
+  const userRole = (session.user as { role?: string }).role;
+  const permissions = getPermissions(userRole ?? null);
 
   if (!permissions.canManageTeam) {
     throw new Error("Non autorisé: permissions insuffisantes");

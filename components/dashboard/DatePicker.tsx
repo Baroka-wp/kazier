@@ -81,9 +81,14 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
   // Sync state when value prop changes externally
   useEffect(() => {
     const parsed = parseDateTime(value);
-    setSelectedDate(parsed.date);
-    setSelectedHour(parsed.hour);
-    setSelectedMinute(parsed.minute);
+    const newDate = parsed.date;
+    const newHour = parsed.hour;
+    const newMinute = parsed.minute;
+
+    // Update state in a batch to avoid cascading renders
+    if (newDate !== selectedDate) setSelectedDate(newDate);
+    if (newHour !== selectedHour) setSelectedHour(newHour);
+    if (newMinute !== selectedMinute) setSelectedMinute(newMinute);
   }, [value]);
 
   useEffect(() => {

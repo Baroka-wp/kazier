@@ -606,7 +606,7 @@ function ProjectCard({ project, onEdit, onDelete, canManage, onClick }: {
   canManage: boolean;
   onClick: () => void;
 }) {
-  const IconComponent = getIconComponent(project.icon);
+  const iconId = project.icon;
 
   return (
     <div
@@ -637,29 +637,32 @@ function ProjectCard({ project, onEdit, onDelete, canManage, onClick }: {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
-          {IconComponent ? (
-            <div style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "10px",
-              background: "rgba(107,26,42,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#6B1A2A",
-              flexShrink: 0,
-            }}>
-              <IconComponent size={24} />
-            </div>
-          ) : (
-            <div style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "10px",
-              background: "#F5F2ED",
-              flexShrink: 0,
-            }} />
-          )}
+          {(() => {
+            const IconComp = getIconComponent(iconId);
+            return IconComp ? (
+              <div style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "10px",
+                background: "rgba(107,26,42,0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#6B1A2A",
+                flexShrink: 0,
+              }}>
+                <IconComp size={24} />
+              </div>
+            ) : (
+              <div style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "10px",
+                background: "#F5F2ED",
+                flexShrink: 0,
+              }} />
+            );
+          })()}
           <div style={{ minWidth: 0 }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#1A1A1A", marginBottom: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {project.name}
