@@ -2,6 +2,27 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import { getPermissions } from "@/lib/permissions";
+
+// ── Helper: Vérifier authentification et permissions ─────────────────────────
+
+async function requireReportPermission(permission: 'canEditReports' | 'canDeleteReports') {
+  const session = await auth();
+
+  if (!session?.user) {
+    throw new Error("Non authentifié");
+  }
+
+  const userRole = (session.user as any).role as string | null | undefined;
+  const permissions = getPermissions(userRole);
+
+  if (!permissions[permission]) {
+    throw new Error("Non autorisé: permissions insuffisantes");
+  }
+
+  return session.user;
+}
 
 export type Report = {
   id: number;
@@ -22,6 +43,9 @@ export type Report = {
 
 export async function deleteReport(id: number): Promise<{ success: boolean; error?: string }> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireReportPermission('canDeleteReports');
+
     await prisma.rapports.delete({
       where: { id }
     });
@@ -46,6 +70,9 @@ export async function updateReport(
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireReportPermission('canEditReports');
+
     // Filtrer les champs définis
     const updateData: any = {};
     if (data.work_built !== undefined) updateData.work_built = data.work_built;

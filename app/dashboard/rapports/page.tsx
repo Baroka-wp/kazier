@@ -48,16 +48,18 @@ export default function RapportsPage() {
   if (roleFilter) params.set("role", roleFilter);
   if (projectFilter) params.set("projectId", String(projectFilter));
 
-  const { data, error, mutate } = useSWR<ApiResponse>(
+  const { data, error } = useSWR<ApiResponse>(
     `/api/rapports?${params.toString()}`,
     fetcher,
     {
-      keepPreviousData: true,
-      dedupingInterval: 500,
+      dedupingInterval: 1000,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
     }
   );
 
   const isLoading = !data && !error;
+  const isEmpty = !isLoading && (!data?.data || data.data.length === 0);
 
   // Handlers pour les filtres
   const handlePageChange = (newPage: number) => {
@@ -85,6 +87,7 @@ export default function RapportsPage() {
       roles={data?.roles ?? []}
       projects={data?.projects ?? []}
       loading={isLoading}
+      isEmpty={isEmpty}
       // Pagination
       onPageChange={handlePageChange}
       onSearch={handleSearch}
@@ -96,8 +99,6 @@ export default function RapportsPage() {
       onRoleFilter={handleRoleFilter}
       projectFilter={projectFilter}
       onProjectFilter={handleProjectFilter}
-      // Refresh
-      refreshKey={JSON.stringify({ page, search, roleFilter, projectFilter })}
     />
   );
 }

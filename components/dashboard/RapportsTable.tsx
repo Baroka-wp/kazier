@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { FileDown, X, ChevronDown, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Folder } from "lucide-react";
+import { useSWRConfig } from "swr";
 import DataTable from "@/components/dashboard/DataTable";
 import { deleteReport, updateReport } from "@/lib/report-actions";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -44,6 +45,7 @@ type Props = {
   roles: string[];
   projects: Array<{ id: number; name: string }>;
   loading?: boolean;
+  isEmpty?: boolean;
   // Pagination serveur
   onPageChange?: (page: number) => void;
   onSearch?: (search: string) => void;
@@ -55,7 +57,6 @@ type Props = {
   onRoleFilter?: (role: string) => void;
   projectFilter?: number | undefined;
   onProjectFilter?: (projectId: number | undefined) => void;
-  refreshKey?: string;
 };
 
 type Toast = { id: number; type: "success" | "error"; message: string };
@@ -448,6 +449,7 @@ export default function RapportsTable({
   roles,
   projects,
   loading: loadingProp,
+  isEmpty,
   onPageChange,
   onSearch,
   totalItems,
@@ -467,6 +469,7 @@ export default function RapportsTable({
   const [saving, setSaving] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  const { mutate } = useSWRConfig();
   const { canEditReports, canDeleteReports } = usePermissions();
 
   // Utiliser les filtres externes (serveur) ou locaux
@@ -487,7 +490,8 @@ export default function RapportsTable({
     setToDelete(null);
     if (results.every(r => r.success)) {
       addToast("success", `${reportIds.length > 1 ? `${reportIds.length} rapports supprimés` : "Rapport supprimé"} pour ${toDelete.full_name}.`);
-      // Le refresh SWR se fera automatiquement
+      // ✅ Refresh via SWR
+      await mutate((key) => typeof key === 'string' && key.includes('/api/rapports'));
     } else {
       addToast("error", "Erreur lors de la suppression.");
     }
@@ -507,7 +511,8 @@ export default function RapportsTable({
     if (result.success) {
       addToast("success", `Rapport modifié.`);
       setEditing(null);
-      // Le refresh SWR se fera automatiquement
+      // ✅ Refresh via SWR
+      await mutate((key) => typeof key === 'string' && key.includes('/api/rapports'));
     } else {
       addToast("error", result.error ?? "Erreur lors de la modification.");
     }
@@ -598,7 +603,7 @@ export default function RapportsTable({
         ]}
         pageSize={10}
         searchPlaceholder="Rechercher un membre..."
-        emptyMessage="Aucun rapport trouvé."
+        emptyMessage={isEmpty ? "Aucun rapport pour le moment." : "Aucun rapport trouvé."}
         filters={filterSlot}
         loading={loadingProp}
         // Pagination serveur

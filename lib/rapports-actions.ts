@@ -1,6 +1,27 @@
 "use server";
 
 import { prisma } from "./prisma";
+import { auth } from "@/auth";
+import { getPermissions } from "@/lib/permissions";
+
+// ── Helper: Vérifier authentification et permissions ─────────────────────────
+
+async function requireReportPermission(permission: 'canEditReports' | 'canDeleteReports') {
+  const session = await auth();
+
+  if (!session?.user) {
+    throw new Error("Non authentifié");
+  }
+
+  const userRole = (session.user as any).role as string | null | undefined;
+  const permissions = getPermissions(userRole);
+
+  if (!permissions[permission]) {
+    throw new Error("Non autorisé: permissions insuffisantes");
+  }
+
+  return session.user;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
