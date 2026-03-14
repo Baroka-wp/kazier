@@ -114,64 +114,6 @@ function MemberAvatar({ name }: { name: string }) {
   );
 }
 
-// ── Modal View ────────────────────────────────────────────────────────────────
-
-function ViewModal({ project, onClose }: { project: Project; onClose: () => void }) {
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "20px", width: "100%", maxWidth: "460px", overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.15)", animation: "popIn 0.2s ease" }}>
-
-        {/* Header */}
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "10px",
-              background: "rgba(107,26,42,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#6B1A2A",
-              flexShrink: 0,
-            }}>
-              {(() => {
-                const IconComp = AVAILABLE_ICONS.find(i => i.id === project.icon)?.component;
-                return IconComp ? <IconComp size={24} /> : null;
-              })()}
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1A1A1A" }}>
-                {project.name}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>
-                {project.team_members?.length ?? 0} équipes
-              </div>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ width: "30px", height: "30px", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.08)", background: "#F5F2ED", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#888" }}>
-            <X size={14} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div style={{ padding: "18px 24px 22px" }}>
-          {[
-            { label: "Description", value: project.description },
-            { label: "Équipes", value: project.team_members?.map(m => m.full_name).join(", ") || "Aucune" },
-            { label: "Icône", value: project.icon || "—" },
-          ].map(({ label, value }) => (
-            <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", gap: "16px" }}>
-              <span style={{ fontSize: "0.72rem", color: "#999" }}>{label}</span>
-              <span style={{ fontSize: "0.83rem", color: "#1A1A1A", fontWeight: 500 }}>{value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Modal Edit / Create avec Sélection Icônes ────────────────────────────────
 
 function EditModal({ mode, project, teams, onClose, onSaved }: {
@@ -673,7 +615,6 @@ function ProjectCard({ project, onEdit, onDelete, canManage, onClick }: {
 export default function ProjectsGrid({ projects: initialProjects }: Props) {
   const router = useRouter();
   const [teams, setTeams] = useState<TeamMember[]>([]);
-  const [selected, setSelected] = useState<Project | null>(null);
   const [editTarget, setEditTarget] = useState<Project | null>(null);
   const [editMode, setEditMode] = useState<EditMode>("update");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -901,7 +842,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
             ]}
             data={projects}
             actions={[
-              { icon: "view", label: "Voir", onClick: (p: Project) => setSelected(p) },
+              { icon: "view", label: "Voir", onClick: (p: Project) => router.push(`/dashboard/projects/${p.id}`) },
               ...(canManageTeam ? [{ icon: "edit" as const, label: "Modifier", onClick: (p: Project) => {
                 setEditMode("update");
                 setEditTarget(p);
@@ -978,14 +919,6 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
           </div>
         )}
       </div>
-
-      {/* Modal View */}
-      {selected && (
-        <ViewModal
-          project={selected}
-          onClose={() => setSelected(null)}
-        />
-      )}
 
       {/* Modal Edit */}
       {isModalOpen && (
