@@ -6,7 +6,7 @@ import { X, AlertTriangle, Plus, CheckCircle2, XCircle, MoreVertical, Database, 
 import { createProject, updateProject, deleteProject, getTeams, type Project, type TeamMember } from "@/lib/project-actions";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useRouter } from "next/navigation";
-import ProjectsTable from "@/components/dashboard/ProjectsTable";
+import DataTable from "@/components/dashboard/DataTable";
 
 // ── Icons disponibles ────────────────────────────────────────────────────────
 
@@ -615,6 +615,7 @@ function ProjectCard({ project, onEdit, onDelete, canManage, onClick }: {
 export default function ProjectsGrid({ projects: initialProjects }: Props) {
   const router = useRouter();
   const [teams, setTeams] = useState<TeamMember[]>([]);
+  const [selected, setSelected] = useState<Project | null>(null);
   const [editTarget, setEditTarget] = useState<Project | null>(null);
   const [editMode, setEditMode] = useState<EditMode>("update");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -789,11 +790,96 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
 
         {/* Content - Grid or Table view */}
         {viewMode === "table" ? (
-          <ProjectsTable
-            projects={projects}
+          <DataTable
+            columns={[
+              {
+                key: "name",
+                label: "Projet",
+                sortable: true,
+                render: (p) => (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "10px",
+                        background: "rgba(107,26,42,0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "1.2rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {(() => {
+                        const IconComp = AVAILABLE_ICONS.find(i => i.id === p.icon)?.component;
+                        return IconComp ? <IconComp size={20} color="#6B1A2A" /> : null;
+                      })()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 500, fontSize: "0.83rem" }}>{p.name}</div>
+                      <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{p.team_members?.length ?? 0} équipes</div>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "description",
+                label: "Description",
+                render: (p) => <span style={{ fontSize: "0.8rem", color: "#666" }}>{p.description}</span>,
+              },
+              {
+                key: "team_members",
+                label: "Équipes",
+                render: (p) => (
+                  <span style={{ fontSize: "0.75rem", color: "#aaa" }}>
+                    {p.team_members?.map((m) => m.first_name).join(", ") || "—"}
+                  </span>
+                ),
+              },
+            ]}
+            data={projects}
+            actions={[
+              { icon: "view", label: "Voir", onClick: (p: Project) => setSelected(p) },
+              ...(canManageTeam ? [{ icon: "edit" as const, label: "Modifier", onClick: (p: Project) => {
+                setEditMode("update");
+                setEditTarget(p);
+                setIsModalOpen(true);
+              }}] : []),
+              ...(canManageTeam ? [{ icon: "delete" as const, label: "Supprimer", onClick: (p: Project) => setToDelete(p) }] : []),
+            ]}
+            pageSize={10}
+            searchPlaceholder="Rechercher un projet..."
+            emptyMessage={isEmpty ? "Aucun projet pour le moment. Commencez par en ajouter un !" : "Aucun projet trouvé."}
+            filters={
+              canManageTeam && (
+                <button
+                  onClick={() => {
+                    setEditMode("create");
+                    setIsModalOpen(true);
+                    setEditTarget(null);
+                  }}
+                  style={{
+                    marginLeft: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: "#6B1A2A",
+                    color: "white",
+                    fontSize: "0.82rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  <Plus size={14} /> Ajouter projet
+                </button>
+              )
+            }
             loading={isLoading}
-            isEmpty={isEmpty}
-            onRefresh={() => mutate()}
           />
         ) : projects.length === 0 ? (
           <div
@@ -831,6 +917,14 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
           </div>
         )}
       </div>
+
+      {/* Modal View */}
+      {selected && (
+        <ViewModal
+          project={selected}
+          onClose={() => setSelected(null)}
+        />
+      )}
 
       {/* Modal Edit */}
       {isModalOpen && (
