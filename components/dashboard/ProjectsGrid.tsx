@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import useSWR from "swr";
 import { X, AlertTriangle, Plus, CheckCircle2, XCircle, MoreVertical, Database, Settings, Users, Zap, Briefcase, BarChart3, Target, Lock, Layers, Cpu, Workflow, Boxes } from "lucide-react";
 import { createProject, updateProject, deleteProject, getTeams, type Project, type TeamMember } from "@/lib/project-actions";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -26,7 +27,7 @@ const AVAILABLE_ICONS = [
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Props = {
-  projects: Project[];
+  projects?: Project[]; // Optionnel avec SWR
 };
 
 type Toast = {
@@ -36,6 +37,8 @@ type Toast = {
 };
 
 type EditMode = "create" | "update";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 // ── Helper: Get icon component ───────────────────────────────────────────────
 
@@ -610,15 +613,23 @@ function ProjectCard({ project, onEdit, onDelete, canManage, onClick }: {
 
 export default function ProjectsGrid({ projects: initialProjects }: Props) {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [teams, setTeams] = useState<TeamMember[]>([]);
   const [editTarget, setEditTarget] = useState<Project | null>(null);
   const [editMode, setEditMode] = useState<EditMode>("update");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const { canManageTeam, canViewTeam } = usePermissions();
+
+  // SWR pour fetch les projets
+  const { data, error, mutate } = useSWR<{ data: Project[] }>('/api/projects', fetcher, {
+    dedupingInterval: 500,
+  });
+
+  const projects = data?.data ?? initialProjects ?? [];
+  const isLoading = !data && !error;
 
   // Charger les équipes au montage
   useEffect(() => {
@@ -642,7 +653,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
     const res = await deleteProject(toDelete.id);
     setDeleting(false);
     if (res.success) {
-      setProjects(prev => prev.filter(p => p.id !== toDelete.id));
+      await mutate(); // ✅ Refresh via SWR
       addToast("success", `Projet "${toDelete.name}" supprimé.`);
       setToDelete(null);
     } else {
@@ -665,7 +676,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
           </div>
           {canManageTeam && (
             <button
-              onClick={() => { setEditMode("create"); setEditTarget(null); }}
+              onClick={() => { setEditMode("create"); setIsModalOpen(true); }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -706,7 +717,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
               <ProjectCard
                 key={project.id}
                 project={project}
-                onEdit={(p) => { setEditMode("update"); setEditTarget(p); }}
+                onEdit={(p) => { setEditMode("update"); setEditTarget(p); setIsModalOpen(true); }}
                 onDelete={(p) => setToDelete(p)}
                 canManage={canManageTeam}
                 onClick={() => router.push(`/dashboard/projects/${project.id}`)}
@@ -717,20 +728,20 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
       </div>
 
       {/* Modal Edit */}
-      {(editMode === "create" || editTarget) && (
+      {isModalOpen && (
         <EditModal
           mode={editMode}
           project={editTarget}
           teams={teams}
-          onClose={() => { setEditTarget(null); setEditMode("update"); }}
-          onSaved={(updated, created) => {
+          onClose={() => { setIsModalOpen(false); setEditTarget(null); setEditMode("update"); }}
+          onSaved={async (updated, created) => {
             if (created) {
-              setProjects(prev => [updated, ...prev]);
               addToast("success", `"${updated.name}" ajouté.`);
             } else {
-              setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
               addToast("success", `"${updated.name}" mis à jour.`);
             }
+            setIsModalOpen(false);
+            await mutate(); // ✅ Refresh via SWR
           }}
         />
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { useState } from "react";
 import TasksTable from "@/components/dashboard/TasksTable/";
 
@@ -33,6 +33,7 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
+  const { mutate } = useSWRConfig();
 
   const params = new URLSearchParams({
     page: String(page),
@@ -43,21 +44,30 @@ export default function TasksPage() {
   if (statusFilter) params.set("status", statusFilter);
   if (priorityFilter) params.set("priority", priorityFilter);
 
-  const { data, error } = useSWR<ApiResponse>(
+  const { data, error, mutate: refreshSWR } = useSWR<ApiResponse>(
     `/api/tasks?${params.toString()}`,
     fetcher,
     {
-      keepPreviousData: true,
-      dedupingInterval: 500,
+      dedupingInterval: 1000,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
     }
   );
 
   const isLoading = !data && !error;
+  const isEmpty = !isLoading && (!data?.data || data.data.length === 0);
+
+  // Fonction de refresh pour les tâches CRUD
+  const refreshTasks = async () => {
+    await refreshSWR();
+  };
 
   return (
     <TasksTable
       tasks={data?.data ?? []}
       loading={isLoading}
+      isEmpty={isEmpty}
+      onRefresh={refreshTasks}
       // Pagination
       onPageChange={setPage}
       onSearch={setSearch}

@@ -28,6 +28,8 @@ import { FilterSlot } from "./Filters";
 type Props = {
   tasks: Task[];
   loading?: boolean;
+  isEmpty?: boolean;
+  onRefresh?: () => void;
   // Pagination serveur
   onPageChange?: (page: number) => void;
   onSearch?: (search: string) => void;
@@ -376,6 +378,8 @@ function formatDeadline(raw: string | null): string {
 export default function TasksTable({
   tasks: initialTasks,
   loading: loadingProp,
+  isEmpty,
+  onRefresh,
   onPageChange,
   onSearch,
   totalItems,
@@ -386,7 +390,6 @@ export default function TasksTable({
   priorityFilter: priorityFilterProp,
   onPriorityFilter,
 }: Props) {
-  const [tasks] = useState<Task[]>(initialTasks);
   const [teams, setTeams] = useState<TeamMember[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [editTarget, setEditTarget] = useState<Task | null>(null);
@@ -413,8 +416,8 @@ export default function TasksTable({
     })();
   }, []);
 
-  // Pas de filtrage client pour pagination serveur
-  const filtered = tasks;
+  // Pour pagination serveur, on utilise directement les tâches passées en props
+  // Le filtrage est géré côté serveur via les params API
 
   function addToast(type: Toast["type"], message: string) {
     const id = Date.now();
@@ -433,7 +436,8 @@ export default function TasksTable({
     if (res.success) {
       addToast("success", `Tâche "${toDelete.title}" supprimée.`);
       setToDelete(null);
-      // Le refresh SWR se fera automatiquement
+      // ✅ Refresh via onRefresh
+      await onRefresh?.();
     } else {
       addToast("error", res.error ?? "Erreur lors de la suppression.");
     }
@@ -534,11 +538,11 @@ export default function TasksTable({
             ),
           },
         ]}
-        data={filtered}
+        data={initialTasks}
         actions={actions}
         pageSize={10}
         searchPlaceholder="Rechercher une tâche..."
-        emptyMessage="Aucune tâche trouvée."
+        emptyMessage={isEmpty ? "Aucune tâche pour le moment. Commencez par en créer une !" : "Aucune tâche trouvée."}
         filters={filterSlot}
         loading={loadingProp}
         // Pagination serveur
@@ -559,13 +563,14 @@ export default function TasksTable({
             setEditTarget(null);
             setEditMode("update");
           }}
-          onSaved={(updated, created) => {
+          onSaved={async (updated, created) => {
             if (created) {
               addToast("success", `"${updated.title}" ajoutée.`);
             } else {
               addToast("success", `"${updated.title}" mise à jour.`);
             }
-            // Le refresh SWR se fera automatiquement
+            // ✅ Refresh via onRefresh
+            await onRefresh?.();
           }}
         />
       )}

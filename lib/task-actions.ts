@@ -3,6 +3,27 @@
 import { prisma } from "./prisma";
 import { notifyTaskAssigned } from "./notify-task";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import { getPermissions } from "@/lib/permissions";
+
+// ── Helper: Vérifier authentification et permissions ─────────────────────────
+
+async function requireTeamManagement() {
+  const session = await auth();
+
+  if (!session?.user) {
+    throw new Error("Non authentifié");
+  }
+
+  const userRole = (session.user as any).role as string | null | undefined;
+  const permissions = getPermissions(userRole);
+
+  if (!permissions.canManageTeam) {
+    throw new Error("Non autorisé: permissions insuffisantes");
+  }
+
+  return session.user;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -109,8 +130,29 @@ function validateTask(data: CreateTaskData): { valid: true } | { valid: false; e
 
 export async function createTask(data: CreateTaskData): Promise<TaskResult> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireTeamManagement();
+
     const validation = validateTask(data);
     if (!validation.valid) return { success: false, error: validation.error };
+
+    // Convertir due_date en format ISO-8601 valide pour Prisma
+    let dueDate: Date | null = null;
+    if (data.due_date) {
+      // Format attendu: "YYYY-MM-DD HH:MM"
+      const match = data.due_date.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/);
+      if (match) {
+        const [, datePart, timePart] = match;
+        const [year, month, day] = datePart.split("-").map(Number);
+        const [hour, minute] = timePart.split(":").map(Number);
+        dueDate = new Date(year, month - 1, day, hour, minute);
+      } else {
+        dueDate = new Date(data.due_date);
+      }
+      if (isNaN(dueDate.getTime())) {
+        dueDate = null;
+      }
+    }
 
     const task = await prisma.tasks.create({
       data: {
@@ -120,7 +162,7 @@ export async function createTask(data: CreateTaskData): Promise<TaskResult> {
         priority: data.priority || "medium",
         project_id: data.project_id || null,
         assigned_to: data.assigned_to || [],
-        due_date: data.due_date || null,
+        due_date: dueDate,
       }
     });
 
@@ -233,6 +275,9 @@ export async function getTasks(params?: PaginationParams): Promise<PaginatedResu
 
 export async function updateTask(id: number, data: UpdateTaskData): Promise<TaskResult> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireTeamManagement();
+
     const existing = await prisma.tasks.findUnique({
       where: { id }
     });
@@ -251,6 +296,23 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
     const validation = validateTask(mergedData);
     if (!validation.valid) return { success: false, error: validation.error };
 
+    // Convertir due_date en format ISO-8601 valide pour Prisma
+    let dueDate: Date | null = null;
+    if (mergedData.due_date) {
+      const match = mergedData.due_date.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/);
+      if (match) {
+        const [, datePart, timePart] = match;
+        const [year, month, day] = datePart.split("-").map(Number);
+        const [hour, minute] = timePart.split(":").map(Number);
+        dueDate = new Date(year, month - 1, day, hour, minute);
+      } else {
+        dueDate = new Date(mergedData.due_date);
+      }
+      if (isNaN(dueDate.getTime())) {
+        dueDate = null;
+      }
+    }
+
     const updated = await prisma.tasks.update({
       where: { id },
       data: {
@@ -260,7 +322,7 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
         priority: mergedData.priority!,
         project_id: mergedData.project_id ?? null,
         assigned_to: mergedData.assigned_to || [],
-        due_date: mergedData.due_date ?? null,
+        due_date: dueDate,
       }
     });
 
@@ -293,6 +355,9 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
 
 export async function deleteTask(id: number): Promise<{ success: boolean; error?: string }> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireTeamManagement();
+
     await prisma.tasks.delete({
       where: { id }
     });

@@ -2,6 +2,27 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import { getPermissions } from "@/lib/permissions";
+
+// ── Helper: Vérifier authentification et permissions ─────────────────────────
+
+async function requireTeamManagement() {
+  const session = await auth();
+
+  if (!session?.user) {
+    throw new Error("Non authentifié");
+  }
+
+  const userRole = (session.user as any).role as string | null | undefined;
+  const permissions = getPermissions(userRole);
+
+  if (!permissions.canManageTeam) {
+    throw new Error("Non autorisé: permissions insuffisantes");
+  }
+
+  return session.user;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,6 +54,22 @@ export type UpdateProjectData = Partial<CreateProjectData>;
 export type ProjectResult =
   | { success: true; project: Project }
   | { success: false; error: string };
+
+// ── Types pour la pagination ──────────────────────────────────────────────────
+
+export type PaginationParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+};
+
+export type PaginatedResult<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
 
 // ── Slack : notifier un membre ajouté à un projet ─────────────────────────────
 
@@ -141,6 +178,9 @@ async function populateTeamMembers(team_ids: number[]): Promise<TeamMember[]> {
 
 export async function createProject(data: CreateProjectData): Promise<ProjectResult> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireTeamManagement();
+
     const validation = validateProject(data);
     if (!validation.valid)
       return { success: false, error: validation.error };
@@ -237,8 +277,9 @@ export async function getProject(id: number): Promise<ProjectResult> {
 
 // ── READ (GET ALL) ────────────────────────────────────────────────────────────
 
-export async function getProjects(): Promise<{ success: boolean; projects?: Project[]; error?: string }> {
-  try {
+export async function getProjects(params?: PaginationParams): Promise<PaginatedResult<Project> | { success: boolean; projects?: Project[]; error?: string }> {
+  // Si pas de params, retourner l'ancienne version pour compatibilité
+  if (!params) {
     const projects = await prisma.project.findMany({
       orderBy: { id: 'desc' }
     });
@@ -258,16 +299,63 @@ export async function getProjects(): Promise<{ success: boolean; projects?: Proj
     );
 
     return { success: true, projects: typedProjects };
-  } catch (err: any) {
-    console.error("[getProjects]", err);
-    return { success: false, error: "Erreur lors de la récupération des projets." };
   }
+
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 10;
+  const search = params.search;
+
+  // Construire les filtres WHERE
+  const where: any = {};
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' as const } },
+      { description: { contains: search, mode: 'insensitive' as const } },
+    ];
+  }
+
+  // Récupérer le total
+  const total = await prisma.project.count({ where });
+
+  // Récupérer les projets paginés
+  const projects = await prisma.project.findMany({
+    where,
+    orderBy: { id: 'desc' },
+    skip: (page - 1) * limit,
+    take: limit
+  });
+
+  const typedProjects: Project[] = await Promise.all(
+    projects.map(async (p) => {
+      const members = await populateTeamMembers(p.team_ids);
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        icon: p.icon,
+        team_ids: p.team_ids,
+        team_members: members,
+      };
+    })
+  );
+
+  return {
+    data: typedProjects,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
 }
 
 // ── UPDATE ────────────────────────────────────────────────────────────────────
 
 export async function updateProject(id: number, data: UpdateProjectData): Promise<ProjectResult> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireTeamManagement();
+
     // Récupérer le projet actuel
     const existing = await prisma.project.findUnique({
       where: { id }
@@ -354,6 +442,9 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
 
 export async function deleteProject(id: number): Promise<{ success: boolean; error?: string }> {
   try {
+    // ✅ Vérifier authentification et permissions
+    await requireTeamManagement();
+
     await prisma.project.delete({
       where: { id }
     });
