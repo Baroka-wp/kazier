@@ -11,7 +11,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Mot de passe", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         // Récupérer l'utilisateur avec son équipe
         const user = await prisma.users.findFirst({
           where: {
@@ -38,7 +38,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const fullName = `${user.team?.first_name ?? ""} ${user.team?.last_name ?? ""}`.trim();
 
         return {
-          id: String(user.id), // ✅ ID en string
+          id: String(user.id),
           email: user.email,
           name: fullName || user.email,
           role: user.role,
@@ -50,7 +50,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    // Stocker toutes les infos dans le JWT
     async jwt({ token, user }) {
       if (user) {
         const customUser = user as {
@@ -61,7 +60,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           last_name?: string;
           name?: string;
         };
-        token.id = customUser.id; // ✅ Ajouter l'ID
+        token.id = customUser.id;
         token.role = customUser.role;
         token.team_id = customUser.team_id;
         token.first_name = customUser.first_name;
@@ -70,7 +69,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return token;
     },
-    // Exposer toutes les infos dans la session
     async session({ session, token }) {
       if (session.user) {
         type ExtendedUser = {
@@ -80,7 +78,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           first_name?: string;
           last_name?: string;
         };
-        (session.user as ExtendedUser).id = token.id as string; // ✅ Ajouter l'ID
+        (session.user as ExtendedUser).id = token.id as string;
         (session.user as ExtendedUser).role = token.role as string;
         (session.user as ExtendedUser).team_id = token.team_id as number;
         (session.user as ExtendedUser).first_name = token.first_name as string;
@@ -93,19 +91,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login",
   },
-  // Configuration pour HTTPS/Cloudflare
   trustHost: true,
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true, // ✅ Important pour HTTPS
-      },
-    },
-  },
-  // Debug en prod pour voir les erreurs
-  debug: process.env.NODE_ENV === "development",
 });
