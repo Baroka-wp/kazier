@@ -1,34 +1,19 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { auth } from "@/auth";
 
-export function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-  const isDashboard = pathname.startsWith("/dashboard");
-
-  // Vérifier si l'utilisateur est authentifié via le JWT NextAuth
-  // NextAuth v5 peut utiliser différents noms de cookies selon HTTP/HTTPS
-  const sessionToken =
-    request.cookies.get("authjs.session-token")?.value ||
-    request.cookies.get("__Secure-authjs.session-token")?.value ||
-    request.cookies.get("__Host-authjs.session-token")?.value;
-  const isLoggedIn = !!sessionToken;
+export default auth((req) => {
+  const isLoggedIn = !!req.auth;
+  const isDashboard = req.nextUrl.pathname.startsWith("/dashboard");
 
   // ── Non authentifié et tente d'accéder au dashboard ─────────────────────
   if (!isLoggedIn && isDashboard) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", "/dashboard");
-    return NextResponse.redirect(loginUrl);
+    const loginUrl = new URL("/login", req.nextUrl.origin);
+    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    return Response.redirect(loginUrl);
   }
 
-  // ── Authentifié et sur le dashboard ──────────────────────────────────────
-  if (isLoggedIn && isDashboard) {
-    // Récupérer le rôle depuis le cookie JWT (décodage basique)
-    // Pour une vérification complète du rôle, utiliser auth() dans un Server Component
-    return NextResponse.next();
-  }
-
-  return NextResponse.next();
-}
+  // L'utilisateur est authentifié ou n'accède pas au dashboard
+  return;
+});
 
 export const config = {
   matcher: ["/dashboard/:path*"],
