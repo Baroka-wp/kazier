@@ -64,10 +64,10 @@ export async function requestPasswordReset(email: string): Promise<{
     const resetUrl = `${process.env.AUTH_URL || "http://localhost:3000"}/reset-password?token=${token}`;
 
     // Vérifier les variables d'environnement
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    if (!process.env.BREVO_SMTP_USER || !process.env.BREVO_SMTP_PASSWORD) {
       console.error("[requestPasswordReset] Variables d'env manquantes:", {
-        hasUser: !!process.env.GMAIL_USER,
-        hasPass: !!process.env.GMAIL_APP_PASSWORD,
+        hasUser: !!process.env.BREVO_SMTP_USER,
+        hasPass: !!process.env.BREVO_SMTP_PASSWORD,
       });
       return {
         success: false,
@@ -76,15 +76,17 @@ export async function requestPasswordReset(email: string): Promise<{
     }
 
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp-relay.brevo.com",
+      port: 587,
+      secure: false,
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user: process.env.BREVO_SMTP_USER,
+        pass: process.env.BREVO_SMTP_PASSWORD,
       },
     });
 
     await transporter.sendMail({
-      from: `"Africa Samurai" <${process.env.GMAIL_USER}>`,
+      from: `"Africa Samurai" <${process.env.BREVO_SMTP_USER}>`,
       to: normalized,
       subject: "🔐 Réinitialisation de votre mot de passe",
       html: `
