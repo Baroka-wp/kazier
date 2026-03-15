@@ -4,6 +4,7 @@ import { prisma } from "./lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     Credentials({
       credentials: {
@@ -92,6 +93,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login",
   },
-  // Configuration pour éviter les problèmes d'IP locale
+  // Configuration pour HTTPS/Cloudflare
   trustHost: true,
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: true, // ✅ Important pour HTTPS
+      },
+    },
+  },
+  // Debug en prod pour voir les erreurs
+  debug: process.env.NODE_ENV === "development",
 });
