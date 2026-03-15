@@ -126,15 +126,23 @@ Ajoutez les secrets suivants:
 | Secret                 | Valeur                                        | Comment générer              |
 | ---------------------- | --------------------------------------------- | ---------------------------- |
 | `DATABASE_URL`         | `postgresql://kazier:PASSWORD@db:5432/kazier` | Remplacer PASSWORD           |
-| `NEXTAUTH_SECRET`      | `...`                                         | `openssl rand -base64 32`    |
-| `NEXTAUTH_URL`         | `http://204.168.150.89:3000`                  | URL publique de l'app        |
+| `AUTH_SECRET`          | `...`                                         | `openssl rand -base64 32`    |
+| `AUTH_URL`             | `https://team.irotoribaroka.com`              | URL publique de l'app        |
 | `SLACK_BOT_TOKEN`      | `xoxb-...`                                    | Depuis Slack API             |
 | `SLACK_CHANNEL_ID`     | `C0XXXXXXX`                                   | ID du channel Slack          |
 | `SLACK_BOSS_USER_ID`   | `U0XXXXXXX`                                   | ID Slack du boss             |
-| `NEXT_PUBLIC_FORM_URL` | `http://204.168.150.89:3000`                  | URL publique du formulaire   |
+| `NEXT_PUBLIC_FORM_URL` | `https://team.irotoribaroka.com`              | URL publique du formulaire   |
 | `POSTGRES_PASSWORD`    | `...`                                         | Mot de passe PostgreSQL fort |
 
-**Générer NEXTAUTH_SECRET:**
+**⚠️ IMPORTANT - NextAuth v5:**
+
+NextAuth v5 utilise de nouvelles variables d'environnement :
+
+- ✅ `AUTH_SECRET` (remplace `NEXTAUTH_SECRET`)
+- ✅ `AUTH_URL` (remplace `NEXTAUTH_URL`)
+- ✅ `AUTH_TRUST_HOST=true` (automatiquement défini dans le workflow pour les déploiements derrière proxy)
+
+**Générer AUTH_SECRET:**
 
 ```bash
 openssl rand -base64 32
