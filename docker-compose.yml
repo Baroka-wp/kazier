@@ -17,8 +17,9 @@ services:
       - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
       - SLACK_BOSS_USER_ID=${SLACK_BOSS_USER_ID}
       - NEXT_PUBLIC_FORM_URL=${NEXT_PUBLIC_FORM_URL}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - AUTH_URL=${AUTH_URL}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_TRUST_HOST=true
     restart: unless-stopped
     depends_on:
       - db
