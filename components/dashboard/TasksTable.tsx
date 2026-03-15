@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { CheckCircle2, XCircle, X, AlertTriangle, ChevronDown } from "lucide-react";
 import DataTable from "@/components/dashboard/DataTable";
 import { deleteTask, getProjectsForTasks, type Task } from "@/lib/task-actions";
 import { usePermissions } from "@/hooks/usePermissions";

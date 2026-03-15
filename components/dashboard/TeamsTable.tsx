@@ -17,11 +17,11 @@ import { X, AlertTriangle, Plus, CheckCircle2, XCircle, Crown } from "lucide-rea
 
 type TeamMember = {
   id: number;
-  first_name: string;
-  last_name: string;
+  first_name: string | null;
+  last_name: string | null;
   full_name: string;
-  phone: string;
-  age: number;
+  phone: string | null;
+  age: number | null;
   is_boss: boolean;
   slack_id: string | null;
   created_at: string;
@@ -422,9 +422,12 @@ function EditModal({
       onSaved(updated, mode === "create");
       onClose();
     } else {
-      if ("field" in result && result.field)
-        setErrors((e) => ({ ...e, [result.field]: result.error }));
-      else if ("error" in result) setServerError(result.error);
+      if ("field" in result && result.field) {
+        const fieldKey = result.field as string;
+        setErrors((e) => ({ ...e, [fieldKey]: result.error }));
+      } else if ("error" in result) {
+        setServerError(result.error);
+      }
     }
   }
 

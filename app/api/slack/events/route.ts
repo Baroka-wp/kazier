@@ -85,7 +85,11 @@ export async function POST(req: NextRequest) {
   // ── Event : team_join ─────────────────────────────────────────────────────
   if (payload.type === "event_callback" && payload.event?.type === "team_join") {
     const slackUser = payload.event.user;
+    if (!slackUser) return NextResponse.json({ ok: true });
+
     const slackId = slackUser.id;
+    if (!slackId) return NextResponse.json({ ok: true });
+
     const email = slackUser.profile?.email ?? "";
 
     if (!email) return NextResponse.json({ ok: true });
@@ -121,8 +125,8 @@ export async function POST(req: NextRequest) {
 
     const member = {
       id: user.team.id,
-      first_name: user.team.first_name,
-      last_name: user.team.last_name,
+      first_name: user.team.first_name ?? "",
+      last_name: user.team.last_name ?? "",
       slack_id: user.team.slack_id,
     };
 
@@ -190,9 +194,13 @@ export async function POST(req: NextRequest) {
     // Bouton "C'est moi"
     if (action.action_id === "confirm_identity") {
       try {
-        const parsed = JSON.parse(action.value);
+        const parsed = JSON.parse(action.value ?? "{}");
         const teamId = parsed.team_id;
         const slackId = parsed.slack_user_id;
+
+        if (!teamId || !slackId) {
+          return NextResponse.json({ ok: true });
+        }
 
         await prisma.teams.update({
           where: { id: teamId },

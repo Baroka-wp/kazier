@@ -9,7 +9,8 @@ export function EditModal({
   mode,
   task,
   projects,
-  teams,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  teams: _teams,
   onClose,
   onSaved,
 }: {

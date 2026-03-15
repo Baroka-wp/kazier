@@ -63,9 +63,6 @@ const AVAILABLE_ICONS = [
   { id: "boxes", component: Boxes },
 ];
 
-  return icon?.component || null;
-}
-
 // ── Tabs ───────────────────────────────────────────────────────────────────────
 
 type Tab = "general" | "tasks" | "reports";
@@ -91,7 +88,6 @@ export default function ProjectDetailClient({ project }: Props) {
   const [projects, setProjects] = useState<Array<{ id: number; name: string }>>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
-
 
   // Charger les tâches du projet
   useEffect(() => {

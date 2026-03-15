@@ -158,7 +158,7 @@ Ajouter à lib/equipe-actions.ts:
 | Équipes (read) | ⚠️   | ❌   | ❌          | ❌         | ✅         | ✅        |
 | 33%            |
 | Team Members   | ⚠️   | ❌   | ❌          | ❌         | ❌         | ❌        | 0%    |
-|  |
+|                |
 
 Score Global: 58% (2/4 modules conformes)
 

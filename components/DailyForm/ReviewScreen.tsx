@@ -246,6 +246,7 @@ export default function ReviewScreen({
       .then((r) => r.json())
       .then((data) => onCitationsReady(data))
       .catch(() => onCitationsReady(FALLBACK_CITATIONS));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function navigate(dir: number) {

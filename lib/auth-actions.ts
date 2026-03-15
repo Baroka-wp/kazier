@@ -5,18 +5,22 @@ import bcrypt from "bcryptjs";
 
 // ── Fonction utilitaire pour changer le mot de passe (ex: depuis le profil) ──
 
-export async function changePassword(userId: string, newPassword: string): Promise<{
+export async function changePassword(
+  userId: string,
+  newPassword: string
+): Promise<{
   success: boolean;
   error?: string;
 }> {
   if (!userId) return { success: false, error: "Utilisateur non identifié." };
-  if (newPassword.length < 8) return { success: false, error: "Le mot de passe doit contenir au moins 8 caractères." };
+  if (newPassword.length < 8)
+    return { success: false, error: "Le mot de passe doit contenir au moins 8 caractères." };
 
   const hashed = await bcrypt.hash(newPassword, 12);
 
   await prisma.users.update({
     where: { id: Number(userId) },
-    data: { password: hashed }
+    data: { password: hashed },
   });
 
   return { success: true };
@@ -24,6 +28,7 @@ export async function changePassword(userId: string, newPassword: string): Promi
 
 // ── Étape 1 : demande de reset (DÉSACTIVÉE) ───────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function requestPasswordReset(_email: string): Promise<{
   success: boolean;
   error?: string;
@@ -35,6 +40,7 @@ export async function requestPasswordReset(_email: string): Promise<{
 
 // ── Étape 2 : valider le token (DÉSACTIVÉE) ───────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function validateResetToken(_token: string): Promise<{
   valid: boolean;
   error?: string;
@@ -44,7 +50,12 @@ export async function validateResetToken(_token: string): Promise<{
 
 // ── Étape 3 : appliquer le nouveau mot de passe (DÉSACTIVÉE) ──────────────────
 
-export async function resetPassword(_token: string, _newPassword: string): Promise<{
+export async function resetPassword(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _token: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _newPassword: string
+): Promise<{
   success: boolean;
   error?: string;
 }> {

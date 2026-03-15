@@ -103,7 +103,7 @@ function ProjectIcon({
     .replace(/[-_](.)/g, (_, c: string) => c.toUpperCase())
     .replace(/^(.)/, (_, c: string) => c.toUpperCase());
   type LucideIconType = React.FC<{ size?: number; color?: string }>;
-  const Icon = (LucideIcons as Record<string, LucideIconType>)[pascal];
+  const Icon = (LucideIcons as unknown as Record<string, LucideIconType>)[pascal];
   if (!Icon) return <Folder size={size} color={color} />;
   return <Icon size={size} color={color} />;
 }

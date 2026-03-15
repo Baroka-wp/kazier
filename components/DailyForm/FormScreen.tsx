@@ -746,11 +746,7 @@ export default function FormScreen({
                             </span>
                           )}
                         </button>
-                        <TasksBadge
-                          tasks={projectTasks}
-                          project={project}
-                          onClick={() => setModalProject(project)}
-                        />
+                        <TasksBadge tasks={projectTasks} onClick={() => setModalProject(project)} />
                       </div>
                     );
                   })}
