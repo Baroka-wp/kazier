@@ -17,7 +17,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma Client
+# Generate Prisma Client (needs DATABASE_URL even if not used)
+ENV DATABASE_URL="postgresql://user:password@localhost:5432/kazier"
 RUN npx prisma generate
 
 # Run quality checks
