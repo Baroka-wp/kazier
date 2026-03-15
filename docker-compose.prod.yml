@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Docker Compose pour la PRODUCTION (VPS)
 # Utilise l'image depuis GitHub Container Registry (GHCR)
 
