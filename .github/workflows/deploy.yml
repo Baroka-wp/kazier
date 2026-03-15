@@ -1,0 +1,174 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Permet de lancer manuellement le déploiement
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            # Se déplacer dans le répertoire de l'application
+            cd /home/${{ secrets.VPS_USER }}/kazier || mkdir -p /home/${{ secrets.VPS_USER }}/kazier && cd /home/${{ secrets.VPS_USER }}/kazier
+
+            # Créer docker-compose.yml s'il n'existe pas
+            cat > docker-compose.yml << 'EOF'
+            version: '3.8'
+
+            services:
+              app:
+                image: ghcr.io/${{ github.repository }}:latest
+                container_name: kazier-app
+                restart: unless-stopped
+                ports:
+                  - "3000:3000"
+                environment:
+                  - NODE_ENV=production
+                  - DATABASE_URL=${DATABASE_URL}
+                  - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+                  - NEXTAUTH_URL=${NEXTAUTH_URL}
+                  - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+                  - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+                  - SLACK_BOSS_USER_ID=${SLACK_BOSS_USER_ID}
+                  - NEXT_PUBLIC_FORM_URL=${NEXT_PUBLIC_FORM_URL}
+                networks:
+                  - kazier-network
+
+              db:
+                image: postgres:15-alpine
+                container_name: kazier-db
+                restart: unless-stopped
+                environment:
+                  - POSTGRES_USER=${POSTGRES_USER:-kazier}
+                  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+                  - POSTGRES_DB=${POSTGRES_DB:-kazier}
+                volumes:
+                  - postgres-data:/var/lib/postgresql/data
+                networks:
+                  - kazier-network
+                healthcheck:
+                  test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kazier}"]
+                  interval: 10s
+                  timeout: 5s
+                  retries: 5
+
+              adminer:
+                image: adminer:latest
+                container_name: kazier-adminer
+                restart: unless-stopped
+                ports:
+                  - "8080:8080"
+                networks:
+                  - kazier-network
+                depends_on:
+                  - db
+
+            networks:
+              kazier-network:
+                driver: bridge
+
+            volumes:
+              postgres-data:
+            EOF
+
+            # Créer le fichier .env s'il n'existe pas
+            if [ ! -f .env ]; then
+              echo "Création du fichier .env..."
+              cat > .env << 'ENVEOF'
+            # Database
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            POSTGRES_USER=kazier
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=kazier
+
+            # Auth
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+
+            # Slack
+            SLACK_BOT_TOKEN=${{ secrets.SLACK_BOT_TOKEN }}
+            SLACK_CHANNEL_ID=${{ secrets.SLACK_CHANNEL_ID }}
+            SLACK_BOSS_USER_ID=${{ secrets.SLACK_BOSS_USER_ID }}
+
+            # App
+            NEXT_PUBLIC_FORM_URL=${{ secrets.NEXT_PUBLIC_FORM_URL }}
+            ENVEOF
+            fi
+
+            # Login to GitHub Container Registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Pull latest image
+            docker pull ghcr.io/${{ github.repository }}:latest
+
+            # Redémarrer les containers
+            docker-compose down
+            docker-compose up -d
+
+            # Nettoyer les images inutilisées
+            docker image prune -af
+
+            # Afficher le statut
+            docker-compose ps
+
+            echo "✅ Déploiement terminé avec succès!"

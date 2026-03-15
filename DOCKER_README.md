@@ -1,5 +1,7 @@
 # 🐳 Docker Setup - Kazier
 
+> 🚀 **Déploiement automatique sur VPS:** Pour configurer le déploiement automatique sur votre VPS, consultez [DEPLOYMENT.md](./DEPLOYMENT.md)
+
 Ce document explique comment utiliser Docker pour développer et déployer l'application Kazier.
 
 ## 📋 Prérequis
