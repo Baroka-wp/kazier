@@ -30,14 +30,16 @@ model teams {
 }
 
 model users {
-  id       Int     @id @default(autoincrement())
-  email    String  @unique
-  password String
-  role     String?
-  team_id  Int?
+  id                  Int       @id @default(autoincrement())
+  email               String    @unique
+  password            String
+  role                String?
+  team_id             Int?
+  reset_token         String?   @unique
+  reset_token_expires DateTime?
 
   // Relations
-  team     teams?  @relation(fields: [team_id], references: [id])
+  team                teams?    @relation(fields: [team_id], references: [id])
 }
 
 model project {
