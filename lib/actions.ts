@@ -23,15 +23,15 @@ export async function getProjectsByMember(team_id: number) {
       icon: true,
     },
     orderBy: {
-      name: 'asc',
+      name: "asc",
     },
   });
 
-  return result.map(r => ({
+  return result.map((r) => ({
     id: r.id,
-    name: r.name || '',
-    description: r.description || '',
-    icon: r.icon || '',
+    name: r.name || "",
+    description: r.description || "",
+    icon: r.icon || "",
   }));
 }
 
@@ -43,7 +43,7 @@ export async function getTasksByMember(team_id: number) {
         has: team_id,
       },
       status: {
-        not: 'terminée',
+        not: "terminée",
       },
     },
     include: {
@@ -55,20 +55,20 @@ export async function getTasksByMember(team_id: number) {
       },
     },
     orderBy: {
-      due_date: 'asc',
+      due_date: "asc",
     },
   });
 
-  return result.map(t => ({
+  return result.map((t) => ({
     id: t.id,
-    title: t.title || '',
-    description: t.description || '',
-    status: t.status || '',
-    priority: t.priority || '',
-    due_date: t.due_date ? t.due_date.toISOString().split('T')[0] : null,
+    title: t.title || "",
+    description: t.description || "",
+    status: t.status || "",
+    priority: t.priority || "",
+    due_date: t.due_date ? t.due_date.toISOString().split("T")[0] : null,
     project_id: t.project_id || 0,
-    project_name: t.project?.name || '',
-    project_icon: t.project?.icon || '',
+    project_name: t.project?.name || "",
+    project_icon: t.project?.icon || "",
   }));
 }
 
@@ -76,46 +76,56 @@ export async function getTasksByMember(team_id: number) {
 export async function sendToSlack(data: {
   team_id: number;
   full_name: string;
-  projects: string[];         // noms des projets sélectionnés
-  validated_tasks: number[];  // IDs des tâches validées
+  projects: string[]; // noms des projets sélectionnés
+  validated_tasks: number[]; // IDs des tâches validées
   challenges: string;
   needed_learning: string;
   tomorrow_build: string;
 }) {
-  const { team_id, full_name, projects, validated_tasks, challenges, needed_learning, tomorrow_build } = data;
+  const {
+    team_id,
+    full_name,
+    projects,
+    validated_tasks,
+    challenges,
+    needed_learning,
+    tomorrow_build,
+  } = data;
 
   // Récupérer titres + project_id des tâches validées
-  const taskRows = validated_tasks.length > 0
-    ? await prisma.tasks.findMany({
-        where: {
-          id: {
-            in: validated_tasks,
+  const taskRows =
+    validated_tasks.length > 0
+      ? await prisma.tasks.findMany({
+          where: {
+            id: {
+              in: validated_tasks,
+            },
           },
-        },
-        select: {
-          id: true,
-          title: true,
-          project_id: true,
-        },
-      })
-    : [];
+          select: {
+            id: true,
+            title: true,
+            project_id: true,
+          },
+        })
+      : [];
 
-  const taskTitles = taskRows.map(r => r.title || '');
+  const taskTitles = taskRows.map((r) => r.title || "");
 
   // Récupérer les project_id depuis les noms
-  const projectRows = projects.length > 0
-    ? await prisma.project.findMany({
-        where: {
-          name: {
-            in: projects,
+  const projectRows =
+    projects.length > 0
+      ? await prisma.project.findMany({
+          where: {
+            name: {
+              in: projects,
+            },
           },
-        },
-        select: {
-          id: true,
-          name: true,
-        },
-      })
-    : [];
+          select: {
+            id: true,
+            name: true,
+          },
+        })
+      : [];
 
   // ── Message Slack ──────────────────────────────────────────────────────────
   const slackPayload = {
@@ -138,7 +148,7 @@ export async function sendToSlack(data: {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: `*✅ Tâches validées :*\n${taskTitles.length > 0 ? taskTitles.map(t => `• ${t}`).join("\n") : "_Aucune_"}`,
+          text: `*✅ Tâches validées :*\n${taskTitles.length > 0 ? taskTitles.map((t) => `• ${t}`).join("\n") : "_Aucune_"}`,
         },
       },
       {
@@ -175,10 +185,10 @@ export async function sendToSlack(data: {
     //   needed_learning    ← needed_learning
     //   tomorrow_build     ← tomorrow_build
 
-    const inserts = projectRows.map(p => {
+    const inserts = projectRows.map((p) => {
       const projectTaskTitles = taskRows
-        .filter(t => t.project_id === p.id)
-        .map(t => `• ${t.title}`)
+        .filter((t) => t.project_id === p.id)
+        .map((t) => `• ${t.title}`)
         .join("\n");
 
       return prisma.rapports.create({
@@ -216,7 +226,7 @@ export async function sendToSlack(data: {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
       },
       body: JSON.stringify({
         ...slackPayload,
@@ -267,13 +277,13 @@ export async function searchNames(query: string) {
         {
           first_name: {
             contains: query,
-            mode: 'insensitive',
+            mode: "insensitive",
           },
         },
         {
           last_name: {
             contains: query,
-            mode: 'insensitive',
+            mode: "insensitive",
           },
         },
       ],
@@ -284,14 +294,14 @@ export async function searchNames(query: string) {
       last_name: true,
     },
     orderBy: {
-      first_name: 'asc',
+      first_name: "asc",
     },
     take: 5,
   });
 
-  return result.map(r => ({
+  return result.map((r) => ({
     id: r.id,
-    full_name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+    full_name: `${r.first_name || ""} ${r.last_name || ""}`.trim(),
   }));
 }
 
@@ -330,7 +340,7 @@ export async function getMissingMembers() {
       slack_id: true,
     },
     orderBy: {
-      first_name: 'asc',
+      first_name: "asc",
     },
   });
 
@@ -345,16 +355,16 @@ export async function getMissingMembers() {
     select: {
       team_id: true,
     },
-    distinct: ['team_id'],
+    distinct: ["team_id"],
   });
 
-  const submittedIds = new Set(submittedToday.map(r => r.team_id).filter(Boolean));
+  const submittedIds = new Set(submittedToday.map((r) => r.team_id).filter(Boolean));
 
   // Filtrer les membres qui n'ont pas soumis
   return allMembers
-    .filter(m => !submittedIds.has(m.id))
-    .map(r => ({
-      full_name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
-      slack_id: r.slack_id || '',
+    .filter((m) => !submittedIds.has(m.id))
+    .map((r) => ({
+      full_name: `${r.first_name || ""} ${r.last_name || ""}`.trim(),
+      slack_id: r.slack_id || "",
     }));
 }

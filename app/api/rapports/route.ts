@@ -4,13 +4,13 @@ import { getRapportsData } from "@/lib/rapports-actions";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || undefined;
     const role = searchParams.get("role") || undefined;
-    const projectId = searchParams.get("projectId") 
-      ? parseInt(searchParams.get("projectId")!) 
+    const projectId = searchParams.get("projectId")
+      ? parseInt(searchParams.get("projectId")!)
       : undefined;
 
     const result = await getRapportsData({
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       limit,
       search,
       role,
-      projectId
+      projectId,
     });
 
     return NextResponse.json(result);

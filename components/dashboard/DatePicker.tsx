@@ -109,12 +109,14 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
 
     // Utiliser l'heure actuelle par défaut si aucune heure n'est sélectionnée
     const now = new Date();
-    const defaultHour = selectedHour === "00" && selectedMinute === "00"
-      ? String(now.getHours()).padStart(2, "0")
-      : selectedHour;
-    const defaultMinute = selectedHour === "00" && selectedMinute === "00"
-      ? String(now.getMinutes()).padStart(2, "0")
-      : selectedMinute;
+    const defaultHour =
+      selectedHour === "00" && selectedMinute === "00"
+        ? String(now.getHours()).padStart(2, "0")
+        : selectedHour;
+    const defaultMinute =
+      selectedHour === "00" && selectedMinute === "00"
+        ? String(now.getMinutes()).padStart(2, "0")
+        : selectedMinute;
 
     // Auto-confirm avec l'heure
     const newDateTime = formatDateTimeValue(newDate, defaultHour, defaultMinute);
@@ -199,8 +201,19 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
         <span>{displayLabel || placeholder || "Sélectionner date et heure"}</span>
         {selectedDate && hovered && (
           <button
-            onClick={(e) => { e.stopPropagation(); handleClear(); }}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#999", padding: "0", display: "flex", alignItems: "center" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClear();
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#999",
+              padding: "0",
+              display: "flex",
+              alignItems: "center",
+            }}
           >
             <X size={14} />
           </button>
@@ -209,54 +222,100 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
 
       {/* Calendar Popup */}
       {showCalendar && (
-        <div style={{
-          position: "absolute",
-          bottom: "100%",
-          left: "0",
-          marginBottom: "8px",
-          zIndex: 1000,
-          background: "#fff",
-          borderRadius: "12px",
-          border: "1px solid rgba(0,0,0,0.1)",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
-          padding: "16px",
-          minWidth: "320px",
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            bottom: "100%",
+            left: "0",
+            marginBottom: "8px",
+            zIndex: 1000,
+            background: "#fff",
+            borderRadius: "12px",
+            border: "1px solid rgba(0,0,0,0.1)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            padding: "16px",
+            minWidth: "320px",
+          }}
+        >
           {/* Month Navigation */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "16px",
+            }}
+          >
             <button
               onClick={() => {
-                if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(currentYear - 1); }
-                else setCurrentMonth(currentMonth - 1);
+                if (currentMonth === 0) {
+                  setCurrentMonth(11);
+                  setCurrentYear(currentYear - 1);
+                } else setCurrentMonth(currentMonth - 1);
               }}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#666", padding: "4px" }}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#666",
+                padding: "4px",
+              }}
             >
               <ChevronLeft size={16} />
             </button>
             <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1A1A1A" }}>
-              {new Date(currentYear, currentMonth).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
+              {new Date(currentYear, currentMonth).toLocaleDateString("fr-FR", {
+                month: "long",
+                year: "numeric",
+              })}
             </span>
             <button
               onClick={() => {
-                if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(currentYear + 1); }
-                else setCurrentMonth(currentMonth + 1);
+                if (currentMonth === 11) {
+                  setCurrentMonth(0);
+                  setCurrentYear(currentYear + 1);
+                } else setCurrentMonth(currentMonth + 1);
               }}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#666", padding: "4px" }}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#666",
+                padding: "4px",
+              }}
             >
               <ChevronRight size={16} />
             </button>
           </div>
 
           {/* Calendar Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", marginBottom: "16px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 1fr)",
+              gap: "4px",
+              marginBottom: "16px",
+            }}
+          >
             {["D", "L", "M", "M", "J", "V", "S"].map((d, idx) => (
-              <div key={`h-${idx}`} style={{ textAlign: "center", fontSize: "0.65rem", fontWeight: 600, color: "#999", padding: "4px 0" }}>
+              <div
+                key={`h-${idx}`}
+                style={{
+                  textAlign: "center",
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  color: "#999",
+                  padding: "4px 0",
+                }}
+              >
                 {d}
               </div>
             ))}
             {calendarDays.map((day, idx) => {
-              const isSelected = day &&
-                selectedDate === `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+              const isSelected =
+                day &&
+                selectedDate ===
+                  `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
               return (
                 <div
                   key={idx}
@@ -272,8 +331,14 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
                     cursor: day ? "pointer" : "default",
                     transition: "all 0.15s",
                   }}
-                  onMouseEnter={e => { if (day && !isSelected) (e.currentTarget as HTMLElement).style.background = "rgba(107,26,42,0.08)"; }}
-                  onMouseLeave={e => { if (day && !isSelected) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                  onMouseEnter={(e) => {
+                    if (day && !isSelected)
+                      (e.currentTarget as HTMLElement).style.background = "rgba(107,26,42,0.08)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (day && !isSelected)
+                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                  }}
                 >
                   {day}
                 </div>
@@ -282,26 +347,67 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
           </div>
 
           {/* Time Selectors */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "12px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "8px",
+              marginBottom: "12px",
+            }}
+          >
             <div>
-              <label style={{ display: "block", fontSize: "0.65rem", fontWeight: 600, color: "#999", marginBottom: "4px", textTransform: "uppercase" as const }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  color: "#999",
+                  marginBottom: "4px",
+                  textTransform: "uppercase" as const,
+                }}
+              >
                 Heure
               </label>
-              <select value={selectedHour} onChange={e => setSelectedHour(e.target.value)} style={selectStyle}>
+              <select
+                value={selectedHour}
+                onChange={(e) => setSelectedHour(e.target.value)}
+                style={selectStyle}
+              >
                 {Array.from({ length: 24 }, (_, i) => {
                   const h = String(i).padStart(2, "0");
-                  return <option key={h} value={h}>{h}h</option>;
+                  return (
+                    <option key={h} value={h}>
+                      {h}h
+                    </option>
+                  );
                 })}
               </select>
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "0.65rem", fontWeight: 600, color: "#999", marginBottom: "4px", textTransform: "uppercase" as const }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  color: "#999",
+                  marginBottom: "4px",
+                  textTransform: "uppercase" as const,
+                }}
+              >
                 Minute
               </label>
-              <select value={selectedMinute} onChange={e => setSelectedMinute(e.target.value)} style={selectStyle}>
+              <select
+                value={selectedMinute}
+                onChange={(e) => setSelectedMinute(e.target.value)}
+                style={selectStyle}
+              >
                 {Array.from({ length: 60 }, (_, i) => {
                   const m = String(i).padStart(2, "0");
-                  return <option key={m} value={m}>{m}</option>;
+                  return (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  );
                 })}
               </select>
             </div>
@@ -309,14 +415,39 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
 
           {/* ✅ Aperçu date + heure en temps réel */}
           {selectedDate && (
-            <div style={{ textAlign: "center", fontSize: "0.75rem", color: "#6B1A2A", fontWeight: 600, marginBottom: "12px", padding: "6px", background: "rgba(107,26,42,0.05)", borderRadius: "8px" }}>
+            <div
+              style={{
+                textAlign: "center",
+                fontSize: "0.75rem",
+                color: "#6B1A2A",
+                fontWeight: 600,
+                marginBottom: "12px",
+                padding: "6px",
+                background: "rgba(107,26,42,0.05)",
+                borderRadius: "8px",
+              }}
+            >
               {formatDisplayLabel(selectedDate, selectedHour, selectedMinute)}
             </div>
           )}
 
           {/* Shortcuts */}
           <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
-            <button onClick={handleToday} style={{ flex: 1, padding: "6px 10px", borderRadius: "8px", border: "1px solid rgba(107,26,42,0.2)", background: "rgba(107,26,42,0.05)", color: "#6B1A2A", fontSize: "0.7rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            <button
+              onClick={handleToday}
+              style={{
+                flex: 1,
+                padding: "6px 10px",
+                borderRadius: "8px",
+                border: "1px solid rgba(107,26,42,0.2)",
+                background: "rgba(107,26,42,0.05)",
+                color: "#6B1A2A",
+                fontSize: "0.7rem",
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
               Maintenant
             </button>
             <button
@@ -324,7 +455,18 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
                 setSelectedHour("18");
                 setSelectedMinute("00");
               }}
-              style={{ flex: 1, padding: "6px 10px", borderRadius: "8px", border: "1px solid rgba(107,26,42,0.2)", background: "rgba(107,26,42,0.05)", color: "#6B1A2A", fontSize: "0.7rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+              style={{
+                flex: 1,
+                padding: "6px 10px",
+                borderRadius: "8px",
+                border: "1px solid rgba(107,26,42,0.2)",
+                background: "rgba(107,26,42,0.05)",
+                color: "#6B1A2A",
+                fontSize: "0.7rem",
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
             >
               18:00
             </button>
@@ -332,10 +474,38 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
 
           {/* Actions */}
           <div style={{ display: "flex", gap: "8px" }}>
-            <button onClick={() => setShowCalendar(false)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.08)", background: "#F5F2ED", color: "#666", fontSize: "0.8rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            <button
+              onClick={() => setShowCalendar(false)}
+              style={{
+                flex: 1,
+                padding: "8px",
+                borderRadius: "8px",
+                border: "1px solid rgba(0,0,0,0.08)",
+                background: "#F5F2ED",
+                color: "#666",
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
               Annuler
             </button>
-            <button onClick={handleConfirm} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#6B1A2A", color: "white", fontSize: "0.8rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            <button
+              onClick={handleConfirm}
+              style={{
+                flex: 1,
+                padding: "8px",
+                borderRadius: "8px",
+                border: "none",
+                background: "#6B1A2A",
+                color: "white",
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
               Confirmer
             </button>
           </div>

@@ -50,7 +50,9 @@ export type PaginatedResult<T> = {
 
 // ── Get Rapports Data (avec pagination) ──────────────────────────────────────
 
-export async function getRapportsData(params?: PaginationParams): Promise<PaginatedResult<RapportWithDetails> & { roles: string[]; projects: ProjectSimple[] }> {
+export async function getRapportsData(
+  params?: PaginationParams
+): Promise<PaginatedResult<RapportWithDetails> & { roles: string[]; projects: ProjectSimple[] }> {
   const page = params?.page ?? 1;
   const limit = params?.limit ?? 10;
   const search = params?.search;
@@ -59,14 +61,14 @@ export async function getRapportsData(params?: PaginationParams): Promise<Pagina
 
   // Construire les filtres WHERE
   type WhereClause = {
-    full_name?: { contains: string; mode: 'insensitive' };
+    full_name?: { contains: string; mode: "insensitive" };
     role?: string;
     project_id?: number;
   };
   const where: WhereClause = {};
 
   if (search) {
-    where.full_name = { contains: search, mode: 'insensitive' as const };
+    where.full_name = { contains: search, mode: "insensitive" as const };
   }
 
   if (role) {
@@ -86,38 +88,38 @@ export async function getRapportsData(params?: PaginationParams): Promise<Pagina
     include: {
       team: {
         include: {
-          users: true
-        }
+          users: true,
+        },
       },
-      project: true
+      project: true,
     },
     orderBy: {
-      created_at: 'desc'
+      created_at: "desc",
     },
     skip: (page - 1) * limit,
-    take: limit
+    take: limit,
   });
 
   // Récupérer tous les projets (pour les filtres)
   const projectsData = await prisma.project.findMany({
     select: {
       id: true,
-      name: true
+      name: true,
     },
     orderBy: {
-      name: 'asc'
-    }
+      name: "asc",
+    },
   });
 
   // Transform reports data
-  const allReports: RapportWithDetails[] = rapportsData.map(r => {
+  const allReports: RapportWithDetails[] = rapportsData.map((r) => {
     const user = r.team?.users[0];
     return {
       id: r.id,
       team_id: r.team_id,
       project_id: r.project_id,
-      full_name: `${r.team?.first_name || ''} ${r.team?.last_name || ''}`.trim(),
-      role: user?.role ?? 'Membre',
+      full_name: `${r.team?.first_name || ""} ${r.team?.last_name || ""}`.trim(),
+      role: user?.role ?? "Membre",
       built: r.work_built,
       working_built: r.working_built,
       blocked: r.broken_features,
@@ -125,15 +127,15 @@ export async function getRapportsData(params?: PaginationParams): Promise<Pagina
       needed_learning: r.needed_learning,
       tomorrow_build: r.tomorrow_build,
       submitted_at: r.created_at,
-      project_name: r.project?.name ?? 'Sans projet'
+      project_name: r.project?.name ?? "Sans projet",
     };
   });
 
   // Rôles distincts
-  const roles = [...new Set(allReports.map(r => r.role).filter(Boolean))] as string[];
+  const roles = [...new Set(allReports.map((r) => r.role).filter(Boolean))] as string[];
 
   // Transform projects data
-  const projects: ProjectSimple[] = projectsData.map(p => ({
+  const projects: ProjectSimple[] = projectsData.map((p) => ({
     id: p.id,
     name: p.name,
   }));
@@ -145,7 +147,7 @@ export async function getRapportsData(params?: PaginationParams): Promise<Pagina
     limit,
     totalPages: Math.ceil(total / limit),
     roles,
-    projects
+    projects,
   };
 }
 
@@ -157,36 +159,36 @@ export async function getRapportsDataLegacy(): Promise<RapportsDataResult> {
       include: {
         team: {
           include: {
-            users: true
-          }
+            users: true,
+          },
         },
-        project: true
+        project: true,
       },
       orderBy: {
-        created_at: 'desc'
-      }
+        created_at: "desc",
+      },
     }),
 
     prisma.project.findMany({
       select: {
         id: true,
-        name: true
+        name: true,
       },
       orderBy: {
-        name: 'asc'
-      }
-    })
+        name: "asc",
+      },
+    }),
   ]);
 
   // Transform reports data
-  const allReports: RapportWithDetails[] = rapportsData.map(r => {
+  const allReports: RapportWithDetails[] = rapportsData.map((r) => {
     const user = r.team?.users[0];
     return {
       id: r.id,
       team_id: r.team_id,
       project_id: r.project_id,
-      full_name: `${r.team?.first_name || ''} ${r.team?.last_name || ''}`.trim(),
-      role: user?.role ?? 'Membre',
+      full_name: `${r.team?.first_name || ""} ${r.team?.last_name || ""}`.trim(),
+      role: user?.role ?? "Membre",
       built: r.work_built,
       working_built: r.working_built,
       blocked: r.broken_features,
@@ -194,15 +196,15 @@ export async function getRapportsDataLegacy(): Promise<RapportsDataResult> {
       needed_learning: r.needed_learning,
       tomorrow_build: r.tomorrow_build,
       submitted_at: r.created_at,
-      project_name: r.project?.name ?? 'Sans projet'
+      project_name: r.project?.name ?? "Sans projet",
     };
   });
 
   // Rôles distincts extraits depuis les résultats
-  const roles = [...new Set(allReports.map(r => r.role).filter(Boolean))] as string[];
+  const roles = [...new Set(allReports.map((r) => r.role).filter(Boolean))] as string[];
 
   // Transform projects data
-  const projects: ProjectSimple[] = projectsData.map(p => ({
+  const projects: ProjectSimple[] = projectsData.map((p) => ({
     id: p.id,
     name: p.name,
   }));

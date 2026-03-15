@@ -6,7 +6,7 @@ Système de rapport quotidien pour l'équipe Africa Samurai. Un bot Slack **(Gro
 
 ## ✨ Fonctionnalités
 
-- **Rappel automatique** — Groot Bot envoie un message dans le canal Slack avec le lien du formulaire tous les jours de la semaine à 17h 00  sauf les week-end
+- **Rappel automatique** — Groot Bot envoie un message dans le canal Slack avec le lien du formulaire tous les jours de la semaine à 17h 00 sauf les week-end
 - **Formulaire multi-étapes** — 7 questions avec navigation, animation et compteur de caractères
 - **Autocomplete** — le champ nom cherche dans la table `teams` en temps réel
 - **Blocage double soumission** — impossible de soumettre le rapport deux fois le même jour

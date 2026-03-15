@@ -51,9 +51,7 @@ export type CreateProjectData = {
 
 export type UpdateProjectData = Partial<CreateProjectData>;
 
-export type ProjectResult =
-  | { success: true; project: Project }
-  | { success: false; error: string };
+export type ProjectResult = { success: true; project: Project } | { success: false; error: string };
 
 // ── Types pour la pagination ──────────────────────────────────────────────────
 
@@ -73,7 +71,7 @@ export type PaginatedResult<T> = {
 
 // ── Slack : notifier un membre ajouté à un projet ─────────────────────────────
 
-//Envoyer un message lorsqu'on ajoute un team à un projet 
+//Envoyer un message lorsqu'on ajoute un team à un projet
 async function sendSlackProjectAssignment(params: {
   slack_id: string;
   first_name: string;
@@ -84,7 +82,7 @@ async function sendSlackProjectAssignment(params: {
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -128,7 +126,9 @@ async function sendSlackProjectAssignment(params: {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-function validateProject(data: CreateProjectData): { valid: true } | { valid: false; error: string } {
+function validateProject(
+  data: CreateProjectData
+): { valid: true } | { valid: false; error: string } {
   const name = data.name?.trim();
   if (!name || name.length < 2)
     return { valid: false, error: "Le nom doit contenir au moins 2 caractères." };
@@ -151,16 +151,16 @@ async function populateTeamMembers(team_ids: number[]): Promise<TeamMember[]> {
   try {
     const members = await prisma.teams.findMany({
       where: {
-        id: { in: team_ids }
+        id: { in: team_ids },
       },
       select: {
         id: true,
         first_name: true,
-        last_name: true
+        last_name: true,
       },
       orderBy: {
-        first_name: 'asc'
-      }
+        first_name: "asc",
+      },
     });
     return members.map((m) => ({
       id: m.id,
@@ -182,8 +182,7 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
     await requireTeamManagement();
 
     const validation = validateProject(data);
-    if (!validation.valid)
-      return { success: false, error: validation.error };
+    if (!validation.valid) return { success: false, error: validation.error };
 
     const name = data.name.trim();
     const description = data.description.trim();
@@ -196,7 +195,7 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
         description,
         icon,
         team_ids,
-      }
+      },
     });
 
     const members = await populateTeamMembers(team_ids);
@@ -206,13 +205,13 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
       const membersWithSlack = await prisma.teams.findMany({
         where: {
           id: { in: team_ids },
-          slack_id: { not: null }
+          slack_id: { not: null },
         },
         select: {
           id: true,
           first_name: true,
-          slack_id: true
-        }
+          slack_id: true,
+        },
       });
       await Promise.all(
         membersWithSlack.map((m) =>
@@ -250,11 +249,10 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
 export async function getProject(id: number): Promise<ProjectResult> {
   try {
     const project = await prisma.project.findUnique({
-      where: { id }
+      where: { id },
     });
 
-    if (!project)
-      return { success: false, error: "Projet non trouvé." };
+    if (!project) return { success: false, error: "Projet non trouvé." };
 
     const members = await populateTeamMembers(project.team_ids);
 
@@ -277,11 +275,13 @@ export async function getProject(id: number): Promise<ProjectResult> {
 
 // ── READ (GET ALL) ────────────────────────────────────────────────────────────
 
-export async function getProjects(params?: PaginationParams): Promise<PaginatedResult<Project> | { success: boolean; projects?: Project[]; error?: string }> {
+export async function getProjects(
+  params?: PaginationParams
+): Promise<PaginatedResult<Project> | { success: boolean; projects?: Project[]; error?: string }> {
   // Si pas de params, retourner l'ancienne version pour compatibilité
   if (!params) {
     const projects = await prisma.project.findMany({
-      orderBy: { id: 'desc' }
+      orderBy: { id: "desc" },
     });
 
     const typedProjects: Project[] = await Promise.all(
@@ -307,14 +307,17 @@ export async function getProjects(params?: PaginationParams): Promise<PaginatedR
 
   // Construire les filtres WHERE
   type WhereClause = {
-    OR?: Array<{ name?: { contains: string; mode: 'insensitive' }; description?: { contains: string; mode: 'insensitive' } }>;
+    OR?: Array<{
+      name?: { contains: string; mode: "insensitive" };
+      description?: { contains: string; mode: "insensitive" };
+    }>;
   };
   const where: WhereClause = {};
 
   if (search) {
     where.OR = [
-      { name: { contains: search, mode: 'insensitive' as const } },
-      { description: { contains: search, mode: 'insensitive' as const } },
+      { name: { contains: search, mode: "insensitive" as const } },
+      { description: { contains: search, mode: "insensitive" as const } },
     ];
   }
 
@@ -324,9 +327,9 @@ export async function getProjects(params?: PaginationParams): Promise<PaginatedR
   // Récupérer les projets paginés
   const projects = await prisma.project.findMany({
     where,
-    orderBy: { id: 'desc' },
+    orderBy: { id: "desc" },
     skip: (page - 1) * limit,
-    take: limit
+    take: limit,
   });
 
   const typedProjects: Project[] = await Promise.all(
@@ -348,7 +351,7 @@ export async function getProjects(params?: PaginationParams): Promise<PaginatedR
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit)
+    totalPages: Math.ceil(total / limit),
   };
 }
 
@@ -361,11 +364,10 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
 
     // Récupérer le projet actuel
     const existing = await prisma.project.findUnique({
-      where: { id }
+      where: { id },
     });
 
-    if (!existing)
-      return { success: false, error: "Projet non trouvé." };
+    if (!existing) return { success: false, error: "Projet non trouvé." };
 
     const oldTeamIds = existing.team_ids;
 
@@ -378,8 +380,7 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
     };
 
     const validation = validateProject(mergedData);
-    if (!validation.valid)
-      return { success: false, error: validation.error };
+    if (!validation.valid) return { success: false, error: validation.error };
 
     const newTeamIds = mergedData.team_ids || [];
 
@@ -390,7 +391,7 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
         description: mergedData.description.trim(),
         icon: mergedData.icon,
         team_ids: newTeamIds,
-      }
+      },
     });
 
     // Détecter les nouveaux membres ajoutés
@@ -400,13 +401,13 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
       const newMembers = await prisma.teams.findMany({
         where: {
           id: { in: addedIds },
-          slack_id: { not: null }
+          slack_id: { not: null },
         },
         select: {
           id: true,
           first_name: true,
-          slack_id: true
-        }
+          slack_id: true,
+        },
       });
       await Promise.all(
         newMembers.map((m) =>
@@ -449,7 +450,7 @@ export async function deleteProject(id: number): Promise<{ success: boolean; err
     await requireTeamManagement();
 
     await prisma.project.delete({
-      where: { id }
+      where: { id },
     });
     revalidatePath("/dashboard/projets");
     revalidatePath("/dashboard");
@@ -462,17 +463,21 @@ export async function deleteProject(id: number): Promise<{ success: boolean; err
 
 // ── GET TEAMS ─────────────────────────────────────────────────────────────────
 
-export async function getTeams(): Promise<{ success: boolean; teams?: TeamMember[]; error?: string }> {
+export async function getTeams(): Promise<{
+  success: boolean;
+  teams?: TeamMember[];
+  error?: string;
+}> {
   try {
     const teams = await prisma.teams.findMany({
       select: {
         id: true,
         first_name: true,
-        last_name: true
+        last_name: true,
       },
       orderBy: {
-        first_name: 'asc'
-      }
+        first_name: "asc",
+      },
     });
 
     return {

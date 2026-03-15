@@ -69,36 +69,48 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#F5F2ED] flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-white rounded-3xl p-8 md:p-12 shadow-[0_20px_60px_-10px_rgba(107,26,42,0.1)]">
-
         <img src="/africa-samurai-logo.png" alt="Africa Samurai" className="h-16 mx-auto mb-8" />
 
         {/* ── Vue login ── */}
         {view === "login" && (
           <>
-            <h1 className="text-2xl font-bold text-[#1A1A1A] mb-1 text-center">Connectez-vous ! </h1>
+            <h1 className="text-2xl font-bold text-[#1A1A1A] mb-1 text-center">
+              Connectez-vous !{" "}
+            </h1>
             {/* <p className="text-sm text-[#666666] text-center mb-8">Bienvenu Boss 💻</p> */}
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#1A1A1A] mb-1.5">Email</label>
                 <input
-                  name="email" type="email" value={email}
+                  name="email"
+                  type="email"
+                  value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required placeholder="votre@email.com"
+                  required
+                  placeholder="votre@email.com"
                   className="w-full px-4 py-3 rounded-xl text-[#1A1A1A] bg-black/[0.02] border border-black/[0.07] outline-none transition-all focus:border-[#6B1A2A] focus:bg-white focus:ring-3 focus:ring-[#6B1A2A]/7 placeholder:text-black/20"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1A1A1A] mb-1.5">Mot de passe</label>
+                <label className="block text-sm font-medium text-[#1A1A1A] mb-1.5">
+                  Mot de passe
+                </label>
                 <div className="relative">
                   <input
-                    name="password" type={showPassword ? "text" : "password"}
-                    value={password} onChange={(e) => setPassword(e.target.value)}
-                    required placeholder="••••••••"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
                     className="w-full px-4 py-3 rounded-xl text-[#1A1A1A] bg-black/[0.02] border border-black/[0.07] outline-none transition-all focus:border-[#6B1A2A] focus:bg-white focus:ring-3 focus:ring-[#6B1A2A]/7 placeholder:text-black/20"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black/70 cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black/70 cursor-pointer"
+                  >
                     {showPassword ? "🙈" : "👁️"}
                   </button>
                 </div>
@@ -108,7 +120,11 @@ export default function LoginPage() {
               <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => { setView("forgot"); setForgotEmail(email); setForgotError(null); }}
+                  onClick={() => {
+                    setView("forgot");
+                    setForgotEmail(email);
+                    setForgotError(null);
+                  }}
                   className="text-xs text-[#6B1A2A] hover:underline cursor-pointer"
                 >
                   Mot de passe oublié ?
@@ -122,17 +138,30 @@ export default function LoginPage() {
               )}
 
               <button
-                type="submit" disabled={loginLoading || !isLoginValid}
+                type="submit"
+                disabled={loginLoading || !isLoginValid}
                 style={{ backgroundColor: "#6B1A2A" }}
                 className="w-full py-3 rounded-xl font-semibold text-white cursor-pointer transition-all hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loginLoading ? (
                   <>
-                    <span style={{ width: "15px", height: "15px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.35)", borderTopColor: "#fff", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
+                    <span
+                      style={{
+                        width: "15px",
+                        height: "15px",
+                        borderRadius: "50%",
+                        border: "2px solid rgba(255,255,255,0.35)",
+                        borderTopColor: "#fff",
+                        display: "inline-block",
+                        animation: "spin 0.7s linear infinite",
+                      }}
+                    />
                     <span>Connexion...</span>
                     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                   </>
-                ) : "Se connecter →"}
+                ) : (
+                  "Se connecter →"
+                )}
               </button>
             </form>
           </>
@@ -151,16 +180,19 @@ export default function LoginPage() {
 
             <h1 className="text-2xl font-bold text-[#1A1A1A] mb-1">Mot de passe oublié</h1>
             <p className="text-sm text-[#666666] mb-8">
-              Entrez votre email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+              Entrez votre email et nous vous enverrons un lien pour réinitialiser votre mot de
+              passe.
             </p>
 
             <form onSubmit={handleForgot} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#1A1A1A] mb-1.5">Email</label>
                 <input
-                  type="email" value={forgotEmail}
+                  type="email"
+                  value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
-                  required placeholder="votre@email.com"
+                  required
+                  placeholder="votre@email.com"
                   className="w-full px-4 py-3 rounded-xl text-[#1A1A1A] bg-black/[0.02] border border-black/[0.07] outline-none transition-all focus:border-[#6B1A2A] focus:bg-white focus:ring-3 focus:ring-[#6B1A2A]/7 placeholder:text-black/20"
                 />
               </div>
@@ -172,17 +204,30 @@ export default function LoginPage() {
               )}
 
               <button
-                type="submit" disabled={forgotLoading || !isForgotValid}
+                type="submit"
+                disabled={forgotLoading || !isForgotValid}
                 style={{ backgroundColor: "#6B1A2A" }}
                 className="w-full py-3 rounded-xl font-semibold text-white cursor-pointer transition-all hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {forgotLoading ? (
                   <>
-                    <span style={{ width: "15px", height: "15px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.35)", borderTopColor: "#fff", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
+                    <span
+                      style={{
+                        width: "15px",
+                        height: "15px",
+                        borderRadius: "50%",
+                        border: "2px solid rgba(255,255,255,0.35)",
+                        borderTopColor: "#fff",
+                        display: "inline-block",
+                        animation: "spin 0.7s linear infinite",
+                      }}
+                    />
                     <span>Envoi...</span>
                     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                   </>
-                ) : "Envoyer le lien →"}
+                ) : (
+                  "Envoyer le lien →"
+                )}
               </button>
             </form>
           </>

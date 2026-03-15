@@ -11,7 +11,7 @@ async function main() {
 
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await prisma.users.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (existingUser) {
@@ -26,7 +26,7 @@ async function main() {
         last_name: "BAROKA",
         is_boss: true,
         email: email,
-      }
+      },
     });
 
     // Créer ensuite l'utilisateur avec le team_id
@@ -35,15 +35,14 @@ async function main() {
         email: email,
         password: password,
         role: "SA",
-        team_id: team.id
-      }
+        team_id: team.id,
+      },
     });
 
     console.log("✅ Admin créé avec succès !");
     console.log(`   Email: ${email}`);
     console.log(`   Mot de passe: motdepasse123`);
     console.log(`   Team ID: ${team.id}`);
-
   } catch (error) {
     console.error("❌ Erreur lors de la création de l'admin:", error);
     throw error;

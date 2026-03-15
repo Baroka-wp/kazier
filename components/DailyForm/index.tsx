@@ -59,9 +59,7 @@ export default function DailyForm() {
       const exists = prev.find((p) => p.id === project.id);
       if (exists) {
         // Désélectionner aussi les tâches de ce projet
-        const projectTaskIds = tasks
-          .filter((t) => t.project_id === project.id)
-          .map((t) => t.id);
+        const projectTaskIds = tasks.filter((t) => t.project_id === project.id).map((t) => t.id);
         setSelectedTaskIds((ids) => ids.filter((id) => !projectTaskIds.includes(id)));
         return prev.filter((p) => p.id !== project.id);
       }
@@ -198,8 +196,7 @@ export default function DailyForm() {
       />
     );
 
-  if (step === -1)
-    return <WelcomeScreen onStart={() => go(0)} />;
+  if (step === -1) return <WelcomeScreen onStart={() => go(0)} />;
 
   if (reviewing)
     return (

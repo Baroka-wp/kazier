@@ -27,7 +27,6 @@ export type ProjectWithTasks = {
   tasks: Task[];
 };
 
-
 export type TeamMember = {
   id: number;
   full_name: string;
@@ -67,7 +66,7 @@ async function enrichTasksWithNames(tasks: PrismaTask[]): Promise<Task[]> {
     });
 
     for (const m of members) {
-      namesMap[m.id] = `${m.first_name || ''} ${m.last_name || ''}`.trim();
+      namesMap[m.id] = `${m.first_name || ""} ${m.last_name || ""}`.trim();
     }
   }
 
@@ -75,13 +74,13 @@ async function enrichTasksWithNames(tasks: PrismaTask[]): Promise<Task[]> {
     const assignedIds = parseAssignedTo(task.assigned_to);
     return {
       id: task.id,
-      title: task.title ?? '',
-      description: task.description ?? '',
+      title: task.title ?? "",
+      description: task.description ?? "",
       status: (task.status as "à faire" | "en cours" | "review" | "terminée") ?? "à faire",
       priority: (task.priority as "low" | "medium" | "high") ?? "medium",
       project_id: task.project_id,
       assigned_to: assignedIds,
-      due_date: task.due_date ? task.due_date.toISOString().split('T')[0] : null,
+      due_date: task.due_date ? task.due_date.toISOString().split("T")[0] : null,
       created_at: task.created_at.toISOString(),
       assigned_to_names: assignedIds.map((id: number) => namesMap[id]).filter(Boolean),
     };
@@ -105,7 +104,7 @@ export async function getProjectsWithTasksForTeamMember(teamMemberId: number): P
         },
       },
       orderBy: {
-        name: 'asc',
+        name: "asc",
       },
     });
 
@@ -117,13 +116,10 @@ export async function getProjectsWithTasksForTeamMember(teamMemberId: number): P
         const tasksResult = await prisma.tasks.findMany({
           where: {
             project_id: project.id,
-            OR: [
-              { assigned_to: { isEmpty: true } },
-              { assigned_to: { has: memberId } },
-            ],
+            OR: [{ assigned_to: { isEmpty: true } }, { assigned_to: { has: memberId } }],
           },
           orderBy: {
-            created_at: 'desc',
+            created_at: "desc",
           },
         });
 
@@ -142,13 +138,13 @@ export async function getProjectsWithTasksForTeamMember(teamMemberId: number): P
             last_name: true,
           },
           orderBy: {
-            first_name: 'asc',
+            first_name: "asc",
           },
         });
 
         const team_members = members.map((m) => ({
           id: m.id,
-          full_name: `${m.first_name || ''} ${m.last_name || ''}`.trim(),
+          full_name: `${m.first_name || ""} ${m.last_name || ""}`.trim(),
         }));
 
         return {
@@ -157,21 +153,27 @@ export async function getProjectsWithTasksForTeamMember(teamMemberId: number): P
           description: project.description || "Aucune description",
           icon: project.icon,
           team_members,
-          tasks: enrichedTasks
+          tasks: enrichedTasks,
         };
       })
     );
 
     return { success: true, projects: enrichedProjects };
   } catch (err: unknown) {
-    console.error("[getProjectsWithTasksForTeamMember]", err instanceof Error ? err.message : String(err));
+    console.error(
+      "[getProjectsWithTasksForTeamMember]",
+      err instanceof Error ? err.message : String(err)
+    );
     return { success: false, error: "Erreur lors de la récupération des projets." };
   }
 }
 
 // ── getTasksByProject ─────────────────────────────────────────────────────────
 
-export async function getTasksByProject(projectId: number, teamMemberId: number): Promise<{
+export async function getTasksByProject(
+  projectId: number,
+  teamMemberId: number
+): Promise<{
   success: boolean;
   tasks?: Task[];
   error?: string;
@@ -182,15 +184,9 @@ export async function getTasksByProject(projectId: number, teamMemberId: number)
     const result = await prisma.tasks.findMany({
       where: {
         project_id: projectId,
-        OR: [
-          { assigned_to: { isEmpty: true } },
-          { assigned_to: { has: memberId } },
-        ],
+        OR: [{ assigned_to: { isEmpty: true } }, { assigned_to: { has: memberId } }],
       },
-      orderBy: [
-        { status: 'asc' },
-        { created_at: 'desc' },
-      ],
+      orderBy: [{ status: "asc" }, { created_at: "desc" }],
     });
 
     const enrichedTasks = await enrichTasksWithNames(result);
@@ -204,7 +200,10 @@ export async function getTasksByProject(projectId: number, teamMemberId: number)
 
 // ── assignTaskToSelf ──────────────────────────────────────────────────────────
 
-export async function assignTaskToSelf(taskId: number, teamMemberId: number): Promise<{
+export async function assignTaskToSelf(
+  taskId: number,
+  teamMemberId: number
+): Promise<{
   success: boolean;
   task?: Task;
   error?: string;
@@ -242,7 +241,10 @@ export async function assignTaskToSelf(taskId: number, teamMemberId: number): Pr
 
 // ── unassignTaskFromSelf ──────────────────────────────────────────────────────
 
-export async function unassignTaskFromSelf(taskId: number, teamMemberId: number): Promise<{
+export async function unassignTaskFromSelf(
+  taskId: number,
+  teamMemberId: number
+): Promise<{
   success: boolean;
   task?: Task;
   error?: string;
@@ -261,7 +263,7 @@ export async function unassignTaskFromSelf(taskId: number, teamMemberId: number)
     if (!assignedIds.includes(memberId))
       return { success: false, error: "Vous n'êtes pas assigné à cette tâche." };
 
-    const newAssignedIds = assignedIds.filter(id => id !== memberId);
+    const newAssignedIds = assignedIds.filter((id) => id !== memberId);
 
     const updated = await prisma.tasks.update({
       where: { id: taskId },
@@ -321,13 +323,13 @@ export async function getTeamsForAssignment(): Promise<{
         last_name: true,
       },
       orderBy: {
-        first_name: 'asc',
+        first_name: "asc",
       },
     });
 
     const teams = result.map((row) => ({
       id: row.id,
-      full_name: `${row.first_name || ''} ${row.last_name || ''}`.trim(),
+      full_name: `${row.first_name || ""} ${row.last_name || ""}`.trim(),
     }));
 
     return { success: true, teams };

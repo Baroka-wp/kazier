@@ -43,14 +43,10 @@ export default function EquipePage() {
   if (search) params.set("search", search);
   if (roleFilter) params.set("role", roleFilter);
 
-  const { data, error } = useSWR<ApiResponse>(
-    `/api/equipe?${params.toString()}`,
-    fetcher,
-    {
-      keepPreviousData: true,
-      dedupingInterval: 500,
-    }
-  );
+  const { data, error } = useSWR<ApiResponse>(`/api/equipe?${params.toString()}`, fetcher, {
+    keepPreviousData: true,
+    dedupingInterval: 500,
+  });
 
   const isLoading = !data && !error;
 

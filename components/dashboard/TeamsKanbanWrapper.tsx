@@ -32,14 +32,14 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
   );
 
   const groupedByStatus = {
-    "à faire":  localTasks.filter(t => t.status === "à faire"),
-    "en cours": localTasks.filter(t => t.status === "en cours"),
-    "review":   localTasks.filter(t => t.status === "review"),
-    "terminée": localTasks.filter(t => t.status === "terminée"),
+    "à faire": localTasks.filter((t) => t.status === "à faire"),
+    "en cours": localTasks.filter((t) => t.status === "en cours"),
+    review: localTasks.filter((t) => t.status === "review"),
+    terminée: localTasks.filter((t) => t.status === "terminée"),
   };
 
   function handleDragStart(event: DragStartEvent) {
-    const task = localTasks.find(t => `task-${t.id}` === event.active.id);
+    const task = localTasks.find((t) => `task-${t.id}` === event.active.id);
     setActiveTask(task ?? null);
   }
 
@@ -51,18 +51,20 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
 
     const taskId = parseInt(String(active.id).replace("task-", ""));
     // over.id peut être `column-xxx` ou `task-xxx` (si drop sur une card)
-    const newStatus = String(over.id).replace("column-", "").replace(/^task-\d+$/, "") as Task["status"];
+    const newStatus = String(over.id)
+      .replace("column-", "")
+      .replace(/^task-\d+$/, "") as Task["status"];
 
     // Si over est une task, récupérer le status de cette task
-    const overTask = localTasks.find(t => `task-${t.id}` === String(over.id));
-    const resolvedStatus = overTask ? overTask.status : newStatus as Task["status"];
+    const overTask = localTasks.find((t) => `task-${t.id}` === String(over.id));
+    const resolvedStatus = overTask ? overTask.status : (newStatus as Task["status"]);
 
-    const currentTask = localTasks.find(t => t.id === taskId);
+    const currentTask = localTasks.find((t) => t.id === taskId);
     if (!currentTask || currentTask.status === resolvedStatus) return;
 
     // Optimistic update
-    setLocalTasks(prev =>
-      prev.map(t => t.id === taskId ? { ...t, status: resolvedStatus } : t)
+    setLocalTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: resolvedStatus } : t))
     );
 
     const res = await updateTaskStatus(taskId, resolvedStatus);
@@ -80,16 +82,14 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
       onDragEnd={handleDragEnd}
     >
       <div style={{ display: "flex", gap: "16px", overflowX: "auto" }}>
-        {(["à faire", "en cours", "review", "terminée"] as const).map(status => (
+        {(["à faire", "en cours", "review", "terminée"] as const).map((status) => (
           <TaskColumn
             key={status}
             status={status}
             tasks={groupedByStatus[status]}
             teamMemberId={teamMemberId}
             onTaskUpdated={(updatedTask) => {
-              setLocalTasks(prev =>
-                prev.map(t => t.id === updatedTask.id ? updatedTask : t)
-              );
+              setLocalTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
             }}
           />
         ))}

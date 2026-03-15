@@ -38,13 +38,7 @@ function Divider() {
   return <div className="w-px h-5 bg-black/10 mx-1 self-center" />;
 }
 
-function RichTextArea({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-}) {
+function RichTextArea({ value, onChange }: { value: string; onChange: (val: string) => void }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -97,100 +91,130 @@ function RichTextArea({
     >
       {/* ── Barre d'outils ── */}
       <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 border-b border-black/[0.05] bg-black/[0.01]">
-
         {/* Texte */}
-        <ToolbarButton title="Gras" active={editor.isActive("bold")}
-          onClick={() => editor.chain().focus().toggleBold().run()}>
+        <ToolbarButton
+          title="Gras"
+          active={editor.isActive("bold")}
+          onClick={() => editor.chain().focus().toggleBold().run()}
+        >
           <strong>B</strong>
         </ToolbarButton>
-        <ToolbarButton title="Italique" active={editor.isActive("italic")}
-          onClick={() => editor.chain().focus().toggleItalic().run()}>
+        <ToolbarButton
+          title="Italique"
+          active={editor.isActive("italic")}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+        >
           <em>I</em>
         </ToolbarButton>
-        <ToolbarButton title="Souligné" active={editor.isActive("underline")}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}>
+        <ToolbarButton
+          title="Souligné"
+          active={editor.isActive("underline")}
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+        >
           <span style={{ textDecoration: "underline" }}>U</span>
         </ToolbarButton>
-        <ToolbarButton title="Barré" active={editor.isActive("strike")}
-          onClick={() => editor.chain().focus().toggleStrike().run()}>
+        <ToolbarButton
+          title="Barré"
+          active={editor.isActive("strike")}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+        >
           <span style={{ textDecoration: "line-through" }}>S</span>
         </ToolbarButton>
 
         <Divider />
 
         {/* Titres */}
-        <ToolbarButton title="Titre 1" active={editor.isActive("heading", { level: 1 })}
+        <ToolbarButton
+          title="Titre 1"
+          active={editor.isActive("heading", { level: 1 })}
           onClick={() => {
             // Collapse la sélection au début avant d'appliquer le heading
             // pour éviter de splitter le bloc en plusieurs lignes
             const { from } = editor.state.selection;
-            editor
-              .chain()
-              .focus()
-              .setTextSelection(from)
-              .run();
+            editor.chain().focus().setTextSelection(from).run();
             if (editor.isActive("heading", { level: 1 })) {
               editor.chain().focus().setParagraph().run();
             } else {
               editor.chain().focus().setHeading({ level: 1 }).run();
             }
-          }}>
+          }}
+        >
           H1
         </ToolbarButton>
-        <ToolbarButton title="Titre 2" active={editor.isActive("heading", { level: 2 })}
+        <ToolbarButton
+          title="Titre 2"
+          active={editor.isActive("heading", { level: 2 })}
           onClick={() => {
             const { from } = editor.state.selection;
-            editor
-              .chain()
-              .focus()
-              .setTextSelection(from)
-              .run();
+            editor.chain().focus().setTextSelection(from).run();
             if (editor.isActive("heading", { level: 2 })) {
               editor.chain().focus().setParagraph().run();
             } else {
               editor.chain().focus().setHeading({ level: 2 }).run();
             }
-          }}>
+          }}
+        >
           H2
         </ToolbarButton>
 
         <Divider />
 
         {/* Listes */}
-        <ToolbarButton title="Liste à puces" active={editor.isActive("bulletList")}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}>
+        <ToolbarButton
+          title="Liste à puces"
+          active={editor.isActive("bulletList")}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+        >
           • Liste
         </ToolbarButton>
-        <ToolbarButton title="Liste numérotée" active={editor.isActive("orderedList")}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+        <ToolbarButton
+          title="Liste numérotée"
+          active={editor.isActive("orderedList")}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        >
           1. Liste
         </ToolbarButton>
 
         <Divider />
 
         {/* Code */}
-        <ToolbarButton title="Code inline" active={editor.isActive("code")}
-          onClick={() => editor.chain().focus().toggleCode().run()}>
+        <ToolbarButton
+          title="Code inline"
+          active={editor.isActive("code")}
+          onClick={() => editor.chain().focus().toggleCode().run()}
+        >
           {"</>"}
         </ToolbarButton>
-        <ToolbarButton title="Bloc de code" active={editor.isActive("codeBlock")}
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
+        <ToolbarButton
+          title="Bloc de code"
+          active={editor.isActive("codeBlock")}
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+        >
           {"{ }"}
         </ToolbarButton>
 
         <Divider />
 
         {/* Alignement */}
-        <ToolbarButton title="Aligner à gauche" active={editor.isActive({ textAlign: "left" })}
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}>
+        <ToolbarButton
+          title="Aligner à gauche"
+          active={editor.isActive({ textAlign: "left" })}
+          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+        >
           ≡
         </ToolbarButton>
-        <ToolbarButton title="Centrer" active={editor.isActive({ textAlign: "center" })}
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}>
+        <ToolbarButton
+          title="Centrer"
+          active={editor.isActive({ textAlign: "center" })}
+          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+        >
           ≡
         </ToolbarButton>
-        <ToolbarButton title="Aligner à droite" active={editor.isActive({ textAlign: "right" })}
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}>
+        <ToolbarButton
+          title="Aligner à droite"
+          active={editor.isActive({ textAlign: "right" })}
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+        >
           ≡
         </ToolbarButton>
 
@@ -214,12 +238,10 @@ function RichTextArea({
         <Divider />
 
         {/* Undo / Redo */}
-        <ToolbarButton title="Annuler"
-          onClick={() => editor.chain().focus().undo().run()}>
+        <ToolbarButton title="Annuler" onClick={() => editor.chain().focus().undo().run()}>
           ↩
         </ToolbarButton>
-        <ToolbarButton title="Rétablir"
-          onClick={() => editor.chain().focus().redo().run()}>
+        <ToolbarButton title="Rétablir" onClick={() => editor.chain().focus().redo().run()}>
           ↪
         </ToolbarButton>
       </div>

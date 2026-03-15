@@ -12,11 +12,11 @@ export default function WelcomeScreen({ onStart }: Props) {
     <Screen>
       <img src="/africa-samurai-logo.png" alt="Africa Samurai" className="h-16 mb-6" />
       <h1 className="text-4xl font-bold text-[#1A1A1A] leading-tight mb-4">
-        Comment s&apos;est<br />passée votre journée ?
+        Comment s&apos;est
+        <br />
+        passée votre journée ?
       </h1>
-      <p className="text-[#666666] mb-8">
-        {totalQuestions} questions · ~ 3 min
-      </p>
+      <p className="text-[#666666] mb-8">{totalQuestions} questions · ~ 3 min</p>
       <button
         onClick={onStart}
         style={{ backgroundColor: BRAND }}

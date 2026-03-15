@@ -5,7 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Calendar } from "lucide-react";
 import { useState } from "react";
 import { updateTaskStatus, assignTaskToSelf } from "@/lib/team-actions";
-import { type Task  } from "@/lib/task-actions";
+import { type Task } from "@/lib/task-actions";
 
 type Props = {
   task: Task;
@@ -19,10 +19,20 @@ type Props = {
 
 function PriorityDot({ priority }: { priority: string }) {
   const colors: Record<string, string> = {
-    low: "#22c55e", medium: "#fbbf24", high: "#ef4444",
+    low: "#22c55e",
+    medium: "#fbbf24",
+    high: "#ef4444",
   };
   return (
-    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: colors[priority] || "#fbbf24", flexShrink: 0 }} />
+    <div
+      style={{
+        width: "8px",
+        height: "8px",
+        borderRadius: "50%",
+        background: colors[priority] || "#fbbf24",
+        flexShrink: 0,
+      }}
+    />
   );
 }
 
@@ -32,10 +42,16 @@ function formatDate(dateString: string | null): string | null {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return null;
     return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
-function StatusSelect({ status, onStatusChange, disabled }: {
+function StatusSelect({
+  status,
+  onStatusChange,
+  disabled,
+}: {
   status: string;
   onStatusChange: (s: string) => void;
   disabled: boolean;
@@ -46,11 +62,13 @@ function StatusSelect({ status, onStatusChange, disabled }: {
       onChange={(e) => onStatusChange(e.target.value)}
       disabled={disabled}
       style={{
-        padding: "4px 6px", borderRadius: "6px",
+        padding: "4px 6px",
+        borderRadius: "6px",
         border: "1px solid rgba(0,0,0,0.1)",
         background: disabled ? "rgba(0,0,0,0.05)" : "rgba(107,26,42,0.1)",
         color: disabled ? "#999" : "#6B1A2A",
-        fontSize: "0.7rem", fontFamily: "inherit",
+        fontSize: "0.7rem",
+        fontFamily: "inherit",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.6 : 1,
       }}
@@ -63,7 +81,14 @@ function StatusSelect({ status, onStatusChange, disabled }: {
   );
 }
 
-export default function TaskCard({ task, isAssignedToMe, isFree, teamMemberId, onTaskUpdated, isDragging = false }: Props) {
+export default function TaskCard({
+  task,
+  isAssignedToMe,
+  isFree,
+  teamMemberId,
+  onTaskUpdated,
+  isDragging = false,
+}: Props) {
   const [loading, setLoading] = useState(false);
 
   const {
@@ -107,9 +132,7 @@ export default function TaskCard({ task, isAssignedToMe, isFree, teamMemberId, o
         border: "1.5px solid rgba(0,0,0,0.06)",
         padding: "12px",
         marginBottom: "10px",
-        boxShadow: isBeingDragged
-          ? "0 12px 32px rgba(0,0,0,0.2)"
-          : "0 2px 8px rgba(0,0,0,0.04)",
+        boxShadow: isBeingDragged ? "0 12px 32px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.04)",
         opacity: isSortableDragging ? 0.4 : 1,
         cursor: isBeingDragged ? "grabbing" : "grab",
         transition: "box-shadow 0.15s, opacity 0.15s",
@@ -128,10 +151,18 @@ export default function TaskCard({ task, isAssignedToMe, isFree, teamMemberId, o
 
       {/* Description */}
       {task.description && (
-        <p style={{
-          fontSize: "0.75rem", color: "#666", margin: "6px 0", lineHeight: 1.4,
-          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-        }}>
+        <p
+          style={{
+            fontSize: "0.75rem",
+            color: "#666",
+            margin: "6px 0",
+            lineHeight: 1.4,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
           {task.description}
         </p>
       )}
@@ -140,12 +171,20 @@ export default function TaskCard({ task, isAssignedToMe, isFree, teamMemberId, o
       {task.assigned_to_names && task.assigned_to_names.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
           {task.assigned_to_names.map((name, i) => (
-            <span key={i} style={{
-              padding: "2px 7px", borderRadius: "20px", fontSize: "0.62rem", fontWeight: 500,
-              background: name === task.assigned_to_names?.[0] && isAssignedToMe
-                ? "rgba(107,26,42,0.1)" : "rgba(0,0,0,0.05)",
-              color: name === task.assigned_to_names?.[0] && isAssignedToMe ? "#6B1A2A" : "#666",
-            }}>
+            <span
+              key={i}
+              style={{
+                padding: "2px 7px",
+                borderRadius: "20px",
+                fontSize: "0.62rem",
+                fontWeight: 500,
+                background:
+                  name === task.assigned_to_names?.[0] && isAssignedToMe
+                    ? "rgba(107,26,42,0.1)"
+                    : "rgba(0,0,0,0.05)",
+                color: name === task.assigned_to_names?.[0] && isAssignedToMe ? "#6B1A2A" : "#666",
+              }}
+            >
               {name}
             </span>
           ))}
@@ -154,14 +193,36 @@ export default function TaskCard({ task, isAssignedToMe, isFree, teamMemberId, o
 
       {/* Actions — onPointerDown stopPropagation pour éviter le drag au clic */}
       <div
-        style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}
-        onPointerDown={e => e.stopPropagation()}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          marginTop: "8px",
+          flexWrap: "wrap",
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         {isAssignedToMe && (
-          <StatusSelect status={task.status} onStatusChange={handleStatusChange} disabled={loading} />
+          <StatusSelect
+            status={task.status}
+            onStatusChange={handleStatusChange}
+            disabled={loading}
+          />
         )}
         {isAssignedToMe && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", padding: "3px 8px", borderRadius: "8px", fontSize: "0.65rem", fontWeight: 500, background: "rgba(107,26,42,0.1)", color: "#6B1A2A" }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "3px",
+              padding: "3px 8px",
+              borderRadius: "8px",
+              fontSize: "0.65rem",
+              fontWeight: 500,
+              background: "rgba(107,26,42,0.1)",
+              color: "#6B1A2A",
+            }}
+          >
             ✓ Moi
           </span>
         )}
@@ -169,9 +230,24 @@ export default function TaskCard({ task, isAssignedToMe, isFree, teamMemberId, o
           <button
             onClick={handleAssign}
             disabled={loading}
-            style={{ padding: "3px 8px", borderRadius: "6px", border: "1px solid rgba(107,26,42,0.2)", background: "rgba(107,26,42,0.05)", color: "#6B1A2A", fontSize: "0.65rem", fontWeight: 500, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, transition: "all 0.15s" }}
-            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "rgba(107,26,42,0.1)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(107,26,42,0.05)"; }}
+            style={{
+              padding: "3px 8px",
+              borderRadius: "6px",
+              border: "1px solid rgba(107,26,42,0.2)",
+              background: "rgba(107,26,42,0.05)",
+              color: "#6B1A2A",
+              fontSize: "0.65rem",
+              fontWeight: 500,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1,
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) e.currentTarget.style.background = "rgba(107,26,42,0.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(107,26,42,0.05)";
+            }}
           >
             {loading ? "..." : "S'assigner"}
           </button>
@@ -180,7 +256,16 @@ export default function TaskCard({ task, isAssignedToMe, isFree, teamMemberId, o
 
       {/* Due Date */}
       {formattedDate && (
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.65rem", color: "#999", marginTop: "6px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            fontSize: "0.65rem",
+            color: "#999",
+            marginTop: "6px",
+          }}
+        >
           <Calendar size={12} color="#999" />
           {formattedDate}
         </div>

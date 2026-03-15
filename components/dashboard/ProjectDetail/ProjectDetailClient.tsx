@@ -1,7 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, Database, Settings, Users, Zap, Briefcase, BarChart3, Target, Lock, Layers, Cpu, Workflow, Boxes } from "lucide-react";
+import {
+  ChevronLeft,
+  Database,
+  Settings,
+  Users,
+  Zap,
+  Briefcase,
+  BarChart3,
+  Target,
+  Lock,
+  Layers,
+  Cpu,
+  Workflow,
+  Boxes,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Project } from "@/lib/project-actions";
 import { getTasks } from "@/lib/task-actions";
@@ -49,9 +63,6 @@ const AVAILABLE_ICONS = [
   { id: "boxes", component: Boxes },
 ];
 
-function getIconComponent(iconId: string | null) {
-  if (!iconId) return null;
-  const icon = AVAILABLE_ICONS.find(i => i.id === iconId);
   return icon?.component || null;
 }
 
@@ -81,7 +92,6 @@ export default function ProjectDetailClient({ project }: Props) {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
 
-  const iconId = project.icon;
 
   // Charger les tâches du projet
   useEffect(() => {
@@ -89,11 +99,11 @@ export default function ProjectDetailClient({ project }: Props) {
       (async () => {
         setLoadingTasks(true);
         const res = await getTasks();
-        if ('success' in res && res.success && 'tasks' in res && res.tasks) {
-          const projectTasks = res.tasks.filter(t => t.project_id === project.id);
+        if ("success" in res && res.success && "tasks" in res && res.tasks) {
+          const projectTasks = res.tasks.filter((t) => t.project_id === project.id);
           setTasks(projectTasks);
-        } else if ('data' in res) {
-          const projectTasks = res.data.filter(t => t.project_id === project.id);
+        } else if ("data" in res) {
+          const projectTasks = res.data.filter((t) => t.project_id === project.id);
           setTasks(projectTasks);
         }
         setLoadingTasks(false);
@@ -110,26 +120,26 @@ export default function ProjectDetailClient({ project }: Props) {
         if (res.success && res.reports) {
           // Mapper les champs de report-actions vers le type attendu par RapportsTable
           const projectReports: Report[] = res.reports
-            .filter(r => r.project_id === project.id)
-            .map(r => ({
-              id:                  r.id,
-              full_name:           r.full_name,
-              role:                r.role,
-              built:               r.work_built ?? "",        // work_built → built
-              working_built:       r.working_built ?? "",
-              blocked:             r.broken_features ?? "",   // broken_features → blocked
-              validated_learning:  r.validated_learning ?? "",
-              needed_learning:     r.needed_learning ?? "",
-              tomorrow_build:      r.tomorrow_build ?? "",
-              submitted_at:        r.created_at,
-              project_id:          r.project_id,
-              project_name:        r.project_name,
+            .filter((r) => r.project_id === project.id)
+            .map((r) => ({
+              id: r.id,
+              full_name: r.full_name,
+              role: r.role,
+              built: r.work_built ?? "", // work_built → built
+              working_built: r.working_built ?? "",
+              blocked: r.broken_features ?? "", // broken_features → blocked
+              validated_learning: r.validated_learning ?? "",
+              needed_learning: r.needed_learning ?? "",
+              tomorrow_build: r.tomorrow_build ?? "",
+              submitted_at: r.created_at,
+              project_id: r.project_id,
+              project_name: r.project_name,
             }));
 
           setReports(projectReports);
 
           // Récupérer les rôles uniques
-          const uniqueRoles = [...new Set(projectReports.map(r => r.role).filter(Boolean))];
+          const uniqueRoles = [...new Set(projectReports.map((r) => r.role).filter(Boolean))];
           setRoles(uniqueRoles);
 
           // Passer le projet courant pour le filtre
@@ -143,8 +153,25 @@ export default function ProjectDetailClient({ project }: Props) {
   return (
     <div style={{ minHeight: "100vh", background: "#fafafa" }}>
       {/* Header avec back button */}
-      <div style={{ background: "#fff", borderBottom: "1px solid rgba(0,0,0,0.06)", position: "sticky", top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "20px", display: "flex", alignItems: "center", gap: "16px" }}>
+      <div
+        style={{
+          background: "#fff",
+          borderBottom: "1px solid rgba(0,0,0,0.06)",
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "1400px",
+            margin: "0 auto",
+            padding: "20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+          }}
+        >
           <button
             onClick={() => router.back()}
             style={{
@@ -160,39 +187,50 @@ export default function ProjectDetailClient({ project }: Props) {
               color: "#666",
               transition: "all 0.15s",
             }}
-            onMouseEnter={e => e.currentTarget.style.background = "rgba(107,26,42,0.07)"}
-            onMouseLeave={e => e.currentTarget.style.background = "#F5F2ED"}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(107,26,42,0.07)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#F5F2ED")}
           >
             <ChevronLeft size={20} />
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            {IconComponent ? (
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: "rgba(107,26,42,0.1)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#6B1A2A",
-                }}
-              >
-                {(() => {
-                  const IconComponent = getIconComponent(iconId);
-                  return IconComponent ? <IconComponent size={28} /> : null;
-                })()}
-              </div>
-            ) : null}
+            {(() => {
+              const icon = AVAILABLE_ICONS.find((i) => i.id === project.icon);
+              return icon?.component ? (
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "12px",
+                    background: "rgba(107,26,42,0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#6B1A2A",
+                  }}
+                >
+                  {(() => {
+                    const Icon = icon.component;
+                    return <Icon size={28} />;
+                  })()}
+                </div>
+              ) : null;
+            })()}
 
             <div>
-              <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1A1A1A", marginBottom: "2px" }}>
+              <h1
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: 700,
+                  color: "#1A1A1A",
+                  marginBottom: "2px",
+                }}
+              >
                 {project.name}
               </h1>
               <p style={{ fontSize: "0.85rem", color: "#888" }}>
-                {project.team_members?.length ?? 0} équipe{(project.team_members?.length ?? 0) !== 1 ? "s" : ""}
+                {project.team_members?.length ?? 0} équipe
+                {(project.team_members?.length ?? 0) !== 1 ? "s" : ""}
               </p>
             </div>
           </div>
@@ -211,7 +249,7 @@ export default function ProjectDetailClient({ project }: Props) {
           margin: "0 auto",
         }}
       >
-        {TABS.map(tab => {
+        {TABS.map((tab) => {
           const isActive = tab.id === activeTab;
           return (
             <button
@@ -286,7 +324,7 @@ export default function ProjectDetailClient({ project }: Props) {
                     Équipes assignées ({project.team_members.length})
                   </h3>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    {project.team_members.map(member => (
+                    {project.team_members.map((member) => (
                       <div
                         key={member.id}
                         style={{
@@ -313,15 +351,15 @@ export default function ProjectDetailClient({ project }: Props) {
                             fontWeight: 700,
                           }}
                         >
-                          {member.first_name?.[0] ?? ''}
-                          {member.last_name?.[0] ?? ''}
+                          {member.first_name?.[0] ?? ""}
+                          {member.last_name?.[0] ?? ""}
                         </div>
                         <div>
                           <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}>
                             {member.full_name}
                           </div>
                           <div style={{ fontSize: "0.7rem", color: "#999" }}>
-                            {member.first_name ?? ''}
+                            {member.first_name ?? ""}
                           </div>
                         </div>
                       </div>
@@ -361,7 +399,9 @@ export default function ProjectDetailClient({ project }: Props) {
               </div>
             ) : reports.length === 0 ? (
               <div style={{ textAlign: "center", padding: "60px 20px", color: "#999" }}>
-                <p style={{ fontSize: "1rem", marginBottom: "4px" }}>Aucun rapport pour ce projet</p>
+                <p style={{ fontSize: "1rem", marginBottom: "4px" }}>
+                  Aucun rapport pour ce projet
+                </p>
               </div>
             ) : (
               <ClientOnly>

@@ -48,15 +48,11 @@ export default function RapportsPage() {
   if (roleFilter) params.set("role", roleFilter);
   if (projectFilter) params.set("projectId", String(projectFilter));
 
-  const { data, error } = useSWR<ApiResponse>(
-    `/api/rapports?${params.toString()}`,
-    fetcher,
-    {
-      dedupingInterval: 1000,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-    }
-  );
+  const { data, error } = useSWR<ApiResponse>(`/api/rapports?${params.toString()}`, fetcher, {
+    dedupingInterval: 1000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  });
 
   const isLoading = !data && !error;
   const isEmpty = !isLoading && (!data?.data || data.data.length === 0);

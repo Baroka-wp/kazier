@@ -17,18 +17,18 @@
 
 ## Tech Stack
 
-| Technology | Purpose |
-|------------|---------|
-| **Next.js 16** | Frontend framework + API routes |
-| **React 19** | UI library |
-| **TypeScript** | Type safety |
-| **Tailwind CSS v4** | Styling |
-| **Prisma** | ORM for database operations |
-| **Neon** | Serverless PostgreSQL database |
-| **NextAuth.js** | Authentication |
-| **Slack API** | Bot messaging |
-| **Vercel** | Hosting |
-| **bcryptjs** | Password hashing |
+| Technology          | Purpose                         |
+| ------------------- | ------------------------------- |
+| **Next.js 16**      | Frontend framework + API routes |
+| **React 19**        | UI library                      |
+| **TypeScript**      | Type safety                     |
+| **Tailwind CSS v4** | Styling                         |
+| **Prisma**          | ORM for database operations     |
+| **Neon**            | Serverless PostgreSQL database  |
+| **NextAuth.js**     | Authentication                  |
+| **Slack API**       | Bot messaging                   |
+| **Vercel**          | Hosting                         |
+| **bcryptjs**        | Password hashing                |
 
 ## Project Structure
 
@@ -230,21 +230,21 @@ NEXT_PUBLIC_FORM_URL=https://rapportjournalier.vercel.app
 
 The application uses a role-based access control system:
 
-| Role | Description | Dashboard Access | Can View Reports | Can Edit Reports | Can Manage Team |
-|------|-------------|------------------|------------------|------------------|-----------------|
-| `SA` | Super Admin | Full | ✅ | ✅ | ✅ |
-| `TM` | Team Manager | Full | ✅ | ❌ | ❌ |
-| `T`  | Team Member | Teams only | ❌ | ❌ | ❌ |
+| Role | Description  | Dashboard Access | Can View Reports | Can Edit Reports | Can Manage Team |
+| ---- | ------------ | ---------------- | ---------------- | ---------------- | --------------- |
+| `SA` | Super Admin  | Full             | ✅               | ✅               | ✅              |
+| `TM` | Team Manager | Full             | ✅               | ❌               | ❌              |
+| `T`  | Team Member  | Teams only       | ❌               | ❌               | ❌              |
 
 Permissions are defined in `lib/permissions.ts`.
 
 ## Cron Jobs
 
-| Cron | Endpoint | Schedule (UTC) | Local Time (WAT) | Description |
-|------|----------|----------------|------------------|-------------|
-| Remind | `/api/cron/remind` | `30 20 * * 1-5` | 17:00 | Daily channel reminder |
-| Chase | `/api/cron/chase` | Manual trigger | 18:00 | Individual follow-up DMs |
-| Summary | `/api/cron/summary` | Manual trigger | 00:00 | Nightly summary to boss |
+| Cron    | Endpoint            | Schedule (UTC)  | Local Time (WAT) | Description              |
+| ------- | ------------------- | --------------- | ---------------- | ------------------------ |
+| Remind  | `/api/cron/remind`  | `30 20 * * 1-5` | 17:00            | Daily channel reminder   |
+| Chase   | `/api/cron/chase`   | Manual trigger  | 18:00            | Individual follow-up DMs |
+| Summary | `/api/cron/summary` | Manual trigger  | 00:00            | Nightly summary to boss  |
 
 > Note: The Vercel cron is configured for the remind endpoint. The chase and summary endpoints may be triggered externally (e.g., cron-job.org).
 
@@ -283,6 +283,7 @@ Permissions are defined in `lib/permissions.ts`.
 ### Data Fetching Architecture
 
 **✅ CORRECT Pattern (Server Actions):**
+
 ```typescript
 // lib/equipe-actions.ts
 "use server";
@@ -305,6 +306,7 @@ export default async function EquipePage() {
 ```
 
 **❌ INCORRECT Pattern (Direct DB in Pages):**
+
 ```typescript
 // app/dashboard/equipe/page.tsx
 import { prisma } from "@/lib/prisma"; // ❌ NO!
@@ -331,15 +333,15 @@ export default async function EquipePage() {
 
 ## API Routes
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/auth/*` | Various | NextAuth authentication |
-| `/api/cron/remind` | GET | Send daily reminder to Slack channel |
-| `/api/cron/chase` | GET | Send follow-up DMs to absent members |
-| `/api/cron/summary` | GET | Send nightly summary to boss |
-| `/api/ping` | GET | Health check |
-| `/api/slack/*` | Various | Slack integration endpoints |
-| `/api/upload/*` | Various | File upload endpoints |
+| Endpoint            | Method  | Description                          |
+| ------------------- | ------- | ------------------------------------ |
+| `/api/auth/*`       | Various | NextAuth authentication              |
+| `/api/cron/remind`  | GET     | Send daily reminder to Slack channel |
+| `/api/cron/chase`   | GET     | Send follow-up DMs to absent members |
+| `/api/cron/summary` | GET     | Send nightly summary to boss         |
+| `/api/ping`         | GET     | Health check                         |
+| `/api/slack/*`      | Various | Slack integration endpoints          |
+| `/api/upload/*`     | Various | File upload endpoints                |
 
 ## User Flow
 
@@ -357,21 +359,23 @@ export default async function EquipePage() {
 
 ## Key Files Reference
 
-| File | Purpose |
-|------|---------|
-| `prisma/schema.prisma` | Prisma schema - defines all database models |
-| `lib/prisma.ts` | Prisma client singleton with global caching |
-| `lib/*-actions.ts` | Server Actions - all database operations go here |
-| `auth.ts` | NextAuth configuration with credentials provider |
-| `middleware.ts` | Route protection based on auth status and role |
-| `lib/permissions.ts` | Role-based permission matrix |
-| `components/DailyForm/index.tsx` | Main form component with state management |
-| `components/DailyForm/questions.ts` | Question definitions and brand color |
+| File                                | Purpose                                          |
+| ----------------------------------- | ------------------------------------------------ |
+| `prisma/schema.prisma`              | Prisma schema - defines all database models      |
+| `lib/prisma.ts`                     | Prisma client singleton with global caching      |
+| `lib/*-actions.ts`                  | Server Actions - all database operations go here |
+| `auth.ts`                           | NextAuth configuration with credentials provider |
+| `middleware.ts`                     | Route protection based on auth status and role   |
+| `lib/permissions.ts`                | Role-based permission matrix                     |
+| `components/DailyForm/index.tsx`    | Main form component with state management        |
+| `components/DailyForm/questions.ts` | Question definitions and brand color             |
 
 ## Database Management with Prisma
 
 ### Important Hook
+
 **CRITICAL**: Whenever you modify the schema or anything database-related, you MUST:
+
 1. Update `prisma/schema.prisma` first
 2. Run `npx prisma db push` to sync the database
 3. Check all dependencies and update related code
@@ -405,10 +409,10 @@ import { prisma } from "@/lib/prisma";
 // Find many with conditions
 const users = await prisma.users.findMany({
   where: {
-    email: { contains: "example", mode: 'insensitive' }
+    email: { contains: "example", mode: "insensitive" },
   },
   include: { team: true },
-  orderBy: { created_at: 'desc' }
+  orderBy: { created_at: "desc" },
 });
 
 // Create with relation
@@ -419,17 +423,17 @@ await prisma.teams.create({
     users: {
       create: {
         email: "john@example.com",
-        password: hashedPassword
-      }
-    }
-  }
+        password: hashedPassword,
+      },
+    },
+  },
 });
 
 // Array operations
 const tasks = await prisma.tasks.findMany({
   where: {
-    assigned_to: { has: userId }  // Check if array contains value
-  }
+    assigned_to: { has: userId }, // Check if array contains value
+  },
 });
 ```
 
@@ -457,6 +461,7 @@ const tasks = await prisma.tasks.findMany({
    - Use descriptive names based on domain/feature
 
 ## Qwen Added Memories
+
 - Pour ouvrir le projet dans le navigateur, il faut toujours tuer le serveur existant avant de le redémarrer
 - **Database ORM**: We use Prisma exclusively - all schemas are defined in `prisma/schema.prisma`
 - **NO Drizzle**: Drizzle ORM has been removed from the project

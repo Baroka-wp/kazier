@@ -15,18 +15,26 @@ type Props = {
 };
 
 const FALLBACK_CITATIONS: Citation[] = [
-  { quote: "Le succès, c'est d'aller d'échec en échec sans perdre son enthousiasme.", author: "Winston Churchill" },
-  { quote: "La vie, c'est comme une bicyclette, il faut avancer pour ne pas perdre l'équilibre.", author: "Albert Einstein" },
-  { quote: "Le seul moyen de faire du bon travail est d'aimer ce que vous faites.", author: "Steve Jobs" },
+  {
+    quote: "Le succès, c'est d'aller d'échec en échec sans perdre son enthousiasme.",
+    author: "Winston Churchill",
+  },
+  {
+    quote: "La vie, c'est comme une bicyclette, il faut avancer pour ne pas perdre l'équilibre.",
+    author: "Albert Einstein",
+  },
+  {
+    quote: "Le seul moyen de faire du bon travail est d'aimer ce que vous faites.",
+    author: "Steve Jobs",
+  },
 ];
 
 export default function SuccessScreen({ confetti, preloadedCitations }: Props) {
   // Si les citations sont déjà prêtes on les affiche directement, sinon fallback
-  const citations = (preloadedCitations && preloadedCitations.length > 0)
-    ? preloadedCitations
-    : FALLBACK_CITATIONS;
+  const citations =
+    preloadedCitations && preloadedCitations.length > 0 ? preloadedCitations : FALLBACK_CITATIONS;
 
-  const [index, setIndex]   = useState(0);
+  const [index, setIndex] = useState(0);
   const [sliding, setSliding] = useState<"left" | "right" | null>(null);
 
   function navigate(dir: "prev" | "next") {
@@ -34,10 +42,8 @@ export default function SuccessScreen({ confetti, preloadedCitations }: Props) {
     const direction = dir === "next" ? "left" : "right";
     setSliding(direction);
     setTimeout(() => {
-      setIndex(i =>
-        dir === "next"
-          ? (i + 1) % citations.length
-          : (i - 1 + citations.length) % citations.length
+      setIndex((i) =>
+        dir === "next" ? (i + 1) % citations.length : (i - 1 + citations.length) % citations.length
       );
       setSliding(null);
     }, 220);
@@ -52,7 +58,9 @@ export default function SuccessScreen({ confetti, preloadedCitations }: Props) {
         <img src="/africa-samurai-logo.png" alt="Africa Samurai" className="h-16 mx-auto mb-6" />
 
         <h2 className="text-4xl font-bold text-[#1A1A1A] mb-2">Rapport envoyé !</h2>
-        <p style={{ color: "#666" }} className="text-sm mb-8">Beau travail aujourd&apos;hui.</p>
+        <p style={{ color: "#666" }} className="text-sm mb-8">
+          Beau travail aujourd&apos;hui.
+        </p>
 
         {/* Carousel citation — plus de loading, les citations sont déjà là */}
         <div
@@ -70,17 +78,24 @@ export default function SuccessScreen({ confetti, preloadedCitations }: Props) {
               style={{
                 transition: "opacity 0.22s ease, transform 0.22s ease",
                 opacity: sliding ? 0 : 1,
-                transform: sliding === "left"
-                  ? "translateX(-18px)"
-                  : sliding === "right"
-                  ? "translateX(18px)"
-                  : "translateX(0)",
+                transform:
+                  sliding === "left"
+                    ? "translateX(-18px)"
+                    : sliding === "right"
+                      ? "translateX(18px)"
+                      : "translateX(0)",
               }}
             >
-              <p style={{ color: "#1A1A1A", fontStyle: "italic", lineHeight: 1.65 }} className="text-base mb-3 text-left">
+              <p
+                style={{ color: "#1A1A1A", fontStyle: "italic", lineHeight: 1.65 }}
+                className="text-base mb-3 text-left"
+              >
                 &quot;{current.quote}&quot;
               </p>
-              <p style={{ color: "#6B1A2A" }} className="text-xs font-semibold uppercase tracking-widest text-left">
+              <p
+                style={{ color: "#6B1A2A" }}
+                className="text-xs font-semibold uppercase tracking-widest text-left"
+              >
                 — {current.author}
               </p>
             </div>
@@ -90,7 +105,13 @@ export default function SuccessScreen({ confetti, preloadedCitations }: Props) {
         {/* Navigation flèches + points */}
         {citations.length > 1 && (
           <div className="flex items-center justify-center gap-4 mb-6">
-            <button onClick={() => navigate("prev")} className="nav-arrow cursor-pointer" aria-label="Citation précédente">←</button>
+            <button
+              onClick={() => navigate("prev")}
+              className="nav-arrow cursor-pointer"
+              aria-label="Citation précédente"
+            >
+              ←
+            </button>
 
             <div className="flex gap-1.5">
               {citations.map((_, i) => (
@@ -100,7 +121,10 @@ export default function SuccessScreen({ confetti, preloadedCitations }: Props) {
                     if (i === index) return;
                     const dir = i > index ? "left" : "right";
                     setSliding(dir);
-                    setTimeout(() => { setIndex(i); setSliding(null); }, 220);
+                    setTimeout(() => {
+                      setIndex(i);
+                      setSliding(null);
+                    }, 220);
                   }}
                   className="cursor-pointer transition-all duration-300"
                   style={{
@@ -115,7 +139,13 @@ export default function SuccessScreen({ confetti, preloadedCitations }: Props) {
               ))}
             </div>
 
-            <button onClick={() => navigate("next")} className="nav-arrow cursor-pointer" aria-label="Citation suivante">→</button>
+            <button
+              onClick={() => navigate("next")}
+              className="nav-arrow cursor-pointer"
+              aria-label="Citation suivante"
+            >
+              →
+            </button>
           </div>
         )}
       </div>

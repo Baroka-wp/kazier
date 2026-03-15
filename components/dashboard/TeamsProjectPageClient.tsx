@@ -6,17 +6,14 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 // Charger le Kanban en lazy - client only
-const TeamsKanbanWrapper = dynamic(
-  () => import("@/components/dashboard/TeamsKanbanWrapper"),
-  {
-    ssr: false,
-    loading: () => (
-      <div style={{ padding: "40px", textAlign: "center", color: "#999" }}>
-        Chargement du tableau...
-      </div>
-    ),
-  }
-);
+const TeamsKanbanWrapper = dynamic(() => import("@/components/dashboard/TeamsKanbanWrapper"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ padding: "40px", textAlign: "center", color: "#999" }}>
+      Chargement du tableau...
+    </div>
+  ),
+});
 
 type Props = {
   tasks: Task[];
@@ -46,8 +43,8 @@ export default function TeamsProjectPageClient({ tasks, teamMemberId, projectNam
             color: "#666",
             transition: "all 0.15s",
           }}
-          onMouseEnter={e => e.currentTarget.style.background = "rgba(107,26,42,0.07)"}
-          onMouseLeave={e => e.currentTarget.style.background = "#F5F2ED"}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(107,26,42,0.07)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#F5F2ED")}
         >
           <ChevronLeft size={20} />
         </button>

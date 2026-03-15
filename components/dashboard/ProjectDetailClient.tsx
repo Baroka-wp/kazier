@@ -1,11 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  DndContext,
-  type DragEndEvent,
-  closestCorners,
-} from "@dnd-kit/core";
+import { DndContext, type DragEndEvent, closestCorners } from "@dnd-kit/core";
 import {
   ChevronLeft,
   Package,
@@ -58,39 +54,31 @@ function getProjectIcon(iconId: string | null) {
   return ICON_MAP[iconId] || <Package size={24} color="#6B1A2A" />;
 }
 
-export default function ProjectDetailClient({
-  project,
-  initialTasks,
-  teamMemberId,
-}: Props) {
+export default function ProjectDetailClient({ project, initialTasks, teamMemberId }: Props) {
   const [tasks, setTasks] = useState(initialTasks);
 
   async function handleDragEnd(event: DragEndEvent) {
-  const { active, over } = event;
+    const { active, over } = event;
 
-  if (!over) return;
+    if (!over) return;
 
-  const taskId = parseInt(active.id.toString().replace("task-", ""), 10);
-  const newStatus = over.id.toString().replace("column-", "") as StatusType;
+    const taskId = parseInt(active.id.toString().replace("task-", ""), 10);
+    const newStatus = over.id.toString().replace("column-", "") as StatusType;
 
-  if (active.id === over.id) return;
+    if (active.id === over.id) return;
 
-  setTasks((prevTasks) =>
-    prevTasks.map((t) =>
-      t.id === taskId ? ({ ...t, status: newStatus } as Task) : t,
-    ),
-  );
+    setTasks((prevTasks) =>
+      prevTasks.map((t) => (t.id === taskId ? ({ ...t, status: newStatus } as Task) : t))
+    );
 
-  const res = await updateTaskStatus(taskId, newStatus);
-  if (!res.success) {
-    setTasks(initialTasks);
+    const res = await updateTaskStatus(taskId, newStatus);
+    if (!res.success) {
+      setTasks(initialTasks);
+    }
   }
-}
 
   function handleTaskUpdated(updated: Task) {
-    setTasks((prevTasks) =>
-      prevTasks.map((t) => (t.id === updated.id ? updated : t)),
-    );
+    setTasks((prevTasks) => prevTasks.map((t) => (t.id === updated.id ? updated : t)));
   }
 
   // Grouper les tâches par statut
@@ -99,7 +87,7 @@ export default function ProjectDetailClient({
       acc[status] = tasks.filter((t) => t.status === status);
       return acc;
     },
-    {} as Record<StatusType, Task[]>,
+    {} as Record<StatusType, Task[]>
   );
 
   return (
@@ -176,9 +164,7 @@ export default function ProjectDetailClient({
               </h1>
             </div>
           </div>
-          <p style={{ fontSize: "0.85rem", color: "#666", margin: 0 }}>
-            {project.description}
-          </p>
+          <p style={{ fontSize: "0.85rem", color: "#666", margin: 0 }}>{project.description}</p>
         </div>
       </div>
 
@@ -214,7 +200,7 @@ export default function ProjectDetailClient({
                   />
                 ))}
               </div>
-            </DndContext >
+            </DndContext>
           </div>
         </div>
       </div>

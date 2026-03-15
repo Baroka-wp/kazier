@@ -39,10 +39,10 @@ function PriorityDot({ priority }: { priority: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; color: string; label: string }> = {
-    "à faire":  { bg: "rgba(209, 213, 219, 0.1)", color: "#6B7280", label: "À faire"  },
-    "en cours": { bg: "rgba(59, 130, 246, 0.1)",  color: "#3b82f6", label: "En cours" },
-    "review":   { bg: "rgba(168, 85, 247, 0.1)",  color: "#a855f7", label: "Review"   },
-    "terminée": { bg: "rgba(16, 185, 129, 0.1)",  color: "#10b981", label: "Terminée" },
+    "à faire": { bg: "rgba(209, 213, 219, 0.1)", color: "#6B7280", label: "À faire" },
+    "en cours": { bg: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", label: "En cours" },
+    review: { bg: "rgba(168, 85, 247, 0.1)", color: "#a855f7", label: "Review" },
+    terminée: { bg: "rgba(16, 185, 129, 0.1)", color: "#10b981", label: "Terminée" },
   };
   const s = map[status] ?? map["à faire"];
   return (
@@ -182,7 +182,15 @@ export default function TaskItemTeam({
         )}
 
         {/* Badges */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "6px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            flexWrap: "wrap",
+            marginTop: "6px",
+          }}
+        >
           <StatusBadge status={status} />
 
           {isDisabled && assigned_to_names && assigned_to_names.length > 0 && (
@@ -215,7 +223,11 @@ export default function TaskItemTeam({
                 color: "#666",
               }}
             >
-              📅 {new Date(due_date + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+              📅{" "}
+              {new Date(due_date + "T00:00:00").toLocaleDateString("fr-FR", {
+                day: "numeric",
+                month: "short",
+              })}
             </span>
           )}
         </div>

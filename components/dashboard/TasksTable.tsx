@@ -1,14 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import {
-  X,
-  AlertTriangle,
-  Plus,
-  CheckCircle2,
-  XCircle,
-  ChevronDown,
-} from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
 import DataTable from "@/components/dashboard/DataTable";
 import { deleteTask, getProjectsForTasks, type Task } from "@/lib/task-actions";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -110,8 +102,7 @@ function PriorityBadge({ priority }: { priority: string }) {
 // ── Avatars empilés + tooltip ─────────────────────────────────────────────────
 // ✅ Colle ce composant dans TasksTable.tsx en remplacement de NamePills
 function NamePills({ names }: { names?: string[] }) {
-  if (!names?.length)
-    return <span style={{ fontSize: "0.8rem", color: "#ccc" }}>—</span>;
+  if (!names?.length) return <span style={{ fontSize: "0.8rem", color: "#ccc" }}>—</span>;
 
   const visible = names.slice(0, 2);
   const extra = names.length - 2;
@@ -198,13 +189,7 @@ function NamePills({ names }: { names?: string[] }) {
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 
-function ToastNotification({
-  toast,
-  onClose,
-}: {
-  toast: Toast;
-  onClose: () => void;
-}) {
+function ToastNotification({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const ok = toast.type === "success";
   return (
     <div
@@ -225,11 +210,7 @@ function ToastNotification({
         animation: "slideIn 0.25s ease",
       }}
     >
-      {ok ? (
-        <CheckCircle2 size={18} color="#2D7A4F" />
-      ) : (
-        <XCircle size={18} color="#e53e3e" />
-      )}
+      {ok ? <CheckCircle2 size={18} color="#2D7A4F" /> : <XCircle size={18} color="#e53e3e" />}
       <span
         style={{
           fontSize: "0.83rem",
@@ -330,18 +311,14 @@ function DeleteModal({
           >
             Supprimer cette tâche ?
           </h3>
-          <p
-            style={{ fontSize: "0.82rem", color: "#888", marginBottom: "8px" }}
-          >
+          <p style={{ fontSize: "0.82rem", color: "#888", marginBottom: "8px" }}>
             Vous êtes sur le point de supprimer <strong>{task.title}</strong>.
           </p>
           <p style={{ fontSize: "0.78rem", color: "#e53e3e", fontWeight: 500 }}>
             Cette action est irréversible.
           </p>
         </div>
-        <div
-          style={{ display: "flex", gap: "10px", padding: "20px 24px 24px" }}
-        >
+        <div style={{ display: "flex", gap: "10px", padding: "20px 24px 24px" }}>
           <button
             onClick={onCancel}
             disabled={loading}
@@ -453,9 +430,7 @@ function EditModalWrapper({
             >
               {mode === "create" ? "Nouvelle tâche" : "Édition"}
             </div>
-            <div
-              style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A" }}
-            >
+            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A" }}>
               {mode === "create" ? "Ajouter une tâche" : "Modifier la tâche"}
             </div>
           </div>
@@ -478,18 +453,9 @@ function EditModalWrapper({
           </button>
         </div>
         {mode === "create" ? (
-          <CreateTaskForm
-            projects={projects}
-            onSaved={onSaved}
-            onClose={onClose}
-          />
+          <CreateTaskForm projects={projects} onSaved={onSaved} onClose={onClose} />
         ) : (
-          <UpdateTaskForm
-            task={task!}
-            projects={projects}
-            onSaved={onSaved}
-            onClose={onClose}
-          />
+          <UpdateTaskForm task={task!} projects={projects} onSaved={onSaved} onClose={onClose} />
         )}
       </div>
       <style>{`@keyframes popIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }`}</style>
@@ -521,18 +487,14 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
   const filtered = useMemo(() => {
     let data = tasks;
     if (statusFilter) data = data.filter((t) => t.status === statusFilter);
-    if (priorityFilter)
-      data = data.filter((t) => t.priority === priorityFilter);
+    if (priorityFilter) data = data.filter((t) => t.priority === priorityFilter);
     return data;
   }, [tasks, statusFilter, priorityFilter]);
 
   function addToast(type: Toast["type"], message: string) {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(
-      () => setToasts((prev) => prev.filter((t) => t.id !== id)),
-      4000,
-    );
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }
 
   async function handleDelete() {
@@ -649,7 +611,7 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
           <X size={12} /> Réinitialiser
         </button>
       )}
-{/*       {canViewTeam && (
+      {/*       {canViewTeam && (
         <button onClick={() => { setEditMode("create"); setEditTarget(null); }} style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "10px", border: "none", background: "#6B1A2A", color: "white", fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
           <Plus size={14} /> Ajouter tâche
         </button>
@@ -689,11 +651,7 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
             key: "title",
             label: "Tâche",
             sortable: true,
-            render: (t) => (
-              <span style={{ fontWeight: 500, fontSize: "0.83rem" }}>
-                {t.title}
-              </span>
-            ),
+            render: (t) => <span style={{ fontWeight: 500, fontSize: "0.83rem" }}>{t.title}</span>,
           },
           {
             key: "status",
@@ -717,9 +675,7 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
             key: "project_name",
             label: "Projet",
             render: (t) => (
-              <span style={{ fontSize: "0.8rem", color: "#666" }}>
-                {t.project_name || "—"}
-              </span>
+              <span style={{ fontSize: "0.8rem", color: "#666" }}>{t.project_name || "—"}</span>
             ),
           },
           {
@@ -761,9 +717,7 @@ export default function TasksTable({ tasks: initialTasks }: Props) {
               setTasks((prev) => [updated, ...prev]);
               addToast("success", `"${updated.title}" ajoutée.`);
             } else {
-              setTasks((prev) =>
-                prev.map((t) => (t.id === updated.id ? updated : t)),
-              );
+              setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
               addToast("success", `"${updated.title}" mise à jour.`);
             }
             setEditTarget(null);

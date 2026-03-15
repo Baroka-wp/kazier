@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import TaskItemTeam from "./TaskItemTeam";
-import {
-  assignTaskToSelf,
-  unassignTaskFromSelf,
-  type ProjectWithTasks,
-} from "@/lib/team-actions";
+import { assignTaskToSelf, unassignTaskFromSelf, type ProjectWithTasks } from "@/lib/team-actions";
 import type { Task } from "@/lib/task-actions";
 type Props = {
   project: ProjectWithTasks;
@@ -15,25 +11,28 @@ type Props = {
   onTasksUpdated: (updatedTasks: Task[]) => void;
 };
 
-export default function ProjectCard({
-  project,
-  teamMemberId,
-  onTasksUpdated,
-}: Props) {
+export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState(project.tasks);
   const [loadingTaskId, setLoadingTaskId] = useState<number | null>(null);
 
   // Compter les tâches
   const assignedToMe = tasks.filter(
-    (t) => Array.isArray(t.assigned_to) && t.assigned_to.includes(teamMemberId),
+    (t) => Array.isArray(t.assigned_to) && t.assigned_to.includes(teamMemberId)
   ).length;
   const total = tasks.length;
 
   // Séparer les tâches libres et assignées
   const freeTasks = tasks.filter((t) => !t.assigned_to || t.assigned_to.length === 0);
-  const myTasks = tasks.filter((t) => Array.isArray(t.assigned_to) && t.assigned_to.includes(teamMemberId));
-  const othersTasks = tasks.filter((t) => Array.isArray(t.assigned_to) && t.assigned_to.length > 0 && !t.assigned_to.includes(teamMemberId));
+  const myTasks = tasks.filter(
+    (t) => Array.isArray(t.assigned_to) && t.assigned_to.includes(teamMemberId)
+  );
+  const othersTasks = tasks.filter(
+    (t) =>
+      Array.isArray(t.assigned_to) &&
+      t.assigned_to.length > 0 &&
+      !t.assigned_to.includes(teamMemberId)
+  );
 
   async function handleAssign(taskId: number) {
     setLoadingTaskId(taskId);
@@ -70,14 +69,11 @@ export default function ProjectCard({
         transition: "all 0.15s",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow =
-          "0 8px 24px rgba(0,0,0,0.1)";
-        (e.currentTarget as HTMLElement).style.borderColor =
-          "rgba(107,26,42,0.1)";
+        (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.1)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(107,26,42,0.1)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow =
-          "0 2px 8px rgba(0,0,0,0.04)";
+        (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
         (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.06)";
       }}
     >
@@ -94,12 +90,8 @@ export default function ProjectCard({
           borderBottom: isOpen ? "1px solid rgba(0,0,0,0.06)" : "none",
           transition: "all 0.15s",
         }}
-        onMouseEnter={(e) =>
-          ((e.currentTarget as HTMLElement).style.background = "#f5f2ed")
-        }
-        onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLElement).style.background = "#f9f7f4")
-        }
+        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f5f2ed")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#f9f7f4")}
       >
         {/* Icon */}
         <div
@@ -146,14 +138,10 @@ export default function ProjectCard({
 
         {/* Counter */}
         <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div
-            style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}
-          >
+          <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}>
             {assignedToMe}/{total}
           </div>
-          <div style={{ fontSize: "0.65rem", color: "#999", marginTop: "2px" }}>
-            assignées
-          </div>
+          <div style={{ fontSize: "0.65rem", color: "#999", marginTop: "2px" }}>assignées</div>
         </div>
 
         {/* Toggle Icon */}

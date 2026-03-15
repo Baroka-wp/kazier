@@ -47,7 +47,9 @@ export type PaginatedResult<T> = {
 
 // ── Get Teams Data (avec pagination) ─────────────────────────────────────────
 
-export async function getTeamsData(params?: PaginationParams): Promise<PaginatedResult<TeamMemberWithUser> & { roles: string[] }> {
+export async function getTeamsData(
+  params?: PaginationParams
+): Promise<PaginatedResult<TeamMemberWithUser> & { roles: string[] }> {
   const page = params?.page ?? 1;
   const limit = params?.limit ?? 10;
   const search = params?.search;
@@ -55,17 +57,22 @@ export async function getTeamsData(params?: PaginationParams): Promise<Paginated
 
   // Construire les filtres WHERE
   type WhereClause = {
-    OR?: Array<{ first_name?: { contains: string; mode: 'insensitive' }; last_name?: { contains: string; mode: 'insensitive' }; email?: { contains: string; mode: 'insensitive' }; phone?: { contains: string; mode: 'insensitive' } }>;
+    OR?: Array<{
+      first_name?: { contains: string; mode: "insensitive" };
+      last_name?: { contains: string; mode: "insensitive" };
+      email?: { contains: string; mode: "insensitive" };
+      phone?: { contains: string; mode: "insensitive" };
+    }>;
     role?: string;
   };
   const where: WhereClause = {};
 
   if (search) {
     where.OR = [
-      { first_name: { contains: search, mode: 'insensitive' as const } },
-      { last_name: { contains: search, mode: 'insensitive' as const } },
-      { email: { contains: search, mode: 'insensitive' as const } },
-      { phone: { contains: search, mode: 'insensitive' as const } },
+      { first_name: { contains: search, mode: "insensitive" as const } },
+      { last_name: { contains: search, mode: "insensitive" as const } },
+      { email: { contains: search, mode: "insensitive" as const } },
+      { phone: { contains: search, mode: "insensitive" as const } },
     ];
   }
 
@@ -80,23 +87,23 @@ export async function getTeamsData(params?: PaginationParams): Promise<Paginated
   const teamsData = await prisma.teams.findMany({
     where,
     include: {
-      users: true
+      users: true,
     },
     orderBy: {
-      created_at: 'desc'
+      created_at: "desc",
     },
     skip: (page - 1) * limit,
-    take: limit
+    take: limit,
   });
 
   // Transform to match expected format
-  const members: TeamMemberWithUser[] = teamsData.map(t => {
+  const members: TeamMemberWithUser[] = teamsData.map((t) => {
     const user = t.users[0];
     return {
       id: t.id,
       first_name: t.first_name,
       last_name: t.last_name,
-      full_name: `${t.first_name || ''} ${t.last_name || ''}`.trim(),
+      full_name: `${t.first_name || ""} ${t.last_name || ""}`.trim(),
       phone: t.phone,
       age: t.age,
       is_boss: t.is_boss,
@@ -105,13 +112,11 @@ export async function getTeamsData(params?: PaginationParams): Promise<Paginated
       user_id: user?.id ?? null,
       email: user?.email ?? null,
       role: user?.role ?? null,
-      user_created_at: user ? new Date() : null
+      user_created_at: user ? new Date() : null,
     };
   });
 
-  const roles = [
-    ...new Set(members.map(m => m.role).filter(Boolean)),
-  ] as string[];
+  const roles = [...new Set(members.map((m) => m.role).filter(Boolean))] as string[];
 
   return {
     data: members,
@@ -119,7 +124,7 @@ export async function getTeamsData(params?: PaginationParams): Promise<Paginated
     page,
     limit,
     totalPages: Math.ceil(total / limit),
-    roles
+    roles,
   };
 }
 
@@ -128,21 +133,21 @@ export async function getTeamsData(params?: PaginationParams): Promise<Paginated
 export async function getTeamsDataLegacy(): Promise<TeamsDataResult> {
   const teamsData = await prisma.teams.findMany({
     include: {
-      users: true
+      users: true,
     },
     orderBy: {
-      created_at: 'desc'
-    }
+      created_at: "desc",
+    },
   });
 
   // Transform to match expected format
-  const members: TeamMemberWithUser[] = teamsData.map(t => {
+  const members: TeamMemberWithUser[] = teamsData.map((t) => {
     const user = t.users[0]; // Get first user (if exists)
     return {
       id: t.id,
       first_name: t.first_name,
       last_name: t.last_name,
-      full_name: `${t.first_name || ''} ${t.last_name || ''}`.trim(),
+      full_name: `${t.first_name || ""} ${t.last_name || ""}`.trim(),
       phone: t.phone,
       age: t.age,
       is_boss: t.is_boss,
@@ -151,18 +156,16 @@ export async function getTeamsDataLegacy(): Promise<TeamsDataResult> {
       user_id: user?.id ?? null,
       email: user?.email ?? null,
       role: user?.role ?? null,
-      user_created_at: user ? new Date() : null
+      user_created_at: user ? new Date() : null,
     };
   });
 
   const totalMembers = members.length;
-  const bosses = members.filter(m => m.is_boss).length;
-  const withAccount = members.filter(m => m.user_id !== null).length;
+  const bosses = members.filter((m) => m.is_boss).length;
+  const withAccount = members.filter((m) => m.user_id !== null).length;
   const withoutAccount = totalMembers - withAccount;
 
-  const roles = [
-    ...new Set(members.map(m => m.role).filter(Boolean)),
-  ] as string[];
+  const roles = [...new Set(members.map((m) => m.role).filter(Boolean))] as string[];
 
   return { members, totalMembers, bosses, withAccount, withoutAccount, roles };
 }

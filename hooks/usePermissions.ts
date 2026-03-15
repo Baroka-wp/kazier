@@ -2,7 +2,6 @@
 
 import { useAuth } from "./useAuth";
 import {
-  getPermissions,
   canViewReports,
   canEditReports,
   canDeleteReports,
@@ -31,14 +30,14 @@ export function usePermissions(): UsePermissionsReturn {
 
   return {
     role,
-    canViewReports:     canViewReports(role),
-    canEditReports:     canEditReports(role),
-    canDeleteReports:   canDeleteReports(role),
-    canViewTeam:        canViewTeam(role),
-    canManageTeam:      canManageTeam(role),
+    canViewReports: canViewReports(role),
+    canEditReports: canEditReports(role),
+    canDeleteReports: canDeleteReports(role),
+    canViewTeam: canViewTeam(role),
+    canManageTeam: canManageTeam(role),
     canAccessDashboard: canAccessDashboard(role),
-    isSuperAdmin:       isSuperAdmin(role),
-    isTeamManager:      isTeamManager(role),
-    isTeam:             isTeam(role),
+    isSuperAdmin: isSuperAdmin(role),
+    isTeamManager: isTeamManager(role),
+    isTeam: isTeam(role),
   };
 }

@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from "react";
 import DataTable from "@/components/dashboard/DataTable";
-import {
-  deleteTask,
-  getTeamsForAssignment,
-  getProjectsForTasks,
-} from "@/lib/task-actions";
+import { deleteTask, getTeamsForAssignment, getProjectsForTasks } from "@/lib/task-actions";
 import { usePermissions } from "@/hooks/usePermissions";
 
 import {
@@ -47,8 +43,7 @@ function NamePills({ names }: { names?: string[] }) {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
 
-  if (!names?.length)
-    return <span style={{ fontSize: "0.8rem", color: "#ccc" }}>—</span>;
+  if (!names?.length) return <span style={{ fontSize: "0.8rem", color: "#ccc" }}>—</span>;
 
   const visible = names.slice(0, 2);
   const extra = names.slice(2);
@@ -93,13 +88,11 @@ function NamePills({ names }: { names?: string[] }) {
               flexShrink: 0,
               animation: `pillFadeIn 0.25s ease both`,
               animationDelay: `${i * 0.06}s`,
-              transition:
-                "transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
+              transition: "transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "scale(1.06)";
-              e.currentTarget.style.boxShadow =
-                "0 2px 8px rgba(107,26,42,0.15)";
+              e.currentTarget.style.boxShadow = "0 2px 8px rgba(107,26,42,0.15)";
               e.currentTarget.style.background = "rgba(107,26,42,0.12)";
             }}
             onMouseLeave={(e) => {
@@ -170,8 +163,7 @@ function NamePills({ names }: { names?: string[] }) {
               e.currentTarget.style.transform = "scale(1.1)";
               e.currentTarget.style.background = "#6B1A2A";
               e.currentTarget.style.color = "white";
-              e.currentTarget.style.boxShadow =
-                "0 2px 8px rgba(107,26,42,0.25)";
+              e.currentTarget.style.boxShadow = "0 2px 8px rgba(107,26,42,0.25)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "scale(1)";
@@ -208,9 +200,7 @@ function NamePills({ names }: { names?: string[] }) {
                   width: "100%",
                   maxWidth: "320px",
                   boxShadow: "0 24px 60px rgba(0,0,0,0.15)",
-                  animation: closing
-                    ? "slideDown 0.2s ease both"
-                    : "slideUp 0.25s ease both",
+                  animation: closing ? "slideDown 0.2s ease both" : "slideUp 0.25s ease both",
                 }}
               >
                 <div
@@ -286,12 +276,9 @@ function NamePills({ names }: { names?: string[] }) {
                           transition: "background 0.15s",
                         }}
                         onMouseEnter={(e) =>
-                          (e.currentTarget.style.background =
-                            "rgba(107,26,42,0.07)")
+                          (e.currentTarget.style.background = "rgba(107,26,42,0.07)")
                         }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "#F5F2ED")
-                        }
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#F5F2ED")}
                       >
                         <div
                           style={{
@@ -411,8 +398,7 @@ export default function TasksTable({
         getProjectsForTasks(),
       ]);
       if (teamsRes.success && teamsRes.teams) setTeams(teamsRes.teams);
-      if (projectsRes.success && projectsRes.projects)
-        setProjects(projectsRes.projects);
+      if (projectsRes.success && projectsRes.projects) setProjects(projectsRes.projects);
     })();
   }, []);
 
@@ -422,10 +408,7 @@ export default function TasksTable({
   function addToast(type: Toast["type"], message: string) {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(
-      () => setToasts((prev) => prev.filter((t) => t.id !== id)),
-      4000,
-    );
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }
 
   async function handleDelete() {
@@ -489,11 +472,7 @@ export default function TasksTable({
             key: "title",
             label: "Tâche",
             sortable: true,
-            render: (t) => (
-              <span style={{ fontWeight: 500, fontSize: "0.83rem" }}>
-                {t.title}
-              </span>
-            ),
+            render: (t) => <span style={{ fontWeight: 500, fontSize: "0.83rem" }}>{t.title}</span>,
           },
           {
             key: "status",
@@ -516,9 +495,7 @@ export default function TasksTable({
             key: "project_name",
             label: "Projet",
             render: (t) => (
-              <span style={{ fontSize: "0.8rem", color: "#666" }}>
-                {t.project_name || "—"}
-              </span>
+              <span style={{ fontSize: "0.8rem", color: "#666" }}>{t.project_name || "—"}</span>
             ),
           },
           {
@@ -542,7 +519,11 @@ export default function TasksTable({
         actions={actions}
         pageSize={10}
         searchPlaceholder="Rechercher une tâche..."
-        emptyMessage={isEmpty ? "Aucune tâche pour le moment. Commencez par en créer une !" : "Aucune tâche trouvée."}
+        emptyMessage={
+          isEmpty
+            ? "Aucune tâche pour le moment. Commencez par en créer une !"
+            : "Aucune tâche trouvée."
+        }
         filters={filterSlot}
         loading={loadingProp}
         // Pagination serveur

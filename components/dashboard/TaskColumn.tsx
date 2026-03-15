@@ -13,56 +13,69 @@ type Props = {
 };
 
 const STATUS_LABELS = {
-  "à faire":  "À faire",
+  "à faire": "À faire",
   "en cours": "En cours",
-  "review":   "Review",
-  "terminée": "Terminée",
+  review: "Review",
+  terminée: "Terminée",
 };
 
 const STATUS_COLORS = {
-  "à faire":  "#f59e0b",
+  "à faire": "#f59e0b",
   "en cours": "#3b82f6",
-  "review":   "#8b5cf6",
-  "terminée": "#10b981",
+  review: "#8b5cf6",
+  terminée: "#10b981",
 };
 
 export default function TaskColumn({ status, tasks, teamMemberId, onTaskUpdated }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
 
   return (
-    <div style={{
-      flex: 1,
-      minWidth: "280px",
-      maxWidth: "340px",
-      background: "#fafafa",
-      borderRadius: "12px",
-      padding: "12px",
-      display: "flex",
-      flexDirection: "column",
-      border: isOver ? "2px solid rgba(107,26,42,0.3)" : "2px solid transparent",
-      transition: "border-color 0.15s",
-    }}>
+    <div
+      style={{
+        flex: 1,
+        minWidth: "280px",
+        maxWidth: "340px",
+        background: "#fafafa",
+        borderRadius: "12px",
+        padding: "12px",
+        display: "flex",
+        flexDirection: "column",
+        border: isOver ? "2px solid rgba(107,26,42,0.3)" : "2px solid transparent",
+        transition: "border-color 0.15s",
+      }}
+    >
       {/* Header colonne */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: STATUS_COLORS[status], flexShrink: 0 }} />
+        <div
+          style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            background: STATUS_COLORS[status],
+            flexShrink: 0,
+          }}
+        />
         <h3 style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
           {STATUS_LABELS[status]}
         </h3>
-        <span style={{
-          marginLeft: "auto",
-          fontSize: "0.7rem", fontWeight: 600,
-          background: "rgba(0,0,0,0.06)",
-          color: "#666",
-          borderRadius: "20px",
-          padding: "1px 7px",
-        }}>
+        <span
+          style={{
+            marginLeft: "auto",
+            fontSize: "0.7rem",
+            fontWeight: 600,
+            background: "rgba(0,0,0,0.06)",
+            color: "#666",
+            borderRadius: "20px",
+            padding: "1px 7px",
+          }}
+        >
           {tasks.length}
         </span>
       </div>
 
       {/* Zone droppable */}
       <SortableContext
-        items={tasks.map(t => `task-${t.id}`)}
+        items={tasks.map((t) => `task-${t.id}`)}
         strategy={verticalListSortingStrategy}
       >
         <div
@@ -95,13 +108,19 @@ export default function TaskColumn({ status, tasks, teamMemberId, onTaskUpdated 
           })}
 
           {tasks.length === 0 && (
-            <div style={{
-              height: "100%", minHeight: "120px",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#ccc", fontSize: "0.78rem",
-              border: "1.5px dashed rgba(0,0,0,0.08)",
-              borderRadius: "8px",
-            }}>
+            <div
+              style={{
+                height: "100%",
+                minHeight: "120px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ccc",
+                fontSize: "0.78rem",
+                border: "1.5px dashed rgba(0,0,0,0.08)",
+                borderRadius: "8px",
+              }}
+            >
               Déposer ici
             </div>
           )}

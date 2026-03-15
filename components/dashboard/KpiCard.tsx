@@ -19,11 +19,11 @@ export default function KpiCard({
   icon,
   accent = false,
 }: KpiCardProps) {
-  const bg          = accent ? "#6B1A2A"               : "#FFFFFF";
-  const border      = accent ? "#6B1A2A"               : "rgba(0,0,0,0.07)";
-  const labelColor  = accent ? "rgba(255,255,255,0.7)" : "#aaa";
-  const valueColor  = accent ? "#FFFFFF"               : "#1A1A1A";
-  const iconOpacity = accent ? 0.24                    : 0.18;
+  const bg = accent ? "#6B1A2A" : "#FFFFFF";
+  const border = accent ? "#6B1A2A" : "rgba(0,0,0,0.07)";
+  const labelColor = accent ? "rgba(255,255,255,0.7)" : "#aaa";
+  const valueColor = accent ? "#FFFFFF" : "#1A1A1A";
+  const iconOpacity = accent ? 0.24 : 0.18;
   const resolvedDeltaColor = deltaColor ?? (accent ? "rgba(255,255,255,0.72)" : "#6B1A2A");
 
   return (
@@ -35,9 +35,7 @@ export default function KpiCard({
         border: `1px solid ${border}`,
         position: "relative",
         overflow: "hidden",
-        boxShadow: accent
-          ? "0 6px 20px -4px rgba(107,26,42,0.3)"
-          : "0 1px 4px rgba(0,0,0,0.04)",
+        boxShadow: accent ? "0 6px 20px -4px rgba(107,26,42,0.3)" : "0 1px 4px rgba(0,0,0,0.04)",
         transition: "transform 0.15s, box-shadow 0.15s",
       }}
     >

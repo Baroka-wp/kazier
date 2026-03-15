@@ -14,7 +14,7 @@ export default async function TeamProjectsPage() {
 
   const user = session.user as { team_id?: string };
 
-const teamMemberId = parseInt(user.team_id ?? "0");
+  const teamMemberId = parseInt(user.team_id ?? "0");
 
   if (!teamMemberId || isNaN(teamMemberId)) {
     redirect("/login");
@@ -26,7 +26,15 @@ const teamMemberId = parseInt(user.team_id ?? "0");
   console.log("📊 TeamProjectsPage - Projets trouvés:", projects.length);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fff", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#fff",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       {/* Sticky Header */}
       <div
         style={{
@@ -40,11 +48,20 @@ const teamMemberId = parseInt(user.team_id ?? "0");
         }}
       >
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <h1 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#1A1A1A", marginBottom: "4px", margin: 0 }}>
+          <h1
+            style={{
+              fontSize: "1.8rem",
+              fontWeight: 700,
+              color: "#1A1A1A",
+              marginBottom: "4px",
+              margin: 0,
+            }}
+          >
             Mes Projets
           </h1>
           <p style={{ fontSize: "0.9rem", color: "#666", margin: 0 }}>
-            {projects.length} projet{projects.length !== 1 ? "s" : ""} &bull; Cliquez sur un projet pour gérer vos tâches
+            {projects.length} projet{projects.length !== 1 ? "s" : ""} &bull; Cliquez sur un projet
+            pour gérer vos tâches
           </p>
         </div>
       </div>
@@ -77,11 +94,8 @@ const teamMemberId = parseInt(user.team_id ?? "0");
                 gap: "16px",
               }}
             >
-              {projects.map(project => (
-                <ProjectCardLink
-                  key={project.id}
-                  project={project}
-                />
+              {projects.map((project) => (
+                <ProjectCardLink key={project.id} project={project} />
               ))}
             </div>
           )}

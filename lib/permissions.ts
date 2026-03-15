@@ -3,11 +3,11 @@
 export type Role = "SA" | "TM" | "T"; // Super Admin, Team Manager, Team
 
 export interface Permission {
-  canViewReports:     boolean;
-  canEditReports:     boolean;
-  canDeleteReports:   boolean;
-  canViewTeam:        boolean;
-  canManageTeam:      boolean;
+  canViewReports: boolean;
+  canEditReports: boolean;
+  canDeleteReports: boolean;
+  canViewTeam: boolean;
+  canManageTeam: boolean;
   canAccessDashboard: boolean;
 }
 
@@ -16,29 +16,29 @@ export interface Permission {
 const ROLE_PERMISSIONS: Record<Role, Permission> = {
   SA: {
     // Super Admin - Accès complet
-    canViewReports:     true,
-    canEditReports:     true,
-    canDeleteReports:   true,
-    canViewTeam:        true,
-    canManageTeam:      true,
+    canViewReports: true,
+    canEditReports: true,
+    canDeleteReports: true,
+    canViewTeam: true,
+    canManageTeam: true,
     canAccessDashboard: true,
   },
   TM: {
     // Team Manager - Lecture seule
-    canViewReports:     true,
-    canEditReports:     false,
-    canDeleteReports:   false,
-    canViewTeam:        true,
-    canManageTeam:      false,
+    canViewReports: true,
+    canEditReports: false,
+    canDeleteReports: false,
+    canViewTeam: true,
+    canManageTeam: false,
     canAccessDashboard: true,
   },
   T: {
     // Team - Pas d'accès au dashboard (sauf teams)
-    canViewReports:     false,
-    canEditReports:     false,
-    canDeleteReports:   false,
-    canViewTeam:        false,
-    canManageTeam:      false,
+    canViewReports: false,
+    canEditReports: false,
+    canDeleteReports: false,
+    canViewTeam: false,
+    canManageTeam: false,
     canAccessDashboard: false,
   },
 };

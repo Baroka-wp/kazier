@@ -21,13 +21,13 @@ export async function notifyTaskAssigned({
   const members = await prisma.teams.findMany({
     where: {
       id: { in: assignedIds },
-      slack_id: { not: null }
+      slack_id: { not: null },
     },
     select: {
       first_name: true,
       last_name: true,
-      slack_id: true
-    }
+      slack_id: true,
+    },
   });
 
   if (!members.length) return;
@@ -36,7 +36,7 @@ export async function notifyTaskAssigned({
     members.map((member) => {
       const fields = [
         ...(projectName ? [{ type: "mrkdwn", text: `📁 *Projet* : ${projectName}` }] : []),
-        ...(dueDate     ? [{ type: "mrkdwn", text: `📅 *Délai* : ${dueDate}` }]    : []),
+        ...(dueDate ? [{ type: "mrkdwn", text: `📅 *Délai* : ${dueDate}` }] : []),
       ];
 
       const blocks: object[] = [
@@ -61,10 +61,8 @@ export async function notifyTaskAssigned({
 
         { type: "divider" },
 
-         // ── Projet + Deadline en colonnes ─────────────────────────
-        ...(fields.length > 0
-          ? [{ type: "section", fields }]
-          : []),
+        // ── Projet + Deadline en colonnes ─────────────────────────
+        ...(fields.length > 0 ? [{ type: "section", fields }] : []),
 
         { type: "divider" },
 
@@ -76,8 +74,6 @@ export async function notifyTaskAssigned({
             text: `*Titre* : ${taskTitle}\n*Description* : ${taskDescription || "Aucune description"}`,
           },
         },
-
-       
 
         // ── Bouton ────────────────────────────────────────────────
         {

@@ -16,10 +16,12 @@ export async function GET() {
       },
     },
     select: { team_id: true },
-    distinct: ['team_id'],
+    distinct: ["team_id"],
   });
 
-  const submittedIds = submittedToday.map(r => r.team_id).filter((id): id is number => id !== null);
+  const submittedIds = submittedToday
+    .map((r) => r.team_id)
+    .filter((id): id is number => id !== null);
 
   // Récupère les membres qui n'ont pas soumis aujourd'hui
   const missing = await prisma.teams.findMany({
@@ -42,12 +44,12 @@ export async function GET() {
 
   // Envoie un DM à chaque absent
   await Promise.all(
-    missing.map(member =>
+    missing.map((member) =>
       fetch("https://slack.com/api/chat.postMessage", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
         },
         body: JSON.stringify({
           channel: member.slack_id,
@@ -82,5 +84,5 @@ export async function GET() {
     )
   );
 
-  return Response.json({ notified: missing.map(m => `${m.first_name} ${m.last_name}`) });
+  return Response.json({ notified: missing.map((m) => `${m.first_name} ${m.last_name}`) });
 }

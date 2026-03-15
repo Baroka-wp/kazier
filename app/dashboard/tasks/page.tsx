@@ -43,15 +43,15 @@ export default function TasksPage() {
   if (statusFilter) params.set("status", statusFilter);
   if (priorityFilter) params.set("priority", priorityFilter);
 
-  const { data, error, mutate: refreshSWR } = useSWR<ApiResponse>(
-    `/api/tasks?${params.toString()}`,
-    fetcher,
-    {
-      dedupingInterval: 1000,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-    }
-  );
+  const {
+    data,
+    error,
+    mutate: refreshSWR,
+  } = useSWR<ApiResponse>(`/api/tasks?${params.toString()}`, fetcher, {
+    dedupingInterval: 1000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  });
 
   const isLoading = !data && !error;
   const isEmpty = !isLoading && (!data?.data || data.data.length === 0);

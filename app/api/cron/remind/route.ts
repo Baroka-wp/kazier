@@ -3,7 +3,7 @@ export async function GET() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+      Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
     },
     body: JSON.stringify({
       channel: process.env.SLACK_CHANNEL_ID,

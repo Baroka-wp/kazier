@@ -13,9 +13,7 @@ type Params = {
   projectId: string;
 };
 
-export default async function TeamProjectsPage(props: { 
-  params: Promise<Params> 
-}) {
+export default async function TeamProjectsPage(props: { params: Promise<Params> }) {
   const params = await props.params;
   const session = await auth();
 
@@ -34,13 +32,11 @@ export default async function TeamProjectsPage(props: {
     );
   }
 
-  const project = res.projects.find(p => p.id === parseInt(params.projectId));
+  const project = res.projects.find((p) => p.id === parseInt(params.projectId));
 
   if (!project) {
     return (
-      <div style={{ padding: "40px", textAlign: "center", color: "#999" }}>
-        Projet non trouvé.
-      </div>
+      <div style={{ padding: "40px", textAlign: "center", color: "#999" }}>Projet non trouvé.</div>
     );
   }
 
@@ -52,8 +48,8 @@ export default async function TeamProjectsPage(props: {
 
   return (
     <TeamsProjectPageClient
-      tasks={project.tasks} 
-      teamMemberId={teamMemberId} 
+      tasks={project.tasks}
+      teamMemberId={teamMemberId}
       projectName={project.name}
     />
   );

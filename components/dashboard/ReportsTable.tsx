@@ -6,35 +6,53 @@ import DataTable from "@/components/dashboard/DataTable";
 
 function Avatar({ name }: { name: string }) {
   const initials = name
-    ?.split(" ").filter(Boolean).slice(0, 2)
-    .map((w) => w[0].toUpperCase()).join("");
+    ?.split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
   return (
-    <div style={{
-      width: "30px", height: "30px", borderRadius: "50%",
-      background: "rgba(107,26,42,0.07)",
-      border: "1.5px solid rgba(107,26,42,0.15)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: "0.65rem", fontWeight: 700, color: "#6B1A2A", flexShrink: 0,
-    }}>
+    <div
+      style={{
+        width: "30px",
+        height: "30px",
+        borderRadius: "50%",
+        background: "rgba(107,26,42,0.07)",
+        border: "1.5px solid rgba(107,26,42,0.15)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "0.65rem",
+        fontWeight: 700,
+        color: "#6B1A2A",
+        flexShrink: 0,
+      }}
+    >
       {initials}
     </div>
   );
 }
 
 function RoleBadge({ role }: { role: string }) {
-const map: Record<string, { bg: string; color: string }> = {
-  "Super Admin": { bg: "rgba(107,26,42,0.1)",  color: "#6B1A2A" },
-  "Team Manager":{ bg: "rgba(59,130,246,0.1)", color: "#3b82f6" },
-  "Team":        { bg: "rgba(16,185,129,0.1)", color: "#10b981" },
-};
+  const map: Record<string, { bg: string; color: string }> = {
+    "Super Admin": { bg: "rgba(107,26,42,0.1)", color: "#6B1A2A" },
+    "Team Manager": { bg: "rgba(59,130,246,0.1)", color: "#3b82f6" },
+    Team: { bg: "rgba(16,185,129,0.1)", color: "#10b981" },
+  };
   const s = map[role] ?? { bg: "rgba(107,26,42,0.07)", color: "#6B1A2A" };
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center",
-      padding: "3px 10px", borderRadius: "20px",
-      fontSize: "0.67rem", fontWeight: 600,
-      background: s.bg, color: s.color,
-    }}>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "3px 10px",
+        borderRadius: "20px",
+        fontSize: "0.67rem",
+        fontWeight: 600,
+        background: s.bg,
+        color: s.color,
+      }}
+    >
       {role}
     </span>
   );
@@ -42,11 +60,33 @@ const map: Record<string, { bg: string; color: string }> = {
 
 function StatusBadge({ status }: { status: "done" | "pending" }) {
   return status === "done" ? (
-    <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: "20px", fontSize: "0.67rem", fontWeight: 600, background: "rgba(45,122,79,0.1)", color: "#2D7A4F" }}>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "3px 10px",
+        borderRadius: "20px",
+        fontSize: "0.67rem",
+        fontWeight: 600,
+        background: "rgba(45,122,79,0.1)",
+        color: "#2D7A4F",
+      }}
+    >
       ✓ Envoyé
     </span>
   ) : (
-    <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: "20px", fontSize: "0.67rem", fontWeight: 600, background: "rgba(107,26,42,0.08)", color: "#6B1A2A" }}>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "3px 10px",
+        borderRadius: "20px",
+        fontSize: "0.67rem",
+        fontWeight: 600,
+        background: "rgba(107,26,42,0.08)",
+        color: "#6B1A2A",
+      }}
+    >
       ⏳ En attente
     </span>
   );
@@ -99,7 +139,17 @@ export default function ReportsTable({ todayReports, pendingMembers }: Props) {
           key: "built",
           label: "Construit aujourd'hui",
           render: (r) => (
-            <span style={{ fontSize: "0.77rem", color: "#888", maxWidth: "200px", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span
+              style={{
+                fontSize: "0.77rem",
+                color: "#888",
+                maxWidth: "200px",
+                display: "block",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {r.built ?? "—"}
             </span>
           ),
@@ -111,7 +161,10 @@ export default function ReportsTable({ todayReports, pendingMembers }: Props) {
           render: (r) => (
             <span style={{ fontSize: "0.75rem", color: "#aaa", whiteSpace: "nowrap" }}>
               {r.submitted_at
-                ? new Date(r.submitted_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+                ? new Date(r.submitted_at).toLocaleTimeString("fr-FR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                 : "—"}
             </span>
           ),

@@ -122,9 +122,7 @@ function LogoutModal({
           >
             Se déconnecter ?
           </h3>
-          <p
-            style={{ fontSize: "0.9rem", color: "#aaa", marginBottom: "20px" }}
-          >
+          <p style={{ fontSize: "0.9rem", color: "#aaa", marginBottom: "20px" }}>
             Vous serez redirigé vers la page de connexion.
           </p>
 
@@ -171,17 +169,13 @@ function LogoutModal({
               >
                 {userName}
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#aaa" }}>
-                Session active
-              </div>
+              <div style={{ fontSize: "0.75rem", color: "#aaa" }}>Session active</div>
             </div>
           </div>
         </div>
 
         {/* Boutons */}
-        <div
-          style={{ display: "flex", gap: "12px", padding: "24px 20px 28px" }}
-        >
+        <div style={{ display: "flex", gap: "12px", padding: "24px 20px 28px" }}>
           <button
             onClick={onCancel}
             disabled={loading}
@@ -325,9 +319,7 @@ export default function Header() {
             {page.title}
           </h1>
           {page.subtitle && !isMobile && (
-            <p style={{ fontSize: "0.7rem", color: "#aaa", fontWeight: 400 }}>
-              {page.subtitle}
-            </p>
+            <p style={{ fontSize: "0.7rem", color: "#aaa", fontWeight: 400 }}>{page.subtitle}</p>
           )}
         </div>
 
@@ -399,9 +391,7 @@ export default function Header() {
                   width: "36px",
                   height: "36px",
                   borderRadius: "50%",
-                  background: showMobileMenu
-                    ? "rgba(107,26,42,0.1)"
-                    : "#F5F2ED",
+                  background: showMobileMenu ? "rgba(107,26,42,0.1)" : "#F5F2ED",
                   border: "none",
                   cursor: "pointer",
                   transition: "all 0.15s",
@@ -441,9 +431,7 @@ export default function Header() {
                     >
                       {userName}
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#aaa" }}>
-                      {userRole}
-                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#aaa" }}>{userRole}</div>
                   </div>
                   <button
                     onClick={() => {

@@ -35,11 +35,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}
         >
           <Header />
-          <main 
-            className="dashboard-main" 
-            style={{ 
-              flex: 1, 
-              overflowY: "auto", 
+          <main
+            className="dashboard-main"
+            style={{
+              flex: 1,
+              overflowY: "auto",
               padding: "28px 32px",
             }}
           >

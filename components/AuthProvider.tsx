@@ -10,4 +10,3 @@ type Props = {
 export default function AuthProvider({ children }: Props) {
   return <SessionProvider>{children}</SessionProvider>;
 }
-

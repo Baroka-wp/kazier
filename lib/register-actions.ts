@@ -10,19 +10,19 @@ import { getPermissions } from "@/lib/permissions";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type RegisterData = {
-  full_name?:  string;
+  full_name?: string;
   first_name: string;
-  last_name:  string;
-  email:      string;
-  phone:      string;
-  age:        string;
-  role:       string;
-  is_boss:    boolean;
-  slack_id:   string;
+  last_name: string;
+  email: string;
+  phone: string;
+  age: string;
+  role: string;
+  is_boss: boolean;
+  slack_id: string;
 };
 
 export type RegisterResult =
-  | { success: true;  user: { id: number; full_name: string; email: string } }
+  | { success: true; user: { id: number; full_name: string; email: string } }
   | { success: false; error: string; field?: keyof RegisterData };
 
 export type DuplicateResult =
@@ -33,8 +33,8 @@ export type DuplicateResult =
 
 async function sendSlackInviteEmail(params: {
   first_name: string;
-  last_name:  string;
-  email:      string;
+  last_name: string;
+  email: string;
 }) {
   try {
     const transporter = nodemailer.createTransport({
@@ -46,11 +46,11 @@ async function sendSlackInviteEmail(params: {
     });
 
     const inviteLink = process.env.SLACK_INVITE_LINK ?? "#";
-    const fullName   = `${params.first_name} ${params.last_name}`;
+    const fullName = `${params.first_name} ${params.last_name}`;
 
     await transporter.sendMail({
-      from:    `"Africa Samurai" <${process.env.GMAIL_USER}>`,
-      to:      params.email,
+      from: `"Africa Samurai" <${process.env.GMAIL_USER}>`,
+      to: params.email,
       subject: "🎉 Bienvenue chez Africa Samurai — Rejoignez notre Slack",
       html: `
         <!DOCTYPE html>
@@ -110,31 +110,44 @@ async function sendSlackInviteEmail(params: {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-function validateData(data: RegisterData):
-  | { valid: true }
-  | { valid: false; error: string; field: keyof RegisterData }
-{
+function validateData(
+  data: RegisterData
+): { valid: true } | { valid: false; error: string; field: keyof RegisterData } {
   const first = data.first_name?.trim();
   if (!first || first.length < 2)
-    return { valid: false, error: "Le prénom doit contenir au moins 2 caractères.", field: "first_name" };
+    return {
+      valid: false,
+      error: "Le prénom doit contenir au moins 2 caractères.",
+      field: "first_name",
+    };
   if (first.length > 100)
-    return { valid: false, error: "Le prénom est trop long (100 caractères max).", field: "first_name" };
+    return {
+      valid: false,
+      error: "Le prénom est trop long (100 caractères max).",
+      field: "first_name",
+    };
 
   const last = data.last_name?.trim();
   if (!last || last.length < 2)
-    return { valid: false, error: "Le nom doit contenir au moins 2 caractères.", field: "last_name" };
+    return {
+      valid: false,
+      error: "Le nom doit contenir au moins 2 caractères.",
+      field: "last_name",
+    };
   if (last.length > 100)
-    return { valid: false, error: "Le nom est trop long (100 caractères max).", field: "last_name" };
+    return {
+      valid: false,
+      error: "Le nom est trop long (100 caractères max).",
+      field: "last_name",
+    };
 
   const mail = data.email?.trim();
-  if (!mail)
-    return { valid: false, error: "L'adresse e-mail est requise.", field: "email" };
+  if (!mail) return { valid: false, error: "L'adresse e-mail est requise.", field: "email" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail))
     return { valid: false, error: "L'adresse e-mail est invalide.", field: "email" };
 
   const tel = data.phone?.trim();
-  if (!tel)
-    return { valid: false, error: "Le numéro de téléphone est requis.", field: "phone" };
+  if (!tel) return { valid: false, error: "Le numéro de téléphone est requis.", field: "phone" };
   if (!/^\+?[0-9]{7,15}$/.test(tel.replace(/[\s\-().]/g, "")))
     return { valid: false, error: "Le numéro de téléphone est invalide.", field: "phone" };
 
@@ -142,8 +155,7 @@ function validateData(data: RegisterData):
   if (!data.age || isNaN(ageNum) || ageNum < 10 || ageNum > 100)
     return { valid: false, error: "L'âge doit être compris entre 10 et 100.", field: "age" };
 
-  if (!data.role?.trim())
-    return { valid: false, error: "Le rôle est requis.", field: "role" };
+  if (!data.role?.trim()) return { valid: false, error: "Le rôle est requis.", field: "role" };
 
   return { valid: true };
 }
@@ -161,52 +173,54 @@ export async function checkDuplicate(
       const user = excludeTeamId
         ? await prisma.users.findFirst({
             where: {
-              email: { equals: normalized, mode: 'insensitive' },
-              team_id: { not: excludeTeamId }
-            }
+              email: { equals: normalized, mode: "insensitive" },
+              team_id: { not: excludeTeamId },
+            },
           })
         : await prisma.users.findFirst({
             where: {
-              email: { equals: normalized, mode: 'insensitive' }
-            }
+              email: { equals: normalized, mode: "insensitive" },
+            },
           });
       if (user)
         return { exists: true, blocking: true, message: "Cette adresse e-mail est déjà utilisée." };
-    }
-
-    else if (field === "phone") {
+    } else if (field === "phone") {
       const normalized = value.trim();
       const team = excludeTeamId
         ? await prisma.teams.findFirst({
             where: {
               phone: normalized,
-              id: { not: excludeTeamId }
-            }
+              id: { not: excludeTeamId },
+            },
           })
         : await prisma.teams.findFirst({
-            where: { phone: normalized }
+            where: { phone: normalized },
           });
       if (team)
-        return { exists: true, blocking: true, message: "Ce numéro de téléphone est déjà utilisé." };
-    }
-
-    else if (field === "slack_id") {
+        return {
+          exists: true,
+          blocking: true,
+          message: "Ce numéro de téléphone est déjà utilisé.",
+        };
+    } else if (field === "slack_id") {
       const normalized = value.trim();
       const team = excludeTeamId
         ? await prisma.teams.findFirst({
             where: {
               slack_id: normalized,
-              id: { not: excludeTeamId }
-            }
+              id: { not: excludeTeamId },
+            },
           })
         : await prisma.teams.findFirst({
-            where: { slack_id: normalized }
+            where: { slack_id: normalized },
           });
       if (team)
-        return { exists: true, blocking: true, message: "Ce Slack ID est déjà associé à un membre." };
-    }
-
-    else if (field === "full_name") {
+        return {
+          exists: true,
+          blocking: true,
+          message: "Ce Slack ID est déjà associé à un membre.",
+        };
+    } else if (field === "full_name") {
       const normalized = value.trim().toLowerCase();
       const teams = excludeTeamId
         ? await prisma.$queryRaw<Array<{ id: number }>>`
@@ -222,7 +236,8 @@ export async function checkDuplicate(
         return {
           exists: true,
           blocking: false,
-          message: "⚠️ Un utilisateur avec ce nom exact existe déjà. Continuez si c'est bien une personne différente.",
+          message:
+            "⚠️ Un utilisateur avec ce nom exact existe déjà. Continuez si c'est bien une personne différente.",
         };
     }
 
@@ -262,25 +277,27 @@ export async function registerUser(data: RegisterData): Promise<RegisterResult> 
       return { success: false, error: validation.error, field: validation.field };
 
     const first_name = data.first_name.trim();
-    const last_name  = data.last_name.trim();
-    const email      = data.email.trim().toLowerCase();
-    const phone      = data.phone.trim();
-    const age        = Number(data.age);
-    const role       = data.role.trim();
-    const is_boss    = data.is_boss;
-    const slack_id   = data.slack_id?.trim() || null;
+    const last_name = data.last_name.trim();
+    const email = data.email.trim().toLowerCase();
+    const phone = data.phone.trim();
+    const age = Number(data.age);
+    const role = data.role.trim();
+    const is_boss = data.is_boss;
+    const slack_id = data.slack_id?.trim() || null;
 
     // Vérif doublons
     const [emailCheck, phoneCheck, slackCheck] = await Promise.all([
       prisma.users.findFirst({
-        where: { email: { equals: email, mode: 'insensitive' } }
+        where: { email: { equals: email, mode: "insensitive" } },
       }),
       prisma.teams.findFirst({
-        where: { phone }
+        where: { phone },
       }),
-      slack_id ? prisma.teams.findFirst({
-        where: { slack_id }
-      }) : Promise.resolve(null),
+      slack_id
+        ? prisma.teams.findFirst({
+            where: { slack_id },
+          })
+        : Promise.resolve(null),
     ]);
 
     if (emailCheck)
@@ -288,7 +305,11 @@ export async function registerUser(data: RegisterData): Promise<RegisterResult> 
     if (phoneCheck)
       return { success: false, error: "Ce numéro de téléphone est déjà utilisé.", field: "phone" };
     if (slackCheck)
-      return { success: false, error: "Ce Slack ID est déjà associé à un membre.", field: "slack_id" };
+      return {
+        success: false,
+        error: "Ce Slack ID est déjà associé à un membre.",
+        field: "slack_id",
+      };
 
     // 1. Insérer dans teams
     const team = await prisma.teams.create({
@@ -299,7 +320,7 @@ export async function registerUser(data: RegisterData): Promise<RegisterResult> 
         age,
         is_boss,
         slack_id,
-      }
+      },
     });
 
     // 2. Insérer dans users avec team_id
@@ -309,7 +330,7 @@ export async function registerUser(data: RegisterData): Promise<RegisterResult> 
         password: await bcrypt.hash("motdepasse123", 10),
         role,
         team_id: team.id,
-      }
+      },
     });
 
     // 3. Envoyer l'email d'invitation Slack (non bloquant)
@@ -322,18 +343,32 @@ export async function registerUser(data: RegisterData): Promise<RegisterResult> 
       success: true,
       user: { id: team.id, full_name: `${first_name} ${last_name}`, email },
     };
-
   } catch (err: unknown) {
     console.error("[registerUser]", err instanceof Error ? err.message : String(err));
-    if (err && typeof err === 'object' && 'code' in err) {
+    if (err && typeof err === "object" && "code" in err) {
       const prismaErr = err as { code?: string; meta?: { target?: string[] }; constraint?: string };
       if (prismaErr.code === "23505" || prismaErr.code === "P2002") {
         if (prismaErr.meta?.target?.includes("email") || prismaErr.constraint?.includes("email"))
-          return { success: false, error: "Cette adresse e-mail est déjà utilisée.", field: "email" };
+          return {
+            success: false,
+            error: "Cette adresse e-mail est déjà utilisée.",
+            field: "email",
+          };
         if (prismaErr.meta?.target?.includes("phone") || prismaErr.constraint?.includes("phone"))
-          return { success: false, error: "Ce numéro de téléphone est déjà utilisé.", field: "phone" };
-        if (prismaErr.meta?.target?.includes("slack_id") || prismaErr.constraint?.includes("slack_id"))
-          return { success: false, error: "Ce Slack ID est déjà associé à un membre.", field: "slack_id" };
+          return {
+            success: false,
+            error: "Ce numéro de téléphone est déjà utilisé.",
+            field: "phone",
+          };
+        if (
+          prismaErr.meta?.target?.includes("slack_id") ||
+          prismaErr.constraint?.includes("slack_id")
+        )
+          return {
+            success: false,
+            error: "Ce Slack ID est déjà associé à un membre.",
+            field: "slack_id",
+          };
       }
     }
     return { success: false, error: "Une erreur est survenue. Veuillez réessayer." };
@@ -342,10 +377,7 @@ export async function registerUser(data: RegisterData): Promise<RegisterResult> 
 
 // ── Modifier un membre ────────────────────────────────────────────────────────
 
-export async function updateUser(
-  teamId: number,
-  data: RegisterData
-): Promise<RegisterResult> {
+export async function updateUser(teamId: number, data: RegisterData): Promise<RegisterResult> {
   try {
     // ✅ Vérifier authentification et permissions
     await requireTeamManagement();
@@ -355,34 +387,36 @@ export async function updateUser(
       return { success: false, error: validation.error, field: validation.field };
 
     const first_name = data.first_name.trim();
-    const last_name  = data.last_name.trim();
-    const email      = data.email.trim().toLowerCase();
-    const phone      = data.phone.trim();
-    const age        = Number(data.age);
-    const role       = data.role.trim();
-    const is_boss    = data.is_boss;
-    const slack_id   = data.slack_id?.trim() || null;
+    const last_name = data.last_name.trim();
+    const email = data.email.trim().toLowerCase();
+    const phone = data.phone.trim();
+    const age = Number(data.age);
+    const role = data.role.trim();
+    const is_boss = data.is_boss;
+    const slack_id = data.slack_id?.trim() || null;
 
     // Vérif doublons en excluant le membre courant
     const [emailCheck, phoneCheck, slackCheck] = await Promise.all([
       prisma.users.findFirst({
         where: {
-          email: { equals: email, mode: 'insensitive' },
-          team_id: { not: teamId }
-        }
+          email: { equals: email, mode: "insensitive" },
+          team_id: { not: teamId },
+        },
       }),
       prisma.teams.findFirst({
         where: {
           phone,
-          id: { not: teamId }
-        }
+          id: { not: teamId },
+        },
       }),
-      slack_id ? prisma.teams.findFirst({
-        where: {
-          slack_id,
-          id: { not: teamId }
-        }
-      }) : Promise.resolve(null),
+      slack_id
+        ? prisma.teams.findFirst({
+            where: {
+              slack_id,
+              id: { not: teamId },
+            },
+          })
+        : Promise.resolve(null),
     ]);
 
     if (emailCheck)
@@ -390,7 +424,11 @@ export async function updateUser(
     if (phoneCheck)
       return { success: false, error: "Ce numéro de téléphone est déjà utilisé.", field: "phone" };
     if (slackCheck)
-      return { success: false, error: "Ce Slack ID est déjà associé à un membre.", field: "slack_id" };
+      return {
+        success: false,
+        error: "Ce Slack ID est déjà associé à un membre.",
+        field: "slack_id",
+      };
 
     // Mettre à jour teams
     await prisma.teams.update({
@@ -402,7 +440,7 @@ export async function updateUser(
         age,
         is_boss,
         slack_id,
-      }
+      },
     });
 
     // Mettre à jour users (email + role)
@@ -411,7 +449,7 @@ export async function updateUser(
       data: {
         email,
         role,
-      }
+      },
     });
 
     revalidatePath("/dashboard/equipe");
@@ -421,18 +459,32 @@ export async function updateUser(
       success: true,
       user: { id: teamId, full_name: `${first_name} ${last_name}`, email },
     };
-
   } catch (err: unknown) {
     console.error("[updateUser]", err instanceof Error ? err.message : String(err));
-    if (err && typeof err === 'object' && 'code' in err) {
+    if (err && typeof err === "object" && "code" in err) {
       const prismaErr = err as { code?: string; meta?: { target?: string[] }; constraint?: string };
       if (prismaErr.code === "23505" || prismaErr.code === "P2002") {
         if (prismaErr.meta?.target?.includes("email") || prismaErr.constraint?.includes("email"))
-          return { success: false, error: "Cette adresse e-mail est déjà utilisée.", field: "email" };
+          return {
+            success: false,
+            error: "Cette adresse e-mail est déjà utilisée.",
+            field: "email",
+          };
         if (prismaErr.meta?.target?.includes("phone") || prismaErr.constraint?.includes("phone"))
-          return { success: false, error: "Ce numéro de téléphone est déjà utilisé.", field: "phone" };
-        if (prismaErr.meta?.target?.includes("slack_id") || prismaErr.constraint?.includes("slack_id"))
-          return { success: false, error: "Ce Slack ID est déjà associé à un membre.", field: "slack_id" };
+          return {
+            success: false,
+            error: "Ce numéro de téléphone est déjà utilisé.",
+            field: "phone",
+          };
+        if (
+          prismaErr.meta?.target?.includes("slack_id") ||
+          prismaErr.constraint?.includes("slack_id")
+        )
+          return {
+            success: false,
+            error: "Ce Slack ID est déjà associé à un membre.",
+            field: "slack_id",
+          };
       }
     }
     return { success: false, error: "Impossible de mettre à jour ce membre pour le moment." };
@@ -441,18 +493,16 @@ export async function updateUser(
 
 // ── Supprimer un membre ───────────────────────────────────────────────────────
 
-export async function deleteUser(
-  teamId: number
-): Promise<{ success: boolean; error?: string }> {
+export async function deleteUser(teamId: number): Promise<{ success: boolean; error?: string }> {
   try {
     // ✅ Vérifier authentification et permissions
     await requireTeamManagement();
 
     await prisma.users.deleteMany({
-      where: { team_id: teamId }
+      where: { team_id: teamId },
     });
     await prisma.teams.delete({
-      where: { id: teamId }
+      where: { id: teamId },
     });
     revalidatePath("/dashboard/equipe");
     revalidatePath("/dashboard");

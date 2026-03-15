@@ -1,7 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Package, Database, Settings, Users, Zap, Briefcase, BarChart3, Target, Lock, Layers, Cpu, Workflow, Boxes } from "lucide-react";
+import {
+  ChevronRight,
+  Package,
+  Database,
+  Settings,
+  Users,
+  Zap,
+  Briefcase,
+  BarChart3,
+  Target,
+  Lock,
+  Layers,
+  Cpu,
+  Workflow,
+  Boxes,
+} from "lucide-react";
 import { type ProjectWithTasks } from "@/lib/team-actions";
 
 type Props = {
@@ -60,8 +75,25 @@ export default function ProjectCardLink({ project }: Props) {
         }}
       >
         {/* Icon + Titre */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "56px", height: "56px", borderRadius: "12px", background: "rgba(107,26,42,0.08)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "12px",
+            justifyContent: "space-between",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "56px",
+              height: "56px",
+              borderRadius: "12px",
+              background: "rgba(107,26,42,0.08)",
+            }}
+          >
             {getProjectIcon(project.icon)}
           </div>
           <ChevronRight size={20} color="#aaa" style={{ flexShrink: 0, marginTop: "4px" }} />
@@ -69,7 +101,15 @@ export default function ProjectCardLink({ project }: Props) {
 
         {/* Titre */}
         <div>
-          <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#1A1A1A", margin: 0, marginBottom: "4px" }}>
+          <h3
+            style={{
+              fontSize: "1rem",
+              fontWeight: 600,
+              color: "#1A1A1A",
+              margin: 0,
+              marginBottom: "4px",
+            }}
+          >
             {project.name}
           </h3>
         </div>

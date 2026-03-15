@@ -4,17 +4,17 @@ import { getTasks } from "@/lib/task-actions";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || undefined;
     const status = searchParams.get("status") || undefined;
     const priority = searchParams.get("priority") || undefined;
-    const projectId = searchParams.get("projectId") 
-      ? parseInt(searchParams.get("projectId")!) 
+    const projectId = searchParams.get("projectId")
+      ? parseInt(searchParams.get("projectId")!)
       : undefined;
-    const assignedTo = searchParams.get("assignedTo") 
-      ? parseInt(searchParams.get("assignedTo")!) 
+    const assignedTo = searchParams.get("assignedTo")
+      ? parseInt(searchParams.get("assignedTo")!)
       : undefined;
 
     const result = await getTasks({
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       status,
       priority,
       projectId,
-      assignedTo
+      assignedTo,
     });
 
     return NextResponse.json(result);

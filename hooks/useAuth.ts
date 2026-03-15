@@ -3,20 +3,20 @@
 import { useSession } from "next-auth/react";
 
 export interface AuthUser {
-  id:         string;
-  email:      string;
-  name:       string;
-  role:       string | null;
-  team_id:    number | null;
+  id: string;
+  email: string;
+  name: string;
+  role: string | null;
+  team_id: number | null;
   first_name: string | null;
-  last_name:  string | null;
+  last_name: string | null;
 }
 
 export interface UseAuthReturn {
-  user:       AuthUser | null;
-  status:     "authenticated" | "unauthenticated" | "loading";
-  isLoading:  boolean;
-  role:       string | null;
+  user: AuthUser | null;
+  status: "authenticated" | "unauthenticated" | "loading";
+  isLoading: boolean;
+  role: string | null;
 }
 
 /**

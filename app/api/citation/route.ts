@@ -28,9 +28,7 @@ export async function GET() {
     const data = await res.json();
 
     // 2. Prend 10 citations aléatoires
-    const selected = data
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 1);
+    const selected = data.sort(() => Math.random() - 0.5).slice(0, 1);
 
     // 3. Traduit toutes les citations en parallèle
     const translated = await Promise.all(
@@ -41,14 +39,26 @@ export async function GET() {
     );
 
     return NextResponse.json(translated);
-
   } catch (err) {
     console.error("[citation]", err);
     return NextResponse.json([
-      { quote: "Le succès, c'est d'aller d'échec en échec sans perdre son enthousiasme.", author: "Winston Churchill" },
-      { quote: "La vie, c'est comme une bicyclette, il faut avancer pour ne pas perdre l'équilibre.", author: "Albert Einstein" },
-      { quote: "Le seul moyen de faire du bon travail est d'aimer ce que vous faites.", author: "Steve Jobs" },
-      { quote: "Celui qui déplace une montagne commence par déplacer de petites pierres.", author: "Confucius" },
+      {
+        quote: "Le succès, c'est d'aller d'échec en échec sans perdre son enthousiasme.",
+        author: "Winston Churchill",
+      },
+      {
+        quote:
+          "La vie, c'est comme une bicyclette, il faut avancer pour ne pas perdre l'équilibre.",
+        author: "Albert Einstein",
+      },
+      {
+        quote: "Le seul moyen de faire du bon travail est d'aimer ce que vous faites.",
+        author: "Steve Jobs",
+      },
+      {
+        quote: "Celui qui déplace une montagne commence par déplacer de petites pierres.",
+        author: "Confucius",
+      },
       { quote: "La créativité, c'est l'intelligence qui s'amuse.", author: "Albert Einstein" },
     ]);
   }

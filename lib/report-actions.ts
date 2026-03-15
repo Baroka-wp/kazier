@@ -7,7 +7,7 @@ import { getPermissions } from "@/lib/permissions";
 
 // ── Helper: Vérifier authentification et permissions ─────────────────────────
 
-async function requireReportPermission(permission: 'canEditReports' | 'canDeleteReports') {
+async function requireReportPermission(permission: "canEditReports" | "canDeleteReports") {
   const session = await auth();
 
   if (!session?.user) {
@@ -44,10 +44,10 @@ export type Report = {
 export async function deleteReport(id: number): Promise<{ success: boolean; error?: string }> {
   try {
     // ✅ Vérifier authentification et permissions
-    await requireReportPermission('canDeleteReports');
+    await requireReportPermission("canDeleteReports");
 
     await prisma.rapports.delete({
-      where: { id }
+      where: { id },
     });
     revalidatePath("/dashboard/rapports");
     revalidatePath("/dashboard");
@@ -71,7 +71,7 @@ export async function updateReport(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // ✅ Vérifier authentification et permissions
-    await requireReportPermission('canEditReports');
+    await requireReportPermission("canEditReports");
 
     // Filtrer les champs définis
     type UpdateData = {
@@ -86,7 +86,8 @@ export async function updateReport(
     if (data.work_built !== undefined) updateData.work_built = data.work_built;
     if (data.working_built !== undefined) updateData.working_built = data.working_built;
     if (data.broken_features !== undefined) updateData.broken_features = data.broken_features;
-    if (data.validated_learning !== undefined) updateData.validated_learning = data.validated_learning;
+    if (data.validated_learning !== undefined)
+      updateData.validated_learning = data.validated_learning;
     if (data.needed_learning !== undefined) updateData.needed_learning = data.needed_learning;
     if (data.tomorrow_build !== undefined) updateData.tomorrow_build = data.tomorrow_build;
 
@@ -96,7 +97,7 @@ export async function updateReport(
 
     await prisma.rapports.update({
       where: { id },
-      data: updateData
+      data: updateData,
     });
 
     revalidatePath("/dashboard/rapports");
@@ -123,13 +124,13 @@ export async function getReportsWithProjects(): Promise<{
         team: true,
         project: {
           select: {
-            name: true
-          }
-        }
+            name: true,
+          },
+        },
       },
       orderBy: {
-        created_at: 'desc'
-      }
+        created_at: "desc",
+      },
     });
 
     // Récupérer les utilisateurs pour avoir les rôles
@@ -137,10 +138,10 @@ export async function getReportsWithProjects(): Promise<{
     const users = await prisma.users.findMany({
       select: {
         team_id: true,
-        role: true
-      }
+        role: true,
+      },
     });
-    users.forEach(u => {
+    users.forEach((u) => {
       if (u.team_id) usersByTeamId.set(u.team_id, u.role);
     });
 
@@ -148,11 +149,11 @@ export async function getReportsWithProjects(): Promise<{
     const projectsResult = await prisma.project.findMany({
       select: {
         id: true,
-        name: true
+        name: true,
       },
       orderBy: {
-        name: 'asc'
-      }
+        name: "asc",
+      },
     });
 
     const reports = reportsResult.map((r) => ({
