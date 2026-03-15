@@ -6,7 +6,11 @@ export function middleware(request: NextRequest) {
   const isDashboard = pathname.startsWith("/dashboard");
 
   // Vérifier si l'utilisateur est authentifié via le JWT NextAuth
-  const sessionToken = request.cookies.get("authjs.session-token")?.value;
+  // NextAuth v5 peut utiliser différents noms de cookies selon HTTP/HTTPS
+  const sessionToken =
+    request.cookies.get("authjs.session-token")?.value ||
+    request.cookies.get("__Secure-authjs.session-token")?.value ||
+    request.cookies.get("__Host-authjs.session-token")?.value;
   const isLoggedIn = !!sessionToken;
 
   // ── Non authentifié et tente d'accéder au dashboard ─────────────────────
