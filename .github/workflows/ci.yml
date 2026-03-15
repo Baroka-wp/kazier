@@ -195,8 +195,11 @@ jobs:
             # ── Pull latest image ────────────────────────────────────────────
             docker compose pull
 
-            # ── Restart containers ───────────────────────────────────────────
-            docker compose up -d --remove-orphans
+            # ── Stop existing containers ──────────────────────────────────────
+            docker compose down
+
+            # ── Start with new image ──────────────────────────────────────────
+            docker compose up -d
 
             # ── Cleanup old images ───────────────────────────────────────────
             docker image prune -f
