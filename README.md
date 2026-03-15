@@ -111,7 +111,27 @@ SLACK_BOSS_USER_ID=U0XXXXXXX     # ID Slack du boss pour les DMs
 
 # App
 NEXT_PUBLIC_FORM_URL=https://rapportjournalier.vercel.app
+
+# NextAuth v5 (Auth.js) - REQUIS pour la connexion au dashboard
+AUTH_SECRET=your-secret-key-here-min-32-chars  # Générer avec: openssl rand -base64 32
+AUTH_URL=https://your-production-url.com       # URL de production (ou http://localhost:3000 en dev)
+AUTH_TRUST_HOST=true                           # IMPORTANT: Requis en production derrière un proxy (Cloudflare, etc.)
 ```
+
+### 🔐 Configuration Production (IMPORTANT)
+
+Pour que NextAuth v5 fonctionne en production, assurez-vous de définir ces variables dans votre plateforme de déploiement (Vercel, Docker, etc.) :
+
+1. **`AUTH_SECRET`** - Clé secrète pour signer les tokens JWT
+   - Générer : `openssl rand -base64 32`
+   - Doit être identique sur toutes les instances
+
+2. **`AUTH_URL`** - URL complète de votre application
+   - Exemple : `https://team.irotoribaroka.com`
+   - Ne PAS mettre de slash final
+
+3. **`AUTH_TRUST_HOST=true`** - Requis si derrière un proxy (Cloudflare, Nginx, etc.)
+   - Permet à NextAuth de faire confiance aux headers `X-Forwarded-*`
 
 ---
 
