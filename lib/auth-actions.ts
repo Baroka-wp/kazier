@@ -63,6 +63,18 @@ export async function requestPasswordReset(email: string): Promise<{
     // Envoyer l'email
     const resetUrl = `${process.env.AUTH_URL || "http://localhost:3000"}/reset-password?token=${token}`;
 
+    // Vérifier les variables d'environnement
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      console.error("[requestPasswordReset] Variables d'env manquantes:", {
+        hasUser: !!process.env.GMAIL_USER,
+        hasPass: !!process.env.GMAIL_APP_PASSWORD,
+      });
+      return {
+        success: false,
+        error: "Configuration email manquante. Contactez l'administrateur.",
+      };
+    }
+
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
