@@ -74,3 +74,135 @@ jobs:
           NEXT_PUBLIC_FORM_URL: "http://localhost:3000"
           NEXT_TELEMETRY_DISABLED: 1
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # Build & Push Docker Image to GHCR
+  # ──────────────────────────────────────────────────────────────────────────
+  docker-build:
+    name: 🔨 Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [quality-checks, build]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set IMAGE_NAME to lowercase
+        run: echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Deploy to VPS
+  # ──────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: 🚀 Deploy to VPS
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set IMAGE_NAME to lowercase
+        run: echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Copy docker-compose.prod.yml to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: docker-compose.prod.yml
+          target: /opt/kazier/
+
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          IMAGE: ghcr.io/${{ env.IMAGE_NAME }}:latest
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_BOSS_USER_ID: ${{ secrets.SLACK_BOSS_USER_ID }}
+          NEXT_PUBLIC_FORM_URL: ${{ secrets.NEXT_PUBLIC_FORM_URL }}
+          SKIP_SLACK_SIGNATURE: ${{ secrets.SKIP_SLACK_SIGNATURE }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: IMAGE,GH_TOKEN,GH_ACTOR,DATABASE_URL,NEXTAUTH_SECRET,NEXTAUTH_URL,SLACK_BOT_TOKEN,SLACK_CHANNEL_ID,SLACK_BOSS_USER_ID,NEXT_PUBLIC_FORM_URL,SKIP_SLACK_SIGNATURE,POSTGRES_PASSWORD
+          script: |
+            set -e
+            mkdir -p /opt/kazier
+            cd /opt/kazier
+
+            # ── Écrire le .env ────────────────────────────────────────────────
+            printf "IMAGE=%s\n"                   "$IMAGE"                    > .env
+            printf "DATABASE_URL=%s\n"            "$DATABASE_URL"             >> .env
+            printf "NEXTAUTH_SECRET=%s\n"         "$NEXTAUTH_SECRET"          >> .env
+            printf "NEXTAUTH_URL=%s\n"            "$NEXTAUTH_URL"             >> .env
+            printf "SLACK_BOT_TOKEN=%s\n"         "$SLACK_BOT_TOKEN"          >> .env
+            printf "SLACK_CHANNEL_ID=%s\n"        "$SLACK_CHANNEL_ID"         >> .env
+            printf "SLACK_BOSS_USER_ID=%s\n"      "$SLACK_BOSS_USER_ID"       >> .env
+            printf "NEXT_PUBLIC_FORM_URL=%s\n"    "$NEXT_PUBLIC_FORM_URL"     >> .env
+            printf "SKIP_SLACK_SIGNATURE=%s\n"    "$SKIP_SLACK_SIGNATURE"     >> .env
+            printf "POSTGRES_USER=%s\n"           "kazier"                    >> .env
+            printf "POSTGRES_PASSWORD=%s\n"       "$POSTGRES_PASSWORD"        >> .env
+            printf "POSTGRES_DB=%s\n"             "kazier"                    >> .env
+
+            # ── Renommer docker-compose.prod.yml ─────────────────────────────
+            mv docker-compose.prod.yml docker-compose.yml
+
+            # ── Login to GHCR ────────────────────────────────────────────────
+            echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+
+            # ── Pull latest image ────────────────────────────────────────────
+            docker compose pull
+
+            # ── Restart containers ───────────────────────────────────────────
+            docker compose up -d --remove-orphans
+
+            # ── Cleanup old images ───────────────────────────────────────────
+            docker image prune -f
+
+            echo ""
+            echo "✅ Déploiement terminé — $(date)"
+            echo "🌐 Application: http://${{ secrets.VPS_HOST }}:3000"
+            echo "🗄️  Adminer: http://${{ secrets.VPS_HOST }}:8080"
+
