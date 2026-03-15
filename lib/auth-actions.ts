@@ -3,7 +3,7 @@
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
+import { BrevoClient } from "@getbrevo/brevo";
 
 // ── Fonction utilitaire pour changer le mot de passe (ex: depuis le profil) ──
 
@@ -60,36 +60,29 @@ export async function requestPasswordReset(email: string): Promise<{
       },
     });
 
-    // Envoyer l'email
-    const resetUrl = `${process.env.AUTH_URL || "http://localhost:3000"}/reset-password?token=${token}`;
-
-    // Vérifier les variables d'environnement
-    if (!process.env.BREVO_SMTP_USER || !process.env.BREVO_SMTP_PASSWORD) {
-      console.error("[requestPasswordReset] Variables d'env manquantes:", {
-        hasUser: !!process.env.BREVO_SMTP_USER,
-        hasPass: !!process.env.BREVO_SMTP_PASSWORD,
-      });
+    // Vérifier la clé API Brevo
+    if (!process.env.BREVO_API_KEY) {
+      console.error("[requestPasswordReset] BREVO_API_KEY manquante");
       return {
         success: false,
         error: "Configuration email manquante. Contactez l'administrateur.",
       };
     }
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp-relay.brevo.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.BREVO_SMTP_USER,
-        pass: process.env.BREVO_SMTP_PASSWORD,
-      },
+    // Générer l'URL de reset
+    const resetUrl = `${process.env.AUTH_URL || "http://localhost:3000"}/reset-password?token=${token}`;
+
+    // Configurer le client Brevo
+    const client = new BrevoClient({
+      apiKey: process.env.BREVO_API_KEY,
     });
 
-    await transporter.sendMail({
-      from: `"Africa Samurai" <${process.env.BREVO_SMTP_USER}>`,
-      to: normalized,
+    // Envoyer l'email via l'API Brevo
+    await client.transactionalEmails.sendTransacEmail({
+      sender: { name: "KAZIER", email: "mail@irotoribaroka.com" },
+      to: [{ email: normalized }],
       subject: "🔐 Réinitialisation de votre mot de passe",
-      html: `
+      htmlContent: `
         <!DOCTYPE html>
         <html>
           <body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
