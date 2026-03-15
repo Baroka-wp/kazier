@@ -19,7 +19,7 @@ COPY . .
 
 # Generate Prisma Client (needs DATABASE_URL even if not used)
 ENV DATABASE_URL="postgresql://user:password@localhost:5432/kazier"
-RUN npx prisma generate
+RUN ./node_modules/.bin/prisma generate
 
 # Run quality checks
 RUN npm run lint
