@@ -74,23 +74,157 @@ jobs:
           NEXT_PUBLIC_FORM_URL: "http://localhost:3000"
           NEXT_TELEMETRY_DISABLED: 1
 
-  docker-build:
-    name: Docker Build Test
+  deploy:
+    name: Deploy to VPS
     runs-on: ubuntu-latest
-    needs: quality-checks
+    needs: [quality-checks, build]
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          context: .
-          push: false
-          tags: kazier:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            # Créer le répertoire de l'application
+            mkdir -p /home/${{ secrets.VPS_USER }}/kazier
+            cd /home/${{ secrets.VPS_USER }}/kazier
+
+            # Nettoyer les fichiers existants (sauf .env et volumes Docker)
+            find . -mindepth 1 -maxdepth 1 ! -name '.env' ! -name 'postgres-data' -exec rm -rf {} +
+
+      - name: Copy files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "."
+          target: "/home/${{ secrets.VPS_USER }}/kazier"
+          rm: false
+          strip_components: 0
+          overwrite: true
+
+      - name: Build and start Docker containers
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /home/${{ secrets.VPS_USER }}/kazier
+
+            # Créer le fichier .env s'il n'existe pas
+            if [ ! -f .env ]; then
+              echo "Création du fichier .env..."
+              cat > .env << 'ENVEOF'
+            # Database
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            POSTGRES_USER=kazier
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=kazier
+
+            # Auth
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+
+            # Slack
+            SLACK_BOT_TOKEN=${{ secrets.SLACK_BOT_TOKEN }}
+            SLACK_CHANNEL_ID=${{ secrets.SLACK_CHANNEL_ID }}
+            SLACK_BOSS_USER_ID=${{ secrets.SLACK_BOSS_USER_ID }}
+
+            # App
+            NEXT_PUBLIC_FORM_URL=${{ secrets.NEXT_PUBLIC_FORM_URL }}
+            SKIP_SLACK_SIGNATURE=${{ secrets.SKIP_SLACK_SIGNATURE }}
+            ENVEOF
+            fi
+
+            # Créer docker-compose.yml
+            cat > docker-compose.yml << 'EOF'
+            version: '3.8'
+
+            services:
+              app:
+                build:
+                  context: .
+                  dockerfile: Dockerfile
+                container_name: kazier-app
+                restart: unless-stopped
+                ports:
+                  - "3000:3000"
+                env_file:
+                  - .env
+                depends_on:
+                  db:
+                    condition: service_healthy
+                networks:
+                  - kazier-network
+
+              db:
+                image: postgres:15-alpine
+                container_name: kazier-db
+                restart: unless-stopped
+                environment:
+                  - POSTGRES_USER=${POSTGRES_USER:-kazier}
+                  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+                  - POSTGRES_DB=${POSTGRES_DB:-kazier}
+                volumes:
+                  - postgres-data:/var/lib/postgresql/data
+                networks:
+                  - kazier-network
+                healthcheck:
+                  test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kazier}"]
+                  interval: 10s
+                  timeout: 5s
+                  retries: 5
+
+              adminer:
+                image: adminer:latest
+                container_name: kazier-adminer
+                restart: unless-stopped
+                ports:
+                  - "8080:8080"
+                networks:
+                  - kazier-network
+                depends_on:
+                  - db
+
+            networks:
+              kazier-network:
+                driver: bridge
+
+            volumes:
+              postgres-data:
+            EOF
+
+            # Arrêter les anciens containers
+            docker-compose down
+
+            # Build l'image Docker
+            docker-compose build --no-cache
+
+            # Démarrer les containers
+            docker-compose up -d
+
+            # Nettoyer les images inutilisées
+            docker image prune -af
+
+            # Attendre que l'app démarre
+            echo "Attente du démarrage de l'application..."
+            sleep 10
+
+            # Vérifier le statut
+            docker-compose ps
+
+            echo ""
+            echo "✅ Déploiement terminé avec succès!"
+            echo "🌐 Application: http://${{ secrets.VPS_HOST }}:3000"
+            echo "🗄️  Adminer: http://${{ secrets.VPS_HOST }}:8080"

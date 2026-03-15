@@ -2,6 +2,23 @@
 
 Ce guide explique comment configurer le déploiement automatique de Kazier sur votre VPS (204.168.150.89).
 
+## 🚀 Comment ça marche
+
+Le déploiement se fait **directement sur le VPS** sans utiliser de registry Docker:
+
+```
+Push sur main → Quality Checks → Copy vers VPS → Build sur VPS → Start Containers
+     ↓               ↓                  ↓               ↓               ↓
+  GitHub         lint+tsc+fmt        SCP/SSH      docker build   docker-compose up
+```
+
+**Avantages:**
+
+- ✅ Pas besoin de registry Docker (GHCR, Docker Hub, etc.)
+- ✅ Build optimisé pour le CPU du VPS
+- ✅ Fichiers .env restent sur le VPS (sécurité)
+- ✅ Plus simple et direct
+
 ## 📋 Table des matières
 
 1. [Prérequis](#prérequis)
@@ -89,11 +106,7 @@ sudo -u kazier cat /home/kazier/.ssh/github_actions
 
 ## ⚙️ Configuration GitHub
 
-### 1. Activer GitHub Container Registry
-
-Aucune action nécessaire, GHCR est activé par défaut.
-
-### 2. Configurer les Secrets GitHub
+### 1. Configurer les Secrets GitHub
 
 Allez dans **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 
@@ -127,12 +140,12 @@ Ajoutez les secrets suivants:
 openssl rand -base64 32
 ```
 
-### 3. Vérifier le workflow
+### 2. Vérifier le workflow
 
-Le workflow est configuré dans `.github/workflows/deploy.yml` et se déclenche:
+Le workflow est configuré dans `.github/workflows/ci.yml` (job `deploy`) et se déclenche:
 
-- ✅ Automatiquement à chaque push sur `main`
-- ✅ Manuellement depuis l'onglet Actions
+- ✅ Automatiquement à chaque push sur `main` (après les quality checks)
+- ✅ Ne se déclenche PAS sur les autres branches (develop, feature, etc.)
 
 ---
 
@@ -165,10 +178,12 @@ Le déploiement est **automatique** à chaque push sur `main`!
 
 Vous pouvez aussi déclencher un déploiement manuel:
 
-1. Allez dans **Actions** → **Deploy to VPS**
+1. Allez dans **Actions** → **CI - Quality Checks**
 2. Cliquez sur **Run workflow**
 3. Sélectionnez la branche `main`
 4. Cliquez sur **Run workflow**
+
+Le job `deploy` se lancera automatiquement si les quality checks passent.
 
 ---
 
@@ -375,9 +390,11 @@ Votre application Kazier est maintenant déployée automatiquement sur votre VPS
 
 Chaque fois que vous pushez sur `main`, une nouvelle version est automatiquement:
 
-1. ✅ Buildée avec Docker
-2. ✅ Testée (lint, type-check, format)
-3. ✅ Poussée sur GitHub Container Registry
-4. ✅ Déployée sur votre VPS
+1. ✅ Testée (lint, type-check, format)
+2. ✅ Buildée avec Next.js
+3. ✅ Copiée vers le VPS via SCP
+4. ✅ Buildée avec Docker sur le VPS
+5. ✅ Déployée (containers redémarrés)
 
+**Temps de déploiement:** 3-7 minutes
 **Happy coding! 🚀**
