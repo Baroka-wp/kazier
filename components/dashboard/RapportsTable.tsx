@@ -57,6 +57,8 @@ type Props = {
   onRoleFilter?: (role: string) => void;
   projectFilter?: number | undefined;
   onProjectFilter?: (projectId: number | undefined) => void;
+  dateFilter?: string;
+  onDateFilter?: (dateFilter: string) => void;
 };
 
 type Toast = { id: number; type: "success" | "error"; message: string };
@@ -1110,9 +1112,10 @@ export default function RapportsTable({
   onRoleFilter,
   projectFilter: projectFilterProp,
   onProjectFilter,
+  dateFilter: dateFilterProp,
+  onDateFilter,
 }: Props) {
-  const [reports] = useState<Report[]>(initialReports);
-  const [dateFilter, setDateFilter] = useState("today");
+  const reports = initialReports;
   const [selectedGroup, setSelected] = useState<ReportGroup | null>(null);
   const [editingReport, setEditing] = useState<Report | null>(null);
   const [toDelete, setToDelete] = useState<ReportGroup | null>(null);
@@ -1126,6 +1129,7 @@ export default function RapportsTable({
   // Utiliser les filtres externes (serveur) ou locaux
   const roleFilter = roleFilterProp ?? "";
   const projectFilter = projectFilterProp !== undefined ? String(projectFilterProp ?? "") : "";
+  const dateFilter = dateFilterProp ?? "";
 
   function addToast(type: Toast["type"], message: string) {
     const id = Date.now();
@@ -1172,31 +1176,10 @@ export default function RapportsTable({
     }
   }
 
-  // Filtre d'abord les rapports bruts, puis groupe
+  // Les rapports sont déjà filtrés côté serveur, on les groupe directement
   const groups = useMemo(() => {
-    let data = reports;
-    // Les filtres role et project sont gérés côté serveur
-    if (dateFilter) {
-      const now = new Date();
-      data = data.filter((r) => {
-        const d = new Date(r.submitted_at);
-        if (dateFilter === "today")
-          return d.toISOString().split("T")[0] === now.toISOString().split("T")[0];
-        if (dateFilter === "week") {
-          const w = new Date();
-          w.setDate(w.getDate() - 7);
-          return d >= w;
-        }
-        if (dateFilter === "month") {
-          const m = new Date();
-          m.setDate(m.getDate() - 30);
-          return d >= m;
-        }
-        return true;
-      });
-    }
-    return groupReports(data);
-  }, [reports, dateFilter]);
+    return groupReports(reports);
+  }, [reports]);
 
   const filterSlot = (
     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -1215,7 +1198,7 @@ export default function RapportsTable({
         },
         {
           value: dateFilter,
-          onChange: setDateFilter,
+          onChange: (v: string) => onDateFilter?.(v),
           placeholder: "",
           options: [
             { value: "today", label: "Aujourd'hui" },

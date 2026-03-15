@@ -37,6 +37,7 @@ export default function RapportsPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState<number | undefined>();
+  const [dateFilter, setDateFilter] = useState("today");
 
   // Construire l'URL avec les paramètres
   const params = new URLSearchParams({
@@ -47,6 +48,7 @@ export default function RapportsPage() {
   if (search) params.set("search", search);
   if (roleFilter) params.set("role", roleFilter);
   if (projectFilter) params.set("projectId", String(projectFilter));
+  if (dateFilter) params.set("dateFilter", dateFilter);
 
   const { data, error } = useSWR<ApiResponse>(`/api/rapports?${params.toString()}`, fetcher, {
     dedupingInterval: 1000,
@@ -77,6 +79,11 @@ export default function RapportsPage() {
     setPage(1);
   };
 
+  const handleDateFilter = (value: string) => {
+    setDateFilter(value);
+    setPage(1);
+  };
+
   return (
     <RapportsTable
       reports={data?.data ?? []}
@@ -95,6 +102,8 @@ export default function RapportsPage() {
       onRoleFilter={handleRoleFilter}
       projectFilter={projectFilter}
       onProjectFilter={handleProjectFilter}
+      dateFilter={dateFilter}
+      onDateFilter={handleDateFilter}
     />
   );
 }

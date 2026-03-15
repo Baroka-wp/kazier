@@ -18,6 +18,7 @@ export type RapportWithDetails = {
   tomorrow_build: string | null;
   submitted_at: Date;
   project_name: string;
+  project_icon?: string;
 };
 
 export type ProjectSimple = {
@@ -38,6 +39,7 @@ export type PaginationParams = {
   search?: string;
   role?: string;
   projectId?: number;
+  dateFilter?: string; // "today", "week", "month"
 };
 
 export type PaginatedResult<T> = {
@@ -58,31 +60,94 @@ export async function getRapportsData(
   const search = params?.search;
   const role = params?.role;
   const projectId = params?.projectId;
+  const dateFilter = params?.dateFilter;
 
-  // Construire les filtres WHERE
+  // ✅ WHERE clause avec nested relations
   type WhereClause = {
-    full_name?: { contains: string; mode: "insensitive" };
-    role?: string;
+    team?: {
+      OR?: Array<{
+        first_name?: { contains: string; mode: "insensitive" };
+        last_name?: { contains: string; mode: "insensitive" };
+      }>;
+      users?: {
+        some: {
+          role?: string;
+        };
+      };
+    };
     project_id?: number;
+    created_at?: {
+      gte?: Date;
+      lt?: Date;
+    };
   };
+
   const where: WhereClause = {};
 
-  if (search) {
-    where.full_name = { contains: search, mode: "insensitive" as const };
-  }
-
-  if (role) {
-    where.role = role;
-  }
-
+  // Filtre par projet
   if (projectId) {
     where.project_id = projectId;
   }
 
-  // Récupérer le total
+  // Filtre par recherche (nom) OU rôle - utiliser OR pour combiner les conditions
+  if (search) {
+    where.team = {
+      OR: [
+        { first_name: { contains: search, mode: "insensitive" as const } },
+        { last_name: { contains: search, mode: "insensitive" as const } },
+      ],
+    };
+  }
+
+  // Filtre par rôle via team.users - doit être combiné avec search si présent
+  if (role) {
+    if (where.team) {
+      // Si on a déjà un filtre team (search), on ajoute users avec AND implicite
+      where.team.users = {
+        some: {
+          role: role,
+        },
+      };
+    } else {
+      // Sinon on crée un filtre team uniquement pour le rôle
+      where.team = {
+        users: {
+          some: {
+            role: role,
+          },
+        },
+      };
+    }
+  }
+
+  // Filtre par date
+  if (dateFilter) {
+    if (dateFilter === "today") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Début du jour actuel
+      where.created_at = { gte: today };
+    } else if (dateFilter === "week") {
+      // Début de la semaine courante (lundi à 00:00:00)
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0 = dimanche, 1 = lundi, ..., 6 = samedi
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Si dimanche, on recule de 6 jours
+      const monday = new Date(now);
+      monday.setDate(monday.getDate() - daysToMonday);
+      monday.setHours(0, 0, 0, 0);
+      where.created_at = { gte: monday };
+    } else if (dateFilter === "month") {
+      // Début du mois courant (1er jour à 00:00:00)
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      where.created_at = { gte: monthStart };
+    }
+  }
+
+  // ✅ COUNT avec les mêmes filtres (côté DB)
   const total = await prisma.rapports.count({ where });
 
-  // Récupérer les rapports paginés
+  // ✅ FETCH avec pagination Prisma (skip/take)
   const rapportsData = await prisma.rapports.findMany({
     where,
     include: {
@@ -100,19 +165,8 @@ export async function getRapportsData(
     take: limit,
   });
 
-  // Récupérer tous les projets (pour les filtres)
-  const projectsData = await prisma.project.findMany({
-    select: {
-      id: true,
-      name: true,
-    },
-    orderBy: {
-      name: "asc",
-    },
-  });
-
-  // Transform reports data
-  const allReports: RapportWithDetails[] = rapportsData.map((r) => {
+  // Transform data
+  const reports: RapportWithDetails[] = rapportsData.map((r) => {
     const user = r.team?.users[0];
     return {
       id: r.id,
@@ -128,20 +182,31 @@ export async function getRapportsData(
       tomorrow_build: r.tomorrow_build,
       submitted_at: r.created_at,
       project_name: r.project?.name ?? "Sans projet",
+      project_icon: r.project?.icon ?? undefined,
     };
   });
 
-  // Rôles distincts
-  const roles = [...new Set(allReports.map((r) => r.role).filter(Boolean))] as string[];
+  // Récupérer les projets pour les filtres
+  const projectsData = await prisma.project.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 
-  // Transform projects data
+  // Récupérer les rôles distincts (pour les filtres)
+  const allRoles = await prisma.users.findMany({
+    select: { role: true },
+    distinct: ["role"],
+    where: { role: { not: null } },
+  });
+
+  const roles = allRoles.map((u) => u.role).filter(Boolean) as string[];
   const projects: ProjectSimple[] = projectsData.map((p) => ({
     id: p.id,
     name: p.name,
   }));
 
   return {
-    data: allReports,
+    data: reports,
     total,
     page,
     limit,

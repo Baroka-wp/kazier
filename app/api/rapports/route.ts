@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     const projectId = searchParams.get("projectId")
       ? parseInt(searchParams.get("projectId")!)
       : undefined;
+    const dateFilter = searchParams.get("dateFilter") || undefined;
 
     const result = await getRapportsData({
       page,
@@ -19,6 +20,7 @@ export async function GET(request: Request) {
       search,
       role,
       projectId,
+      dateFilter,
     });
 
     return NextResponse.json(result);
