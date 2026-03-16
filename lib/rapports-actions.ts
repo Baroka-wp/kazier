@@ -124,22 +124,22 @@ export async function getRapportsData(
   if (dateFilter) {
     if (dateFilter === "today") {
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Début du jour actuel
+      today.setUTCHours(0, 0, 0, 0); // Début du jour actuel en UTC
       where.created_at = { gte: today };
     } else if (dateFilter === "week") {
-      // Début de la semaine courante (lundi à 00:00:00)
+      // Début de la semaine courante (lundi à 00:00:00 UTC)
       const now = new Date();
-      const dayOfWeek = now.getDay(); // 0 = dimanche, 1 = lundi, ..., 6 = samedi
+      const dayOfWeek = now.getUTCDay(); // 0 = dimanche, 1 = lundi, ..., 6 = samedi
       const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Si dimanche, on recule de 6 jours
       const monday = new Date(now);
-      monday.setDate(monday.getDate() - daysToMonday);
-      monday.setHours(0, 0, 0, 0);
+      monday.setUTCDate(monday.getUTCDate() - daysToMonday);
+      monday.setUTCHours(0, 0, 0, 0);
       where.created_at = { gte: monday };
     } else if (dateFilter === "month") {
-      // Début du mois courant (1er jour à 00:00:00)
+      // Début du mois courant (1er jour à 00:00:00 UTC)
       const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
+      monthStart.setUTCDate(1);
+      monthStart.setUTCHours(0, 0, 0, 0);
       where.created_at = { gte: monthStart };
     }
   }
