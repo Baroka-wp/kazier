@@ -78,21 +78,6 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
   const [hovered, setHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sync state when value prop changes externally
-  useEffect(() => {
-    const parsed = parseDateTime(value);
-    const newDate = parsed.date;
-    const newHour = parsed.hour;
-    const newMinute = parsed.minute;
-
-    // Update state in a batch to avoid cascading renders
-    Promise.resolve().then(() => {
-      if (newDate !== selectedDate) setSelectedDate(newDate);
-      if (newHour !== selectedHour) setSelectedHour(newHour);
-      if (newMinute !== selectedMinute) setSelectedMinute(newMinute);
-    });
-  }, [value, selectedDate, selectedHour, selectedMinute]);
-
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -106,22 +91,8 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
   function handleDateSelect(day: number) {
     const newDate = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     setSelectedDate(newDate);
-
-    // Utiliser l'heure actuelle par défaut si aucune heure n'est sélectionnée
-    const now = new Date();
-    const defaultHour =
-      selectedHour === "00" && selectedMinute === "00"
-        ? String(now.getHours()).padStart(2, "0")
-        : selectedHour;
-    const defaultMinute =
-      selectedHour === "00" && selectedMinute === "00"
-        ? String(now.getMinutes()).padStart(2, "0")
-        : selectedMinute;
-
-    // Auto-confirm avec l'heure
-    const newDateTime = formatDateTimeValue(newDate, defaultHour, defaultMinute);
-    onChange(newDateTime);
-    setShowCalendar(false);
+    // ✅ Ne pas fermer ni confirmer ici
+    // L'utilisateur choisit ensuite l'heure puis clique "Confirmer"
   }
 
   function handleConfirm() {

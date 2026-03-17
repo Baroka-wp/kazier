@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { Task, TeamMember, Project } from "./types";
 import { createTask, getTeamMembersByProject } from "@/lib/task-actions";
-import DateTimeInput from "@/components/dashboard/DateTimeInput";
+//import DateTimeInput from "@/components/dashboard/DateTimeInput";
+import DatePicker from "@/components/dashboard/DatePicker";
 
 function CreateTaskForm({
   projects,
@@ -273,7 +274,8 @@ function CreateTaskForm({
       {/* Due Date */}
       <div style={{ marginBottom: "10px" }}>
         <small style={labelStyle}>Date limite</small>
-        <DateTimeInput
+        <DatePicker
+          key={values.due_date}
           value={values.due_date}
           onChange={(e) => setField("due_date", e)}
           placeholder="Sélectionner date et heure"

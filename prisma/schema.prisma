@@ -62,7 +62,7 @@ model tasks {
   priority    String?
   project_id  Int?
   assigned_to Int[]
-  due_date    DateTime? @db.Date
+  due_date    DateTime? @db.Timestamptz
   created_at  DateTime  @default(now())
 
   // Relations

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { Task, TeamMember, Project } from "./types";
 import { updateTask, getTeamMembersByProject } from "@/lib/task-actions";
-import DateTimeInput from "@/components/dashboard/DateTimeInput";
+//import DateTimeInput from "@/components/dashboard/DateTimeInput";
+import DatePicker from "@/components/dashboard/DatePicker";
 
 // ✅ Parse manuel — évite le bug de new Date("YYYY-MM-DD HH:mm") invalide en prod
 function formatDateForPicker(raw: unknown): string {
@@ -373,7 +374,8 @@ function UpdateTaskForm({
       {/* Due Date */}
       <div style={{ marginBottom: "10px" }}>
         <small style={labelStyle}>Date limite</small>
-        <DateTimeInput
+        <DatePicker
+          key={values.due_date}
           value={values.due_date}
           onChange={(e) => setField("due_date", e)}
           placeholder="Sélectionner date et heure"
