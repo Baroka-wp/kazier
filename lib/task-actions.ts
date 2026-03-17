@@ -18,7 +18,7 @@ async function requireTeamManagement() {
   const userRole = (session.user as { role?: string }).role;
   const permissions = getPermissions(userRole ?? null);
 
-  if (!permissions.canManageTeam) {
+  if (!permissions.canManageTasks) {
     throw new Error("Non autorisé: permissions insuffisantes");
   }
 

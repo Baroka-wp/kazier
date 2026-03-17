@@ -8,6 +8,7 @@ export interface Permission {
   canDeleteReports: boolean;
   canViewTeam: boolean;
   canManageTeam: boolean;
+  canManageTasks: boolean;
   canAccessDashboard: boolean;
 }
 
@@ -21,6 +22,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission> = {
     canDeleteReports: true,
     canViewTeam: true,
     canManageTeam: true,
+    canManageTasks: true,
     canAccessDashboard: true,
   },
   TM: {
@@ -30,6 +32,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission> = {
     canDeleteReports: false,
     canViewTeam: true,
     canManageTeam: false,
+    canManageTasks: true,
     canAccessDashboard: true,
   },
   T: {
@@ -40,6 +43,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission> = {
     canViewTeam: false,
     canManageTeam: false,
     canAccessDashboard: false,
+    canManageTasks: false,
   },
 };
 
@@ -76,6 +80,10 @@ export function canManageTeam(role: string | null | undefined): boolean {
 
 export function canAccessDashboard(role: string | null | undefined): boolean {
   return getPermissions(role).canAccessDashboard;
+}
+
+export function canManageTasks(role: string | null | undefined): boolean {
+  return getPermissions(role).canManageTasks;
 }
 
 export function isSuperAdmin(role: string | null | undefined): boolean {
