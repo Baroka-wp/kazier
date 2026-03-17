@@ -221,6 +221,20 @@ export async function sendToSlack(data: {
       await Promise.all(inserts);
     }
 
+    // ── Mise à jour statut tâches validées → "terminée" ────────────────────────
+    if (validated_tasks.length > 0) {
+      await prisma.tasks.updateMany({
+        where: {
+          id: {
+            in: validated_tasks,
+          },
+        },
+        data: {
+          status: "terminée",
+        },
+      });
+    }
+
     // ── Envoi Slack ────────────────────────────────────────────────────────────
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
