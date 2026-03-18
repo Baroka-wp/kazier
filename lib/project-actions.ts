@@ -50,6 +50,7 @@ export type PaginationParams = {
   page?: number;
   limit?: number;
   search?: string;
+  teamId?: number;
 };
 
 export type PaginatedResult<T> = {
@@ -256,6 +257,7 @@ export async function getProjects(
       name?: { contains: string; mode: "insensitive" };
       description?: { contains: string; mode: "insensitive" };
     }>;
+    team_ids?: { has: number }; // 👈 ajouter
   };
   const where: WhereClause = {};
   if (search) {

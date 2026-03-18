@@ -36,11 +36,13 @@ function UpdateTaskForm({
   projects,
   onSaved,
   onClose,
+  defaultProjectId,
 }: {
   task: Task;
   projects: Project[];
   onSaved: (task: Task, created: boolean) => void;
   onClose: () => void;
+  defaultProjectId?: number;
 }) {
   const initialAssignedTo = Array.isArray(task.assigned_to) ? task.assigned_to : [];
 
@@ -251,21 +253,37 @@ function UpdateTaskForm({
         </div>
       </div>
 
-      {/* Projet */}
+      {/* Projet — grisé si defaultProjectId fourni */}
       <div style={{ marginBottom: "10px" }}>
-        <small style={labelStyle}>Projet</small>
-        <select
-          value={values.project_id || ""}
-          onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
-          style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}
-        >
-          <option value="">Aucun projet</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+        <small style={labelStyle}>Projet *</small>
+        {defaultProjectId ? (
+          // 👇 Affichage en lecture seule si projet imposé
+          <div
+            style={{
+              ...inputStyle,
+              display: "flex",
+              alignItems: "center",
+              opacity: 0.6,
+              cursor: "not-allowed",
+              background: "#E8E4DF",
+            }}
+          >
+            {projects.find((p) => p.id === defaultProjectId)?.name ?? "Projet sélectionné"}
+          </div>
+        ) : (
+          <select
+            value={values.project_id || ""}
+            onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
+            style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}
+          >
+            <option value="">Sélectionner un projet</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Assigné à */}
