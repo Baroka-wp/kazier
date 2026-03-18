@@ -50,6 +50,11 @@ function StatusBadge({ status }: { status: string }) {
       color: "#3b82f6",
       label: "En cours",
     },
+    review: {
+      bg: "rgba(16,185,129,0.1)",
+      color: "#8b5cf6",
+      label: "Review",
+    },
     terminée: {
       bg: "rgba(16,185,129,0.1)",
       color: "#10b981",

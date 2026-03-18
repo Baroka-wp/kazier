@@ -232,6 +232,8 @@ export async function assignTaskToSelf(
     const [enriched] = await enrichTasksWithNames([updated]);
 
     revalidatePath("/dashboard/teams");
+    revalidatePath("/dashboard/tasks"); // 👈
+    revalidatePath("/dashboard"); // 👈
     return { success: true, task: enriched };
   } catch (err: unknown) {
     console.error("[assignTaskToSelf]", err instanceof Error ? err.message : String(err));
@@ -273,6 +275,8 @@ export async function unassignTaskFromSelf(
     const [enriched] = await enrichTasksWithNames([updated]);
 
     revalidatePath("/dashboard/teams");
+    revalidatePath("/dashboard/tasks"); // 👈
+    revalidatePath("/dashboard"); // 👈
     return { success: true, task: enriched };
   } catch (err: unknown) {
     console.error("[unassignTaskFromSelf]", err instanceof Error ? err.message : String(err));
@@ -301,6 +305,8 @@ export async function updateTaskStatus(
     const [enriched] = await enrichTasksWithNames([updated]);
 
     revalidatePath("/dashboard/teams");
+    revalidatePath("/dashboard/tasks"); // 👈 ajouter
+    revalidatePath("/dashboard"); // 👈 ajouter
     return { success: true, task: enriched };
   } catch (err: unknown) {
     console.error("[updateTaskStatus]", err instanceof Error ? err.message : String(err));
