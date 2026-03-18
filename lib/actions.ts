@@ -230,7 +230,7 @@ export async function sendToSlack(data: {
           },
         },
         data: {
-          status: "terminée",
+          status: "review",
         },
       });
     }

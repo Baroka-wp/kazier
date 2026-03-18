@@ -27,6 +27,7 @@ model teams {
   // Relations
   users      users[]
   rapports   rapports[]
+  managed_projects project[] @relation("ProjectTM")
 }
 
 model users {
@@ -48,6 +49,8 @@ model project {
   description String?
   icon        String?
   team_ids    Int[]
+  team_manager_id Int?
+  team_manager    teams?    @relation("ProjectTM", fields: [team_manager_id], references: [id])
 
   // Relations
   tasks       tasks[]
