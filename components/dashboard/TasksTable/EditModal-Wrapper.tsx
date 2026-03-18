@@ -13,6 +13,7 @@ export function EditModal({
   teams: _teams,
   onClose,
   onSaved,
+  defaultProjectId,
 }: {
   mode: EditMode;
   task: Task | null;
@@ -20,6 +21,7 @@ export function EditModal({
   teams: TeamMember[];
   onClose: () => void;
   onSaved: (updated: Task, created: boolean) => void;
+  defaultProjectId?: number;
 }) {
   return (
     <div
@@ -101,9 +103,20 @@ export function EditModal({
 
         {/* Body */}
         {mode === "create" ? (
-          <CreateTaskForm projects={projects} onSaved={onSaved} onClose={onClose} />
+          <CreateTaskForm
+            projects={projects}
+            onSaved={onSaved}
+            onClose={onClose}
+            defaultProjectId={defaultProjectId}
+          />
         ) : (
-          <UpdateTaskForm task={task!} projects={projects} onSaved={onSaved} onClose={onClose} />
+          <UpdateTaskForm
+            task={task!}
+            projects={projects}
+            onSaved={onSaved}
+            onClose={onClose}
+            defaultProjectId={defaultProjectId}
+          />
         )}
       </div>
 

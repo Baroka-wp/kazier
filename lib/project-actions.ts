@@ -59,6 +59,7 @@ export type PaginationParams = {
   page?: number;
   limit?: number;
   search?: string;
+  teamId?: number;
 };
 
 export type PaginatedResult<T> = {
@@ -278,7 +279,6 @@ export async function getProject(id: number): Promise<ProjectResult> {
 export async function getProjects(
   params?: PaginationParams
 ): Promise<PaginatedResult<Project> | { success: boolean; projects?: Project[]; error?: string }> {
-  // Si pas de params, retourner l'ancienne version pour compatibilité
   if (!params) {
     const projects = await prisma.project.findMany({
       orderBy: { id: "desc" },
@@ -311,6 +311,7 @@ export async function getProjects(
       name?: { contains: string; mode: "insensitive" };
       description?: { contains: string; mode: "insensitive" };
     }>;
+    team_ids?: { has: number }; // 👈 ajouter
   };
   const where: WhereClause = {};
 
@@ -321,10 +322,13 @@ export async function getProjects(
     ];
   }
 
-  // Récupérer le total
+  // 👇 Filtrer par team_id si TM
+  if (params.teamId) {
+    where.team_ids = { has: params.teamId };
+  }
+
   const total = await prisma.project.count({ where });
 
-  // Récupérer les projets paginés
   const projects = await prisma.project.findMany({
     where,
     orderBy: { id: "desc" },

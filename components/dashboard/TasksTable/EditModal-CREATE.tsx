@@ -10,13 +10,15 @@ function CreateTaskForm({
   projects,
   onSaved,
   onClose,
+  defaultProjectId,
 }: {
   projects: Project[];
   onSaved: (task: Task, created: boolean) => void;
   onClose: () => void;
+  defaultProjectId?: number;
 }) {
   const [values, setValues] = useState({
-    project_id: null as number | null,
+    project_id: defaultProjectId ?? (null as number | null),
     assigned_to: [] as number[], // ✅ Tableau de plusieurs IDs
     title: "",
     description: "",
@@ -159,21 +161,37 @@ function CreateTaskForm({
         />
       </div>
 
-      {/* Projet */}
+      {/* Projet — grisé si defaultProjectId fourni */}
       <div style={{ marginBottom: "10px" }}>
         <small style={labelStyle}>Projet *</small>
-        <select
-          value={values.project_id || ""}
-          onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
-          style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}
-        >
-          <option value="">Sélectionner un projet</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+        {defaultProjectId ? (
+          // 👇 Affichage en lecture seule si projet imposé
+          <div
+            style={{
+              ...inputStyle,
+              display: "flex",
+              alignItems: "center",
+              opacity: 0.6,
+              cursor: "not-allowed",
+              background: "#E8E4DF",
+            }}
+          >
+            {projects.find((p) => p.id === defaultProjectId)?.name ?? "Projet sélectionné"}
+          </div>
+        ) : (
+          <select
+            value={values.project_id || ""}
+            onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
+            style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}
+          >
+            <option value="">Sélectionner un projet</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Assigné à — checkboxes, visible si projet sélectionné */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   ChevronLeft,
   Database,
@@ -25,11 +25,26 @@ import dynamic from "next/dynamic";
 import { ClientOnly } from "@/components/dashboard/ClientOnly";
 
 const RapportsTable = dynamic(() => import("@/components/dashboard/RapportsTable"), { ssr: false });
-const TasksTable = dynamic(() => import("@/components/dashboard/TasksTable"), { ssr: false });
+const TasksTable = dynamic(() => import("@/components/dashboard/TasksTable/"), { ssr: false });
+const TeamsTable = dynamic(() => import("@/components/dashboard/TeamsTable"), { ssr: false });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-// Type aligné sur RapportsTable
+type TeamMember = {
+  id: number;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string;
+  phone: string | null;
+  age: number | null;
+  is_boss: boolean;
+  slack_id: string | null;
+  created_at: string;
+  user_id: number | null;
+  email: string | null;
+  role: string | null;
+};
+
 type Report = {
   id: number;
   full_name: string;
@@ -65,10 +80,10 @@ const AVAILABLE_ICONS = [
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────
 
-type Tab = "general" | "tasks" | "reports";
+type Tab = "team" | "tasks" | "reports";
 
 const TABS: Array<{ id: Tab; label: string }> = [
-  { id: "general", label: "Général" },
+  { id: "team", label: "Équipe" },
   { id: "tasks", label: "Tâches" },
   { id: "reports", label: "Rapports" },
 ];
@@ -81,49 +96,83 @@ type Props = {
 
 export default function ProjectDetailClient({ project }: Props) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>("general");
+  const [activeTab, setActiveTab] = useState<Tab>("team");
+
+  // ── States Équipe ─────────────────────────────────────────────────────────
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  // ── States Tâches ─────────────────────────────────────────────────────────
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+
+  // ── States Rapports ───────────────────────────────────────────────────────
   const [reports, setReports] = useState<Report[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [projects, setProjects] = useState<Array<{ id: number; name: string }>>([]);
-  const [loadingTasks, setLoadingTasks] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
 
-  // Charger les tâches du projet
-  useEffect(() => {
-    if (activeTab === "tasks") {
-      (async () => {
-        setLoadingTasks(true);
-        const res = await getTasks();
-        if ("success" in res && res.success && "tasks" in res && res.tasks) {
-          const projectTasks = res.tasks.filter((t) => t.project_id === project.id);
-          setTasks(projectTasks);
-        } else if ("data" in res) {
-          const projectTasks = res.data.filter((t) => t.project_id === project.id);
-          setTasks(projectTasks);
-        }
-        setLoadingTasks(false);
-      })();
-    }
-  }, [activeTab, project.id]);
+  // ── Charger les membres du projet ─────────────────────────────────────────
 
-  // Charger les rapports du projet
+  const loadMembers = useCallback(async () => {
+    setLoadingMembers(true);
+    const res = await fetch("/api/equipe?limit=100");
+    const data = await res.json();
+    if (data?.data) {
+      const projectMembers = (data.data as TeamMember[]).filter((m) =>
+        project.team_ids.includes(m.id)
+      );
+      setMembers(projectMembers);
+    }
+    setLoadingMembers(false);
+  }, [project.team_ids]);
+
+  useEffect(() => {
+    if (activeTab !== "team") return;
+    async function run() {
+      await loadMembers();
+    }
+    void run();
+  }, [activeTab, loadMembers]);
+
+  // ── Charger les tâches du projet ──────────────────────────────────────────
+
+  const loadTasks = useCallback(async () => {
+    setLoadingTasks(true);
+    const res = await getTasks();
+    if ("success" in res && res.success && "tasks" in res && res.tasks) {
+      setTasks(res.tasks.filter((t) => t.project_id === project.id));
+    } else if ("data" in res) {
+      setTasks(res.data.filter((t) => t.project_id === project.id));
+    }
+    setLoadingTasks(false);
+  }, [project.id]);
+
+  useEffect(() => {
+    if (activeTab !== "tasks") return;
+    async function run() {
+      await loadTasks();
+    }
+    void run();
+  }, [activeTab, loadTasks]);
+
+  // ── Charger les rapports du projet ────────────────────────────────────────
+
   useEffect(() => {
     if (activeTab === "reports") {
       (async () => {
         setLoadingReports(true);
         const res = await getReportsWithProjects();
         if (res.success && res.reports) {
-          // Mapper les champs de report-actions vers le type attendu par RapportsTable
           const projectReports: Report[] = res.reports
             .filter((r) => r.project_id === project.id)
             .map((r) => ({
               id: r.id,
               full_name: r.full_name,
               role: r.role,
-              built: r.work_built ?? "", // work_built → built
+              built: r.work_built ?? "",
               working_built: r.working_built ?? "",
-              blocked: r.broken_features ?? "", // broken_features → blocked
+              blocked: r.broken_features ?? "",
               validated_learning: r.validated_learning ?? "",
               needed_learning: r.needed_learning ?? "",
               tomorrow_build: r.tomorrow_build ?? "",
@@ -133,12 +182,7 @@ export default function ProjectDetailClient({ project }: Props) {
             }));
 
           setReports(projectReports);
-
-          // Récupérer les rôles uniques
-          const uniqueRoles = [...new Set(projectReports.map((r) => r.role).filter(Boolean))];
-          setRoles(uniqueRoles);
-
-          // Passer le projet courant pour le filtre
+          setRoles([...new Set(projectReports.map((r) => r.role).filter(Boolean))]);
           setProjects([{ id: project.id, name: project.name ?? "" }]);
         }
         setLoadingReports(false);
@@ -148,7 +192,7 @@ export default function ProjectDetailClient({ project }: Props) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#fafafa" }}>
-      {/* Header avec back button */}
+      {/* Header */}
       <div
         style={{
           background: "#fff",
@@ -192,7 +236,9 @@ export default function ProjectDetailClient({ project }: Props) {
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             {(() => {
               const icon = AVAILABLE_ICONS.find((i) => i.id === project.icon);
-              return icon?.component ? (
+              if (!icon?.component) return null;
+              const Icon = icon.component;
+              return (
                 <div
                   style={{
                     width: "48px",
@@ -205,12 +251,9 @@ export default function ProjectDetailClient({ project }: Props) {
                     color: "#6B1A2A",
                   }}
                 >
-                  {(() => {
-                    const Icon = icon.component;
-                    return <Icon size={28} />;
-                  })()}
+                  <Icon size={28} />
                 </div>
-              ) : null;
+              );
             })()}
 
             <div>
@@ -273,117 +316,33 @@ export default function ProjectDetailClient({ project }: Props) {
 
       {/* Content */}
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "24px 20px" }}>
-        {/* ── Général ── */}
-        {activeTab === "general" && (
-          <div>
-            <div
-              style={{
-                background: "#fff",
-                borderRadius: "16px",
-                border: "1.5px solid rgba(0,0,0,0.06)",
-                padding: "24px",
-                maxWidth: "700px",
-              }}
-            >
-              {/* Description */}
-              <div style={{ marginBottom: "24px" }}>
-                <h3
-                  style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                    color: "#999",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Description
-                </h3>
-                <p style={{ fontSize: "0.95rem", color: "#666", lineHeight: 1.7 }}>
-                  {project.description}
-                </p>
-              </div>
-
-              {/* Équipes */}
-              {project.team_members && project.team_members.length > 0 && (
-                <div>
-                  <h3
-                    style={{
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.1em",
-                      color: "#999",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    Équipes assignées ({project.team_members.length})
-                  </h3>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    {project.team_members.map((member) => (
-                      <div
-                        key={member.id}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          padding: "10px 14px",
-                          borderRadius: "10px",
-                          background: "rgba(107,26,42,0.08)",
-                          border: "1px solid rgba(107,26,42,0.15)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "32px",
-                            height: "32px",
-                            borderRadius: "50%",
-                            background: "#6B1A2A",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "white",
-                            fontSize: "0.7rem",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {member.first_name?.[0] ?? ""}
-                          {member.last_name?.[0] ?? ""}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}>
-                            {member.full_name}
-                          </div>
-                          <div style={{ fontSize: "0.7rem", color: "#999" }}>
-                            {member.first_name ?? ""}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* ── Équipe ── */}
+        {activeTab === "team" && (
+          <ClientOnly>
+            <TeamsTable
+              members={members}
+              roles={[...new Set(members.map((m) => m.role).filter(Boolean) as string[])]}
+              loading={loadingMembers}
+              onPageChange={undefined}
+              onSearch={undefined}
+              totalItems={undefined}
+              totalPages={undefined}
+              currentPage={undefined}
+            />
+          </ClientOnly>
         )}
 
         {/* ── Tâches ── */}
         {activeTab === "tasks" && (
-          <div>
-            {loadingTasks ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
-                Chargement des tâches...
-              </div>
-            ) : tasks.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "60px 20px", color: "#999" }}>
-                <p style={{ fontSize: "1rem", marginBottom: "4px" }}>Aucune tâche pour ce projet</p>
-              </div>
-            ) : (
-              <ClientOnly>
-                <TasksTable tasks={tasks} />
-              </ClientOnly>
-            )}
-          </div>
+          <ClientOnly>
+            <TasksTable
+              tasks={tasks}
+              loading={loadingTasks}
+              isEmpty={!loadingTasks && tasks.length === 0}
+              onRefresh={loadTasks}
+              defaultProjectId={project.id}
+            />
+          </ClientOnly>
         )}
 
         {/* ── Rapports ── */}
