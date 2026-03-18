@@ -267,7 +267,15 @@ export async function getProjects(
     ];
   }
 
+  // const total = await prisma.project.count({ where });
+  // 👇 Filtrer par team_id si TM
+
+  if (params.teamId) {
+    where.team_ids = { has: params.teamId };
+  }
+
   const total = await prisma.project.count({ where });
+
   const projects = await prisma.project.findMany({
     where,
     orderBy: { id: "desc" },

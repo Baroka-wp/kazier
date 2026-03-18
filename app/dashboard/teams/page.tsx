@@ -23,8 +23,6 @@ export default async function TeamProjectsPage() {
   const result = await getProjectsWithTasksForTeamMember(teamMemberId);
   const projects = result.success ? result.projects || [] : [];
 
-  console.log("📊 TeamProjectsPage - Projets trouvés:", projects.length);
-
   return (
     <div
       style={{

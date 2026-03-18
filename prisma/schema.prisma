@@ -67,6 +67,7 @@ model tasks {
   assigned_to Int[]
   due_date    DateTime? @db.Timestamptz
   created_at  DateTime  @default(now())
+  reminder_sent Boolean @default(false)
 
   // Relations
   project     project?  @relation(fields: [project_id], references: [id])
