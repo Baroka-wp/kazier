@@ -32,7 +32,6 @@ export type Project = {
   description: string | null;
   icon: string | null;
   team_ids: number[];
-  team_manager_id?: number | null;
   team_members?: TeamMember[];
 };
 
@@ -41,7 +40,6 @@ export type CreateProjectData = {
   description: string;
   icon?: string | null;
   team_ids?: number[];
-  team_manager_id?: number | null;
 };
 
 export type UpdateProjectData = Partial<CreateProjectData>;
@@ -162,10 +160,9 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
     const description = data.description.trim();
     const icon = data.icon || null;
     const team_ids = data.team_ids || [];
-    const team_manager_id = data.team_manager_id ?? null;
 
     const project = await prisma.project.create({
-      data: { name, description, icon, team_ids, team_manager_id },
+      data: { name, description, icon, team_ids },
     });
 
     const members = await populateTeamMembers(team_ids);
@@ -198,7 +195,6 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
         description: project.description,
         icon: project.icon,
         team_ids: project.team_ids,
-        team_manager_id: project.team_manager_id,
         team_members: members,
       },
     };
@@ -221,7 +217,6 @@ export async function getProject(id: number): Promise<ProjectResult> {
         description: project.description,
         icon: project.icon,
         team_ids: project.team_ids,
-        team_manager_id: project.team_manager_id,
         team_members: members,
       },
     };
@@ -245,7 +240,6 @@ export async function getProjects(
           description: p.description,
           icon: p.icon,
           team_ids: p.team_ids,
-          team_manager_id: p.team_manager_id,
           team_members: members,
         };
       })
@@ -288,7 +282,6 @@ export async function getProjects(
         description: p.description,
         icon: p.icon,
         team_ids: p.team_ids,
-        team_manager_id: p.team_manager_id,
         team_members: members,
       };
     })
@@ -315,8 +308,6 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
       description: data.description ?? existing.description ?? "",
       icon: data.icon !== undefined ? data.icon : existing.icon,
       team_ids: data.team_ids ?? oldTeamIds,
-      team_manager_id:
-        data.team_manager_id !== undefined ? data.team_manager_id : existing.team_manager_id,
     };
 
     const validation = validateProject(mergedData);
@@ -331,7 +322,6 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
         description: mergedData.description.trim(),
         icon: mergedData.icon,
         team_ids: newTeamIds,
-        team_manager_id: mergedData.team_manager_id ?? null,
       },
     });
 
@@ -366,7 +356,6 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
         description: updated.description,
         icon: updated.icon,
         team_ids: updated.team_ids,
-        team_manager_id: updated.team_manager_id,
         team_members: members,
       },
     };
