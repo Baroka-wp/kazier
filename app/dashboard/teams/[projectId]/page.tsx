@@ -40,12 +40,6 @@ export default async function TeamProjectsPage(props: { params: Promise<Params> 
     );
   }
 
-  console.log("🎯 TeamProjectsPage - Project trouvé:", {
-    projectId: project.id,
-    projectName: project.name,
-    tasksCount: project.tasks?.length || 0,
-  });
-
   return (
     <TeamsProjectPageClient
       tasks={project.tasks}
