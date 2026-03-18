@@ -385,7 +385,7 @@ export default function TasksTable({
   const [deleting, setDeleting] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const { canViewTeam } = usePermissions();
+  const { canViewTeam, canManageTasks } = usePermissions();
 
   // Utiliser les filtres externes (serveur) ou locaux
   const statusFilter = statusFilterProp ?? "";
@@ -436,12 +436,12 @@ export default function TasksTable({
         setEditMode("create");
         setEditTarget(null);
       }}
-      canViewTeam={canViewTeam}
+      canViewTeam={canManageTasks}
     />
   );
 
   const actions: Action[] = [
-    ...(canViewTeam
+    ...(canManageTasks
       ? [
           {
             icon: "edit" as const,
@@ -453,7 +453,7 @@ export default function TasksTable({
           },
         ]
       : []),
-    ...(canViewTeam
+    ...(canManageTasks
       ? [
           {
             icon: "delete" as const,
