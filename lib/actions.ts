@@ -45,6 +45,87 @@ export async function getTasksByMember(team_id: number) {
   }));
 }
 
+// ── Nouveauté : récupérer les coéquipiers des projets sélectionnés ─────────────
+export async function getTeammatesByProjects(
+  project_ids: number[],
+  current_team_id: number
+): Promise<{ id: number; full_name: string }[]> {
+  if (project_ids.length === 0) return [];
+
+  // Les projets ont un champ team_ids (array d'ids)
+  const projects = await prisma.project.findMany({
+    where: { id: { in: project_ids } },
+    select: { team_ids: true },
+  });
+
+  // Collecter tous les ids uniques, sauf le membre courant
+  const allIds = new Set<number>();
+  for (const p of projects) {
+    for (const id of p.team_ids ?? []) {
+      if (id !== current_team_id) allIds.add(id);
+    }
+  }
+
+  if (allIds.size === 0) return [];
+
+  const members = await prisma.teams.findMany({
+    where: { id: { in: Array.from(allIds) }, is_boss: false },
+    select: { id: true, first_name: true, last_name: true },
+    orderBy: { first_name: "asc" },
+  });
+
+  return members.map((m) => ({
+    id: m.id,
+    full_name: `${m.first_name || ""} ${m.last_name || ""}`.trim(),
+  }));
+}
+
+// ── Nouveauté : sauvegarder les évaluations ────────────────────────────────────
+export async function saveEvaluations(
+  evaluator_id: number,
+  evaluations: {
+    evaluated_id: number;
+    communication: number;
+    collaboration: number;
+    punctuality: number;
+    comment: string;
+  }[]
+) {
+  if (evaluations.length === 0) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  await Promise.all(
+    evaluations.map((e) =>
+      prisma.evaluation.upsert({
+        where: {
+          evaluator_id_evaluated_id_report_date: {
+            evaluator_id,
+            evaluated_id: e.evaluated_id,
+            report_date: today,
+          },
+        },
+        update: {
+          communication: e.communication,
+          collaboration: e.collaboration,
+          punctuality: e.punctuality,
+          comment: stripHtml(e.comment) || null,
+        },
+        create: {
+          evaluator_id,
+          evaluated_id: e.evaluated_id,
+          report_date: today,
+          communication: e.communication,
+          collaboration: e.collaboration,
+          punctuality: e.punctuality,
+          comment: stripHtml(e.comment) || null,
+        },
+      })
+    )
+  );
+}
+
 export async function sendToSlack(data: {
   team_id: number;
   full_name: string;
@@ -53,7 +134,7 @@ export async function sendToSlack(data: {
   challenges: string;
   needed_learning: string;
   tomorrow_build: string;
-  extra_message?: string; // ← nouveau champ optionnel
+  extra_message?: string;
 }) {
   const {
     team_id,
@@ -109,7 +190,6 @@ export async function sendToSlack(data: {
           }`,
         },
       },
-      // ✅ Bloc message libre — affiché seulement si renseigné
       ...(extra_message && stripHtml(extra_message).length > 0
         ? [
             {
@@ -158,7 +238,6 @@ export async function sendToSlack(data: {
   };
 
   try {
-    // ── INSERT rapports ────────────────────────────────────────────────────
     const inserts = projectRows.map((p) => {
       const projectTaskTitles = taskRows
         .filter((t) => t.project_id === p.id)
@@ -174,7 +253,7 @@ export async function sendToSlack(data: {
           broken_features: challenges ?? "",
           needed_learning: needed_learning ?? "",
           tomorrow_build: tomorrow_build ?? "",
-          extra_message: extra_message ? stripHtml(extra_message) : "", // ← nouveau
+          extra_message: extra_message ? stripHtml(extra_message) : "",
         },
       });
     });
@@ -189,14 +268,13 @@ export async function sendToSlack(data: {
           broken_features: challenges ?? "",
           needed_learning: needed_learning ?? "",
           tomorrow_build: tomorrow_build ?? "",
-          extra_message: extra_message ? stripHtml(extra_message) : "", // ← nouveau
+          extra_message: extra_message ? stripHtml(extra_message) : "",
         },
       });
     } else {
       await Promise.all(inserts);
     }
 
-    // ── Envoi Slack au Boss ────────────────────────────────────────────────
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: {

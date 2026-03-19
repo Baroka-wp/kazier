@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useReducer } from "react";
 import {
   sendToSlack,
   checkAlreadySubmitted,
   searchNames,
   getProjectsByMember,
   getTasksByMember,
+  getTeammatesByProjects,
+  saveEvaluations,
 } from "@/lib/actions";
 
 import WelcomeScreen from "./WelcomeScreen";
@@ -24,6 +26,68 @@ export type Project = {
   description: string;
   icon: string;
 };
+
+export type Evaluation = {
+  evaluated_id: number;
+  communication: number;
+  collaboration: number;
+  punctuality: number;
+  comment: string;
+};
+
+// ── Reducer évaluations ────────────────────────────────────────────────────────
+// Regroupe teammates + evaluations dans un seul state pour éviter
+// les appels setState multiples dans le useEffect (react-hooks/set-state-in-effect)
+
+type Teammate = { id: number; full_name: string };
+
+type EvalState = {
+  teammates: Teammate[];
+  evaluations: Record<number, Evaluation>;
+};
+
+type EvalAction =
+  | { type: "SET_TEAMMATES"; teammates: Teammate[] }
+  | { type: "RESET" }
+  | {
+      type: "UPDATE_EVAL";
+      evaluated_id: number;
+      field: keyof Omit<Evaluation, "evaluated_id">;
+      value: number | string;
+    };
+
+const evalInitial: EvalState = { teammates: [], evaluations: {} };
+
+function evalReducer(state: EvalState, action: EvalAction): EvalState {
+  switch (action.type) {
+    case "SET_TEAMMATES":
+      // Nouveau set de coéquipiers → évaluations remises à zéro en même temps
+      return { teammates: action.teammates, evaluations: {} };
+    case "RESET":
+      return evalInitial;
+    case "UPDATE_EVAL": {
+      const existing = state.evaluations[action.evaluated_id];
+      return {
+        ...state,
+        evaluations: {
+          ...state.evaluations,
+          [action.evaluated_id]: {
+            evaluated_id: action.evaluated_id,
+            communication: existing?.communication ?? 0,
+            collaboration: existing?.collaboration ?? 0,
+            punctuality: existing?.punctuality ?? 0,
+            comment: existing?.comment ?? "",
+            [action.field]: action.value,
+          },
+        },
+      };
+    }
+    default:
+      return state;
+  }
+}
+
+// ── Composant principal ────────────────────────────────────────────────────────
 
 export default function DailyForm() {
   const [step, setStep] = useState(-1); // -1 = welcome
@@ -45,6 +109,36 @@ export default function DailyForm() {
   const [tasks, setTasks] = useState<Awaited<ReturnType<typeof getTasksByMember>>>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
 
+  // ── Évaluations — un seul dispatch pour teammates + evaluations ────────────
+  const [evalState, dispatch] = useReducer(evalReducer, evalInitial);
+  const teammates = evalState.teammates;
+  const evaluations = evalState.evaluations;
+
+  // ── Recharger les coéquipiers dès que selectedProjects ou teamId change ────
+  // Un seul dispatch → un seul re-render, pas de cascading setState
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetching =
+      teamId && selectedProjects.length > 0
+        ? getTeammatesByProjects(
+            selectedProjects.map((p) => p.id),
+            teamId
+          )
+        : Promise.resolve([] as Teammate[]);
+
+    fetching.then((result) => {
+      if (cancelled) return;
+      dispatch({ type: "SET_TEAMMATES", teammates: result });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProjects, teamId]);
+
+  // ── Projets ────────────────────────────────────────────────────────────────
+
   async function loadProjects(team_id: number) {
     const [projectsResult, tasksResult] = await Promise.all([
       getProjectsByMember(team_id),
@@ -58,7 +152,6 @@ export default function DailyForm() {
     setSelectedProjects((prev) => {
       const exists = prev.find((p) => p.id === project.id);
       if (exists) {
-        // Désélectionner aussi les tâches de ce projet
         const projectTaskIds = tasks.filter((t) => t.project_id === project.id).map((t) => t.id);
         setSelectedTaskIds((ids) => ids.filter((id) => !projectTaskIds.includes(id)));
         return prev.filter((p) => p.id !== project.id);
@@ -73,8 +166,17 @@ export default function DailyForm() {
     );
   }
 
+  function handleEvaluationChange(
+    evaluated_id: number,
+    field: keyof Omit<Evaluation, "evaluated_id">,
+    value: number | string
+  ) {
+    dispatch({ type: "UPDATE_EVAL", evaluated_id, field, value });
+  }
+
+  // ── Navigation ─────────────────────────────────────────────────────────────
+
   async function go(next: number) {
-    // Validation étape nom
     if (step === 0) {
       if (!teamId) {
         setBlockReason("not_found");
@@ -93,7 +195,6 @@ export default function DailyForm() {
       }
     }
 
-    // Validation étape projets
     if (step === 1) {
       if (selectedProjects.length === 0) {
         setBlockReason("not_found");
@@ -113,7 +214,6 @@ export default function DailyForm() {
       return;
     }
 
-    // Retour depuis step 0 → welcome
     if (next < 0) {
       setTimeout(() => {
         setStep(-1);
@@ -147,25 +247,37 @@ export default function DailyForm() {
     loadProjects(suggestion.id);
   }
 
-  // isValid selon l'étape courante
+  // ── Validation ─────────────────────────────────────────────────────────────
+
   function isValid(): boolean {
     const q = QUESTIONS_GLOBAL[step];
     if (!q) return false;
+
     if (q.type === "projects") return selectedProjects.length > 0;
 
-    // ✅ Étape tâches : valide si au moins une tâche cochée OU message renseigné
     if (q.type === "tasks") {
       const hasTask = selectedTaskIds.length > 0;
       const hasMessage = (answers["extra_message"] || "").replace(/<[^>]*>/g, "").trim().length > 0;
       return hasTask || hasMessage;
     }
 
+    if (q.type === "evaluations") {
+      if (teammates.length === 0) return true;
+      return teammates.every((m) => {
+        const e = evaluations[m.id];
+        return e && e.communication > 0 && e.collaboration > 0 && e.punctuality > 0;
+      });
+    }
+
     const val = answers[q.id] || "";
     return val.replace(/<[^>]*>/g, "").trim().length > 0;
   }
 
+  // ── Soumission ─────────────────────────────────────────────────────────────
+
   async function handleSubmit() {
     if (!teamId) return;
+
     const result = await sendToSlack({
       team_id: teamId,
       full_name: answers["full_name"],
@@ -176,11 +288,17 @@ export default function DailyForm() {
       tomorrow_build: answers["tomorrow_build"] || "",
       extra_message: answers["extra_message"] || "",
     });
-    if (result.success) {
-      setDone(true);
-      setConfetti(true);
-      setTimeout(() => setConfetti(false), 3000);
-    }
+
+    if (!result.success) return;
+
+    const evalList = Object.values(evaluations).filter(
+      (e) => e.communication > 0 && e.collaboration > 0 && e.punctuality > 0
+    );
+    await saveEvaluations(teamId, evalList);
+
+    setDone(true);
+    setConfetti(true);
+    setTimeout(() => setConfetti(false), 3000);
   }
 
   // ── Routing ────────────────────────────────────────────────────────────────
@@ -200,6 +318,7 @@ export default function DailyForm() {
           setCitations([]);
           setSelectedProjects([]);
           setSelectedTaskIds([]);
+          dispatch({ type: "RESET" });
         }}
       />
     );
@@ -213,6 +332,8 @@ export default function DailyForm() {
         selectedProjects={selectedProjects}
         selectedTaskIds={selectedTaskIds}
         tasks={tasks}
+        teammates={teammates}
+        evaluations={evaluations}
         onEdit={(questionIndex) => {
           setReviewing(false);
           setEditingFromReview(true);
@@ -243,6 +364,9 @@ export default function DailyForm() {
       tasks={tasks}
       selectedTaskIds={selectedTaskIds}
       onTaskToggle={handleTaskToggle}
+      teammates={teammates}
+      evaluations={evaluations}
+      onEvaluationChange={handleEvaluationChange}
     />
   );
 }
