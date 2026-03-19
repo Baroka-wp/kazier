@@ -55,7 +55,6 @@ export type UpdateTaskData = Partial<CreateTaskData>;
 
 export type TaskResult = { success: true; task: Task } | { success: false; error: string };
 
-// Type pour la pagination
 export type PaginationParams = {
   page?: number;
   limit?: number;
@@ -74,7 +73,7 @@ export type PaginatedResult<T> = {
   totalPages: number;
 };
 
-// ── Helper: normaliser assigned_to — Neon retourne "{1,2}" en prod ────────────
+// ── Helper: normaliser assigned_to ───────────────────────────────────────────
 
 function parseAssignedTo(raw: unknown): number[] | null {
   if (!raw) return null;
@@ -123,20 +122,117 @@ function validateTask(data: CreateTaskData): { valid: true } | { valid: false; e
   return { valid: true };
 }
 
+// ── Slack : notifier tâche en review ─────────────────────────────────────────
+
+export async function notifyTaskReview(task: Task) {
+  try {
+    if (!task.project_id) return;
+
+    const project = await prisma.project.findUnique({
+      where: { id: task.project_id },
+      select: { team_ids: true, name: true },
+    });
+
+    if (!project) return;
+
+    const allTeamIds = project.team_ids ?? [];
+
+    // Récupérer les TM du projet
+    const tmMembers =
+      allTeamIds.length > 0
+        ? await prisma.teams.findMany({
+            where: {
+              id: { in: allTeamIds },
+              slack_id: { not: null },
+              users: { some: { role: "TM" } },
+            },
+            select: { slack_id: true },
+          })
+        : [];
+
+    // Récupérer les SA
+    const saMembers = await prisma.teams.findMany({
+      where: {
+        slack_id: { not: null },
+        users: { some: { role: "SA" } },
+      },
+      select: { slack_id: true },
+    });
+
+    // Destinataires : SA + TM uniques
+    const recipients = [
+      ...new Set([
+        ...saMembers.map((m) => m.slack_id).filter((id): id is string => id !== null),
+        ...tmMembers.map((m) => m.slack_id).filter((id): id is string => id !== null),
+      ]),
+    ];
+
+    if (!recipients.length) return;
+
+    const message = {
+      username: "Groot_Bot",
+      icon_emoji: ":eyes:",
+      blocks: [
+        {
+          type: "header",
+          text: { type: "plain_text", text: "👀 Tâche en attente de review" },
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `La tâche suivante vient d'être marquée en *review* :`,
+          },
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `📌 *${task.title}*\n📁 Projet : *${task.project_name ?? "Non défini"}*\n👤 Assigné à : *${task.assigned_to_names?.join(", ") ?? "Non assigné"}*`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: { type: "plain_text", text: "📋 Voir les tâches" },
+              url: `${process.env.NEXTAUTH_URL}/dashboard/tasks`,
+              style: "primary",
+            },
+          ],
+        },
+      ],
+    };
+
+    await Promise.all(
+      recipients.map((channel) =>
+        fetch("https://slack.com/api/chat.postMessage", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          },
+          body: JSON.stringify({ ...message, channel }),
+        })
+      )
+    );
+  } catch (err) {
+    console.error("[notifyTaskReview]", err);
+  }
+}
+
 // ── CREATE ────────────────────────────────────────────────────────────────────
 
 export async function createTask(data: CreateTaskData): Promise<TaskResult> {
   try {
-    // ✅ Vérifier authentification et permissions
     await requireTeamManagement();
 
     const validation = validateTask(data);
     if (!validation.valid) return { success: false, error: validation.error };
 
-    // Convertir due_date en format ISO-8601 valide pour Prisma
     let dueDate: Date | null = null;
     if (data.due_date) {
-      // Format attendu: "YYYY-MM-DD HH:MM"
       const match = data.due_date.match(/^(\d{4}-\d{2}-\d{2})[\sT](\d{2}:\d{2})/);
       if (match) {
         const [, datePart, timePart] = match;
@@ -146,9 +242,7 @@ export async function createTask(data: CreateTaskData): Promise<TaskResult> {
       } else {
         dueDate = new Date(data.due_date);
       }
-      if (isNaN(dueDate.getTime())) {
-        dueDate = null;
-      }
+      if (isNaN(dueDate.getTime())) dueDate = null;
     }
 
     const task = await prisma.tasks.create({
@@ -167,7 +261,6 @@ export async function createTask(data: CreateTaskData): Promise<TaskResult> {
     revalidatePath("/dashboard/tasks");
     revalidatePath("/dashboard");
 
-    // Notifier les membres assignés via Slack
     if (enriched.assigned_to?.length) {
       notifyTaskAssigned({
         assignedIds: enriched.assigned_to,
@@ -189,9 +282,7 @@ export async function createTask(data: CreateTaskData): Promise<TaskResult> {
 
 export async function getTask(id: number): Promise<TaskResult> {
   try {
-    const task = await prisma.tasks.findUnique({
-      where: { id },
-    });
+    const task = await prisma.tasks.findUnique({ where: { id } });
     if (!task) return { success: false, error: "Tâche non trouvée." };
     return { success: true, task: await enrichTask(task) };
   } catch (err: unknown) {
@@ -205,24 +296,15 @@ export async function getTask(id: number): Promise<TaskResult> {
 export async function getTasks(
   params?: PaginationParams
 ): Promise<PaginatedResult<Task> | { success: boolean; tasks?: Task[]; error?: string }> {
-  // Si pas de params, retourner l'ancienne version pour compatibilité
   if (!params) {
-    const tasks = await prisma.tasks.findMany({
-      orderBy: { created_at: "desc" },
-    });
+    const tasks = await prisma.tasks.findMany({ orderBy: { created_at: "desc" } });
     const enriched = await Promise.all(tasks.map((t) => enrichTask(t)));
     return { success: true, tasks: enriched };
   }
 
   const page = params.page ?? 1;
   const limit = params.limit ?? 10;
-  const search = params.search;
-  const status = params.status;
-  const priority = params.priority;
-  const projectId = params.projectId;
-  const assignedTo = params.assignedTo;
 
-  // Construire les filtres WHERE
   type WhereClause = {
     OR?: Array<{
       title?: { contains: string; mode: "insensitive" };
@@ -235,33 +317,18 @@ export async function getTasks(
   };
   const where: WhereClause = {};
 
-  if (search) {
+  if (params.search) {
     where.OR = [
-      { title: { contains: search, mode: "insensitive" as const } },
-      { description: { contains: search, mode: "insensitive" as const } },
+      { title: { contains: params.search, mode: "insensitive" as const } },
+      { description: { contains: params.search, mode: "insensitive" as const } },
     ];
   }
+  if (params.status) where.status = params.status;
+  if (params.priority) where.priority = params.priority;
+  if (params.projectId) where.project_id = params.projectId;
+  if (params.assignedTo) where.assigned_to = { has: params.assignedTo };
 
-  if (status) {
-    where.status = status;
-  }
-
-  if (priority) {
-    where.priority = priority;
-  }
-
-  if (projectId) {
-    where.project_id = projectId;
-  }
-
-  if (assignedTo) {
-    where.assigned_to = { has: assignedTo };
-  }
-
-  // Récupérer le total
   const total = await prisma.tasks.count({ where });
-
-  // Récupérer les tâches paginées
   const tasks = await prisma.tasks.findMany({
     where,
     orderBy: { created_at: "desc" },
@@ -284,12 +351,9 @@ export async function getTasks(
 
 export async function updateTask(id: number, data: UpdateTaskData): Promise<TaskResult> {
   try {
-    // ✅ Vérifier authentification et permissions
     await requireTeamManagement();
 
-    const existing = await prisma.tasks.findUnique({
-      where: { id },
-    });
+    const existing = await prisma.tasks.findUnique({ where: { id } });
     if (!existing) return { success: false, error: "Tâche non trouvée." };
 
     const mergedData: CreateTaskData = {
@@ -308,14 +372,13 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
         data.due_date !== undefined
           ? data.due_date
           : existing.due_date
-            ? serializeDueDate(existing.due_date) // ✅ au lieu de .toISOString().split("T")[0]
+            ? serializeDueDate(existing.due_date)
             : null,
     };
 
     const validation = validateTask(mergedData);
     if (!validation.valid) return { success: false, error: validation.error };
 
-    // Convertir due_date en format ISO-8601 valide pour Prisma
     let dueDate: Date | null = null;
     if (mergedData.due_date) {
       const match = mergedData.due_date.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/);
@@ -327,9 +390,7 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
       } else {
         dueDate = new Date(mergedData.due_date);
       }
-      if (isNaN(dueDate.getTime())) {
-        dueDate = null;
-      }
+      if (isNaN(dueDate.getTime())) dueDate = null;
     }
 
     const updated = await prisma.tasks.update({
@@ -348,6 +409,15 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
     const enriched = await enrichTask(updated);
     revalidatePath("/dashboard/tasks");
     revalidatePath("/dashboard");
+
+    // ✅ Notifier SA + TM si tâche passée en "review"
+    const wasNotReview = existing.status !== "review";
+    const isNowReview = enriched.status === "review";
+    if (wasNotReview && isNowReview) {
+      notifyTaskReview(enriched).catch((err) =>
+        console.error("[updateTask] notifyTaskReview error:", err)
+      );
+    }
 
     // Notifier uniquement les membres nouvellement assignés
     const prevIds = parseAssignedTo(existing.assigned_to) ?? [];
@@ -374,12 +444,8 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
 
 export async function deleteTask(id: number): Promise<{ success: boolean; error?: string }> {
   try {
-    // ✅ Vérifier authentification et permissions
     await requireTeamManagement();
-
-    await prisma.tasks.delete({
-      where: { id },
-    });
+    await prisma.tasks.delete({ where: { id } });
     revalidatePath("/dashboard/tasks");
     revalidatePath("/dashboard");
     return { success: true };
@@ -412,16 +478,9 @@ async function enrichTask(task: PrismaTask): Promise<Task> {
   if (assignedIds?.length) {
     try {
       const members = await prisma.teams.findMany({
-        where: {
-          id: { in: assignedIds },
-        },
-        select: {
-          first_name: true,
-          last_name: true,
-        },
-        orderBy: {
-          first_name: "asc",
-        },
+        where: { id: { in: assignedIds } },
+        select: { first_name: true, last_name: true },
+        orderBy: { first_name: "asc" },
       });
       if (members.length) {
         assigned_to_names = members.map((m) => `${m.first_name} ${m.last_name}`);
@@ -468,21 +527,12 @@ export async function getTeamsForAssignment(): Promise<{
 }> {
   try {
     const teams = await prisma.teams.findMany({
-      select: {
-        id: true,
-        first_name: true,
-        last_name: true,
-      },
-      orderBy: {
-        first_name: "asc",
-      },
+      select: { id: true, first_name: true, last_name: true },
+      orderBy: { first_name: "asc" },
     });
     return {
       success: true,
-      teams: teams.map((t) => ({
-        id: t.id,
-        full_name: `${t.first_name} ${t.last_name}`,
-      })),
+      teams: teams.map((t) => ({ id: t.id, full_name: `${t.first_name} ${t.last_name}` })),
     };
   } catch (err: unknown) {
     console.error("[getTeamsForAssignment]", err instanceof Error ? err.message : String(err));
@@ -499,19 +549,13 @@ export async function getProjectsForTasks(): Promise<{
 }> {
   try {
     const projectsResult = await prisma.project.findMany({
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     });
-    const projects = projectsResult.map((p) => ({
-      id: p.id,
-      name: p.name || "Sans nom",
-    }));
-    return { success: true, projects };
+    return {
+      success: true,
+      projects: projectsResult.map((p) => ({ id: p.id, name: p.name || "Sans nom" })),
+    };
   } catch (err: unknown) {
     console.error("[getProjectsForTasks]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des projets." };
@@ -537,25 +581,14 @@ export async function getTeamMembersByProject(projectId: number): Promise<{
     if (!teamIds?.length) return { success: true, members: [] };
 
     const result = await prisma.teams.findMany({
-      where: {
-        id: { in: teamIds },
-      },
-      select: {
-        id: true,
-        first_name: true,
-        last_name: true,
-      },
-      orderBy: {
-        first_name: "asc",
-      },
+      where: { id: { in: teamIds } },
+      select: { id: true, first_name: true, last_name: true },
+      orderBy: { first_name: "asc" },
     });
 
     return {
       success: true,
-      members: result.map((t) => ({
-        id: t.id,
-        full_name: `${t.first_name} ${t.last_name}`,
-      })),
+      members: result.map((t) => ({ id: t.id, full_name: `${t.first_name} ${t.last_name}` })),
     };
   } catch (err: unknown) {
     console.error("[getTeamMembersByProject]", err instanceof Error ? err.message : String(err));
@@ -577,9 +610,7 @@ export async function getTasksByMember(memberId: number): Promise<{
         status: { not: "done" },
       },
       include: {
-        project: {
-          select: { name: true },
-        },
+        project: { select: { name: true } },
       },
       orderBy: [{ due_date: "asc" }],
     });

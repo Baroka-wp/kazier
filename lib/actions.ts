@@ -209,12 +209,12 @@ export async function sendToSlack(data: {
     }
 
     // ── Mise à jour statut tâches → "review" ──────────────────────────────
-    if (validated_tasks.length > 0) {
-      await prisma.tasks.updateMany({
-        where: { id: { in: validated_tasks } },
-        data: { status: "review" },
-      });
-    }
+    // if (validated_tasks.length > 0) {
+    //   await prisma.tasks.updateMany({
+    //     where: { id: { in: validated_tasks } },
+    //     data: { status: "review" },
+    //   });
+    // }
 
     // ── Envoi Slack au Boss ────────────────────────────────────────────────
     const response = await fetch("https://slack.com/api/chat.postMessage", {
@@ -233,95 +233,95 @@ export async function sendToSlack(data: {
     if (!result.ok) throw new Error(`Slack DM failed: ${result.error}`);
 
     // ── Notification review au Boss + TM des projets ───────────────────────
-    if (validated_tasks.length > 0) {
-      const reviewMessage = {
-        username: "Groot_Bot",
-        icon_emoji: ":eyes:",
-        blocks: [
-          {
-            type: "header",
-            text: { type: "plain_text", text: "👀 Tâches en attente de review" },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `*${full_name}* vient de soumettre son rapport.\nLes tâches suivantes sont maintenant en *review* :`,
-            },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: taskTitles.map((t) => `• ${t}`).join("\n"),
-            },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `👉 *Merci d'aller consulter et valider ces tâches dans l'application.*`,
-            },
-          },
-          {
-            type: "actions",
-            elements: [
-              {
-                type: "button",
-                text: { type: "plain_text", text: "📋 Voir les tâches" },
-                url: `${process.env.NEXTAUTH_URL}/dashboard/tasks`,
-                style: "primary",
-              },
-            ],
-          },
-        ],
-      };
+    // if (validated_tasks.length > 0) {
+    //   const reviewMessage = {
+    //     username: "Groot_Bot",
+    //     icon_emoji: ":eyes:",
+    //     blocks: [
+    //       {
+    //         type: "header",
+    //         text: { type: "plain_text", text: "👀 Tâches en attente de review" },
+    //       },
+    //       {
+    //         type: "section",
+    //         text: {
+    //           type: "mrkdwn",
+    //           text: `*${full_name}* vient de soumettre son rapport.\nLes tâches suivantes sont maintenant en *review* :`,
+    //         },
+    //       },
+    //       {
+    //         type: "section",
+    //         text: {
+    //           type: "mrkdwn",
+    //           text: taskTitles.map((t) => `• ${t}`).join("\n"),
+    //         },
+    //       },
+    //       {
+    //         type: "section",
+    //         text: {
+    //           type: "mrkdwn",
+    //           text: `👉 *Merci d'aller consulter et valider ces tâches dans l'application.*`,
+    //         },
+    //       },
+    //       {
+    //         type: "actions",
+    //         elements: [
+    //           {
+    //             type: "button",
+    //             text: { type: "plain_text", text: "📋 Voir les tâches" },
+    //             url: `${process.env.NEXTAUTH_URL}/dashboard/tasks`,
+    //             style: "primary",
+    //           },
+    //         ],
+    //       },
+    //     ],
+    //   };
 
-      // Récupérer tous les team_ids des projets concernés
-      const projectIds = projectRows.map((p) => p.id);
-      const projectsWithTeams = await prisma.project.findMany({
-        where: { id: { in: projectIds } },
-        select: { team_ids: true },
-      });
+    //   // Récupérer tous les team_ids des projets concernés
+    //   const projectIds = projectRows.map((p) => p.id);
+    //   const projectsWithTeams = await prisma.project.findMany({
+    //     where: { id: { in: projectIds } },
+    //     select: { team_ids: true },
+    //   });
 
-      const allTeamIds = [...new Set(projectsWithTeams.flatMap((p) => p.team_ids))];
+    //   const allTeamIds = [...new Set(projectsWithTeams.flatMap((p) => p.team_ids))];
 
-      // Parmi ces membres, récupérer ceux qui ont le rôle "TM" via users
-      const tmMembers =
-        allTeamIds.length > 0
-          ? await prisma.teams.findMany({
-              where: {
-                id: { in: allTeamIds },
-                slack_id: { not: null },
-                users: {
-                  some: { role: "TM" },
-                },
-              },
-              select: { slack_id: true },
-            })
-          : [];
+    //   // Parmi ces membres, récupérer ceux qui ont le rôle "TM" via users
+    //   const tmMembers =
+    //     allTeamIds.length > 0
+    //       ? await prisma.teams.findMany({
+    //           where: {
+    //             id: { in: allTeamIds },
+    //             slack_id: { not: null },
+    //             users: {
+    //               some: { role: "TM" },
+    //             },
+    //           },
+    //           select: { slack_id: true },
+    //         })
+    //       : [];
 
-      // Destinataires : SA + TM uniques
-      const recipients = [
-        ...new Set([
-          process.env.SLACK_BOSS_USER_ID!,
-          ...tmMembers.map((m) => m.slack_id).filter((id): id is string => id !== null),
-        ]),
-      ];
+    //   // Destinataires : SA + TM uniques
+    //   const recipients = [
+    //     ...new Set([
+    //       process.env.SLACK_BOSS_USER_ID!,
+    //       ...tmMembers.map((m) => m.slack_id).filter((id): id is string => id !== null),
+    //     ]),
+    //   ];
 
-      await Promise.all(
-        recipients.map((channel) =>
-          fetch("https://slack.com/api/chat.postMessage", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-            },
-            body: JSON.stringify({ ...reviewMessage, channel }),
-          })
-        )
-      );
-    }
+    //   await Promise.all(
+    //     recipients.map((channel) =>
+    //       fetch("https://slack.com/api/chat.postMessage", {
+    //         method: "POST",
+    //         headers: {
+    //           "Content-Type": "application/json",
+    //           Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+    //         },
+    //         body: JSON.stringify({ ...reviewMessage, channel }),
+    //       })
+    //     )
+    //   );
+    // }
 
     return { success: true };
   } catch (error) {

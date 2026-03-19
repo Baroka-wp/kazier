@@ -236,6 +236,7 @@ function UpdateTaskForm({
           >
             <option value="à faire">À faire</option>
             <option value="en cours">En cours</option>
+            <option value="review">Review</option>
             <option value="terminée">Terminée</option>
           </select>
         </div>

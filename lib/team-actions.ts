@@ -2,7 +2,9 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
-import type { Task } from "@/lib/task-actions";
+import { type Task, notifyTaskReview } from "@/lib/task-actions";
+
+// ── Helper: normaliser assigned_to ───────────────────────────────────────────
 
 function parseAssignedTo(value: unknown): number[] {
   if (!value) return [];
@@ -32,7 +34,7 @@ export type TeamMember = {
   full_name: string;
 };
 
-// ── Helper : enrichir les tâches avec les noms des assignés ──────────────────
+// ── Helper: type Prisma brut pour une tâche ───────────────────────────────────
 
 type PrismaTask = {
   id: number;
@@ -46,23 +48,17 @@ type PrismaTask = {
   created_at: Date;
 };
 
+// ── Helper: enrichir les tâches avec les noms des assignés ───────────────────
+// Optimisé : une seule requête DB pour tous les membres au lieu d'une par tâche
+
 async function enrichTasksWithNames(tasks: PrismaTask[]): Promise<Task[]> {
-  // Collecter tous les IDs uniques en une seule requête au lieu d'une par tâche
   const allIds = [...new Set(tasks.flatMap((t) => parseAssignedTo(t.assigned_to)))];
 
   const namesMap: Record<number, string> = {};
   if (allIds.length > 0) {
     const members = await prisma.teams.findMany({
-      where: {
-        id: {
-          in: allIds,
-        },
-      },
-      select: {
-        id: true,
-        first_name: true,
-        last_name: true,
-      },
+      where: { id: { in: allIds } },
+      select: { id: true, first_name: true, last_name: true },
     });
 
     for (const m of members) {
@@ -88,6 +84,8 @@ async function enrichTasksWithNames(tasks: PrismaTask[]): Promise<Task[]> {
 }
 
 // ── getProjectsWithTasksForTeamMember ─────────────────────────────────────────
+// Récupère tous les projets dont le membre fait partie,
+// avec les tâches qui lui sont assignées ou non assignées
 
 export async function getProjectsWithTasksForTeamMember(teamMemberId: number): Promise<{
   success: boolean;
@@ -98,61 +96,41 @@ export async function getProjectsWithTasksForTeamMember(teamMemberId: number): P
     const memberId = typeof teamMemberId === "string" ? parseInt(teamMemberId) : teamMemberId;
 
     const projects = await prisma.project.findMany({
-      where: {
-        team_ids: {
-          has: memberId,
-        },
-      },
-      orderBy: {
-        name: "asc",
-      },
+      where: { team_ids: { has: memberId } },
+      orderBy: { name: "asc" },
     });
 
     const enrichedProjects = await Promise.all(
       projects.map(async (project) => {
         const teamIds = parseAssignedTo(project.team_ids);
 
-        // Récupérer les tâches
+        // Tâches du projet : non assignées OU assignées au membre
         const tasksResult = await prisma.tasks.findMany({
           where: {
             project_id: project.id,
             OR: [{ assigned_to: { isEmpty: true } }, { assigned_to: { has: memberId } }],
           },
-          orderBy: {
-            created_at: "desc",
-          },
+          orderBy: { created_at: "desc" },
         });
 
         const enrichedTasks = await enrichTasksWithNames(tasksResult);
 
         // Membres du projet
         const members = await prisma.teams.findMany({
-          where: {
-            id: {
-              in: teamIds,
-            },
-          },
-          select: {
-            id: true,
-            first_name: true,
-            last_name: true,
-          },
-          orderBy: {
-            first_name: "asc",
-          },
+          where: { id: { in: teamIds } },
+          select: { id: true, first_name: true, last_name: true },
+          orderBy: { first_name: "asc" },
         });
-
-        const team_members = members.map((m) => ({
-          id: m.id,
-          full_name: `${m.first_name || ""} ${m.last_name || ""}`.trim(),
-        }));
 
         return {
           id: project.id,
           name: project.name || "Sans nom",
           description: project.description || "Aucune description",
           icon: project.icon,
-          team_members,
+          team_members: members.map((m) => ({
+            id: m.id,
+            full_name: `${m.first_name || ""} ${m.last_name || ""}`.trim(),
+          })),
           tasks: enrichedTasks,
         };
       })
@@ -169,6 +147,8 @@ export async function getProjectsWithTasksForTeamMember(teamMemberId: number): P
 }
 
 // ── getTasksByProject ─────────────────────────────────────────────────────────
+// Récupère les tâches d'un projet pour un membre spécifique
+// (tâches non assignées + tâches assignées au membre)
 
 export async function getTasksByProject(
   projectId: number,
@@ -190,7 +170,6 @@ export async function getTasksByProject(
     });
 
     const enrichedTasks = await enrichTasksWithNames(result);
-
     return { success: true, tasks: enrichedTasks };
   } catch (err: unknown) {
     console.error("[getTasksByProject]", err instanceof Error ? err.message : String(err));
@@ -199,6 +178,7 @@ export async function getTasksByProject(
 }
 
 // ── assignTaskToSelf ──────────────────────────────────────────────────────────
+// Permet à un membre de s'assigner lui-même à une tâche
 
 export async function assignTaskToSelf(
   taskId: number,
@@ -222,18 +202,16 @@ export async function assignTaskToSelf(
     if (assignedIds.includes(memberId))
       return { success: false, error: "Vous êtes déjà assigné à cette tâche." };
 
-    const newAssignedIds = [...assignedIds, memberId];
-
     const updated = await prisma.tasks.update({
       where: { id: taskId },
-      data: { assigned_to: newAssignedIds },
+      data: { assigned_to: [...assignedIds, memberId] },
     });
 
     const [enriched] = await enrichTasksWithNames([updated]);
 
     revalidatePath("/dashboard/teams");
-    revalidatePath("/dashboard/tasks"); // 👈
-    revalidatePath("/dashboard"); // 👈
+    revalidatePath("/dashboard/tasks");
+    revalidatePath("/dashboard");
     return { success: true, task: enriched };
   } catch (err: unknown) {
     console.error("[assignTaskToSelf]", err instanceof Error ? err.message : String(err));
@@ -242,6 +220,7 @@ export async function assignTaskToSelf(
 }
 
 // ── unassignTaskFromSelf ──────────────────────────────────────────────────────
+// Permet à un membre de se désassigner d'une tâche
 
 export async function unassignTaskFromSelf(
   taskId: number,
@@ -265,18 +244,16 @@ export async function unassignTaskFromSelf(
     if (!assignedIds.includes(memberId))
       return { success: false, error: "Vous n'êtes pas assigné à cette tâche." };
 
-    const newAssignedIds = assignedIds.filter((id) => id !== memberId);
-
     const updated = await prisma.tasks.update({
       where: { id: taskId },
-      data: { assigned_to: newAssignedIds.length > 0 ? newAssignedIds : [] },
+      data: { assigned_to: assignedIds.filter((id) => id !== memberId) },
     });
 
     const [enriched] = await enrichTasksWithNames([updated]);
 
     revalidatePath("/dashboard/teams");
-    revalidatePath("/dashboard/tasks"); // 👈
-    revalidatePath("/dashboard"); // 👈
+    revalidatePath("/dashboard/tasks");
+    revalidatePath("/dashboard");
     return { success: true, task: enriched };
   } catch (err: unknown) {
     console.error("[unassignTaskFromSelf]", err instanceof Error ? err.message : String(err));
@@ -285,6 +262,8 @@ export async function unassignTaskFromSelf(
 }
 
 // ── updateTaskStatus ──────────────────────────────────────────────────────────
+// Met à jour le statut d'une tâche depuis le kanban (drag & drop)
+// Déclenche une notification Slack au SA + TM si la tâche passe en "review"
 
 export async function updateTaskStatus(
   taskId: number,
@@ -295,6 +274,12 @@ export async function updateTaskStatus(
   error?: string;
 }> {
   try {
+    // Récupérer le statut actuel avant mise à jour
+    const existing = await prisma.tasks.findUnique({
+      where: { id: taskId },
+      select: { status: true },
+    });
+
     const updated = await prisma.tasks.update({
       where: { id: taskId },
       data: { status: newStatus },
@@ -304,9 +289,18 @@ export async function updateTaskStatus(
 
     const [enriched] = await enrichTasksWithNames([updated]);
 
+    // ✅ Notifier SA + TM si la tâche vient de passer en "review"
+    const wasNotReview = existing?.status !== "review";
+    const isNowReview = newStatus === "review";
+    if (wasNotReview && isNowReview) {
+      notifyTaskReview(enriched).catch((err) =>
+        console.error("[updateTaskStatus] notifyTaskReview error:", err)
+      );
+    }
+
     revalidatePath("/dashboard/teams");
-    revalidatePath("/dashboard/tasks"); // 👈 ajouter
-    revalidatePath("/dashboard"); // 👈 ajouter
+    revalidatePath("/dashboard/tasks");
+    revalidatePath("/dashboard");
     return { success: true, task: enriched };
   } catch (err: unknown) {
     console.error("[updateTaskStatus]", err instanceof Error ? err.message : String(err));
@@ -315,6 +309,7 @@ export async function updateTaskStatus(
 }
 
 // ── getTeamsForAssignment ─────────────────────────────────────────────────────
+// Récupère tous les membres disponibles pour assignation
 
 export async function getTeamsForAssignment(): Promise<{
   success: boolean;
@@ -323,22 +318,17 @@ export async function getTeamsForAssignment(): Promise<{
 }> {
   try {
     const result = await prisma.teams.findMany({
-      select: {
-        id: true,
-        first_name: true,
-        last_name: true,
-      },
-      orderBy: {
-        first_name: "asc",
-      },
+      select: { id: true, first_name: true, last_name: true },
+      orderBy: { first_name: "asc" },
     });
 
-    const teams = result.map((row) => ({
-      id: row.id,
-      full_name: `${row.first_name || ""} ${row.last_name || ""}`.trim(),
-    }));
-
-    return { success: true, teams };
+    return {
+      success: true,
+      teams: result.map((row) => ({
+        id: row.id,
+        full_name: `${row.first_name || ""} ${row.last_name || ""}`.trim(),
+      })),
+    };
   } catch (err: unknown) {
     console.error("[getTeamsForAssignment]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des équipes." };
