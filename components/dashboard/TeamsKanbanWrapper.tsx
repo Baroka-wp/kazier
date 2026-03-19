@@ -50,26 +50,31 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
     if (!over) return;
 
     const taskId = parseInt(String(active.id).replace("task-", ""));
-    // over.id peut être `column-xxx` ou `task-xxx` (si drop sur une card)
-    const newStatus = String(over.id)
-      .replace("column-", "")
-      .replace(/^task-\d+$/, "") as Task["status"];
-
-    // Si over est une task, récupérer le status de cette task
-    const overTask = localTasks.find((t) => `task-${t.id}` === String(over.id));
-    const resolvedStatus = overTask ? overTask.status : (newStatus as Task["status"]);
-
     const currentTask = localTasks.find((t) => t.id === taskId);
-    if (!currentTask || currentTask.status === resolvedStatus) return;
+    if (!currentTask) return;
 
-    // Optimistic update
+    // 👇 Bloquer si la tâche n'est pas assignée au membre connecté
+    if (!currentTask.assigned_to?.includes(teamMemberId)) return;
+
+    // 👇 Bloquer si déjà en review ou terminée
+    if (currentTask.status === "review" || currentTask.status === "terminée") return;
+
+    const overTask = localTasks.find((t) => `task-${t.id}` === String(over.id));
+    const resolvedStatus = overTask
+      ? overTask.status
+      : (String(over.id).replace("column-", "") as Task["status"]);
+
+    if (currentTask.status === resolvedStatus) return;
+
+    // 👇 Bloquer le drop vers terminée
+    if (resolvedStatus === "terminée") return;
+
     setLocalTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: resolvedStatus } : t))
     );
 
     const res = await updateTaskStatus(taskId, resolvedStatus);
     if (!res.success) {
-      // Rollback
       setLocalTasks(tasks);
     }
   }
@@ -91,6 +96,7 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
             onTaskUpdated={(updatedTask) => {
               setLocalTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
             }}
+            readOnly={status === "terminée"} // 👈 colonne terminée en lecture seule
           />
         ))}
       </div>

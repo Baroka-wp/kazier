@@ -30,6 +30,7 @@ export function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; color: string; label: string }> = {
     "à faire": { bg: "rgba(209, 213, 219, 0.1)", color: "#6B7280", label: "À faire" },
     "en cours": { bg: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", label: "En cours" },
+    review: { bg: "#8a5cf639", color: "#8b5cf6", label: "Review" },
     terminée: { bg: "rgba(16, 185, 129, 0.1)", color: "#10b981", label: "Terminée" },
   };
   const s = map[status] ?? map["à faire"];

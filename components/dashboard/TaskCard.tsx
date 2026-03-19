@@ -14,7 +14,8 @@ type Props = {
   isFree: boolean;
   teamMemberId: number;
   onTaskUpdated: (updated: Task) => void;
-  isDragging?: boolean; // pour le DragOverlay
+  isDragging?: boolean;
+  readOnly?: boolean;
 };
 
 function PriorityDot({ priority }: { priority: string }) {
@@ -56,27 +57,27 @@ function StatusSelect({
   onStatusChange: (s: string) => void;
   disabled: boolean;
 }) {
+  const isReview = status === "review";
   return (
     <select
       value={status}
       onChange={(e) => onStatusChange(e.target.value)}
-      disabled={disabled}
+      disabled={disabled || isReview}
       style={{
         padding: "4px 6px",
         borderRadius: "6px",
         border: "1px solid rgba(0,0,0,0.1)",
-        background: disabled ? "rgba(0,0,0,0.05)" : "rgba(107,26,42,0.1)",
-        color: disabled ? "#999" : "#6B1A2A",
+        background: disabled || isReview ? "rgba(0,0,0,0.05)" : "rgba(107,26,42,0.1)",
+        color: disabled || isReview ? "#999" : "#6B1A2A",
         fontSize: "0.7rem",
         fontFamily: "inherit",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.6 : 1,
+        cursor: disabled || isReview ? "not-allowed" : "pointer",
+        opacity: disabled || isReview ? 0.6 : 1,
       }}
     >
       <option value="à faire">À faire</option>
       <option value="en cours">En cours</option>
       <option value="review">Review</option>
-      <option value="terminée">Terminée</option>
     </select>
   );
 }
@@ -88,6 +89,7 @@ export default function TaskCard({
   teamMemberId,
   onTaskUpdated,
   isDragging = false,
+  readOnly = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
 
@@ -98,7 +100,10 @@ export default function TaskCard({
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: `task-${task.id}` });
+  } = useSortable({
+    id: `task-${task.id}`,
+    disabled: readOnly,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -127,19 +132,18 @@ export default function TaskCard({
       ref={setNodeRef}
       style={{
         ...style,
-        background: "#fff",
+        background: readOnly ? "#f9f9f9" : "#fff", // 👈 fond légèrement grisé si terminée
         borderRadius: "10px",
         border: "1.5px solid rgba(0,0,0,0.06)",
         padding: "12px",
         marginBottom: "10px",
         boxShadow: isBeingDragged ? "0 12px 32px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.04)",
         opacity: isSortableDragging ? 0.4 : 1,
-        cursor: isBeingDragged ? "grabbing" : "grab",
+        cursor: readOnly ? "default" : isBeingDragged ? "grabbing" : "grab",
         transition: "box-shadow 0.15s, opacity 0.15s",
       }}
-      // drag handle sur toute la card sauf les boutons/select
       {...attributes}
-      {...listeners}
+      {...(readOnly ? {} : listeners)} // 👈 pas de drag si readOnly
     >
       {/* Titre + Priority */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
@@ -167,31 +171,31 @@ export default function TaskCard({
         </p>
       )}
 
-      {/* Assignés */}
+      {/* Assignés — connecté en couleur, autres en gris */}
       {task.assigned_to_names && task.assigned_to_names.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
-          {task.assigned_to_names.map((name, i) => (
-            <span
-              key={i}
-              style={{
-                padding: "2px 7px",
-                borderRadius: "20px",
-                fontSize: "0.62rem",
-                fontWeight: 500,
-                background:
-                  name === task.assigned_to_names?.[0] && isAssignedToMe
-                    ? "rgba(107,26,42,0.1)"
-                    : "rgba(0,0,0,0.05)",
-                color: name === task.assigned_to_names?.[0] && isAssignedToMe ? "#6B1A2A" : "#666",
-              }}
-            >
-              {name}
-            </span>
-          ))}
+          {task.assigned_to_names.map((name, i) => {
+            const isMe = task.assigned_to?.[i] === teamMemberId;
+            return (
+              <span
+                key={i}
+                style={{
+                  padding: "2px 7px",
+                  borderRadius: "20px",
+                  fontSize: "0.62rem",
+                  fontWeight: isMe ? 600 : 400,
+                  background: isMe ? "rgba(107,26,42,0.1)" : "rgba(0,0,0,0.05)",
+                  color: isMe ? "#6B1A2A" : "#aaa",
+                }}
+              >
+                {isMe ? `✓ ${name}` : name}
+              </span>
+            );
+          })}
         </div>
       )}
 
-      {/* Actions — onPointerDown stopPropagation pour éviter le drag au clic */}
+      {/* Actions */}
       <div
         style={{
           display: "flex",
@@ -202,55 +206,60 @@ export default function TaskCard({
         }}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        {isAssignedToMe && (
-          <StatusSelect
-            status={task.status}
-            onStatusChange={handleStatusChange}
-            disabled={loading}
-          />
-        )}
-        {isAssignedToMe && (
+        {/* Si readOnly (terminée) — badge informatif uniquement */}
+        {readOnly ? (
           <span
             style={{
               display: "inline-flex",
-              alignItems: "center",
-              gap: "3px",
               padding: "3px 8px",
               borderRadius: "8px",
               fontSize: "0.65rem",
               fontWeight: 500,
-              background: "rgba(107,26,42,0.1)",
-              color: "#6B1A2A",
+              background: "rgba(16,185,129,0.1)",
+              color: "#10b981",
             }}
           >
-            ✓ Moi
+            ✓ Terminée
           </span>
-        )}
-        {isFree && (
-          <button
-            onClick={handleAssign}
-            disabled={loading}
-            style={{
-              padding: "3px 8px",
-              borderRadius: "6px",
-              border: "1px solid rgba(107,26,42,0.2)",
-              background: "rgba(107,26,42,0.05)",
-              color: "#6B1A2A",
-              fontSize: "0.65rem",
-              fontWeight: 500,
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.6 : 1,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) e.currentTarget.style.background = "rgba(107,26,42,0.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(107,26,42,0.05)";
-            }}
-          >
-            {loading ? "..." : "S'assigner"}
-          </button>
+        ) : (
+          <>
+            {/* Select statut — visible seulement si assigné à moi */}
+            {isAssignedToMe && (
+              <StatusSelect
+                status={task.status}
+                onStatusChange={handleStatusChange}
+                disabled={loading}
+              />
+            )}
+
+            {/* Bouton s'assigner — visible seulement si tâche libre */}
+            {isFree && (
+              <button
+                onClick={handleAssign}
+                disabled={loading}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                  border: "1px solid rgba(107,26,42,0.2)",
+                  background: "rgba(107,26,42,0.05)",
+                  color: "#6B1A2A",
+                  fontSize: "0.65rem",
+                  fontWeight: 500,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.6 : 1,
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.background = "rgba(107,26,42,0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(107,26,42,0.05)";
+                }}
+              >
+                {loading ? "..." : "S'assigner"}
+              </button>
+            )}
+          </>
         )}
       </div>
 

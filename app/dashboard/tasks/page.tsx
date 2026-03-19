@@ -48,9 +48,10 @@ export default function TasksPage() {
     error,
     mutate: refreshSWR,
   } = useSWR<ApiResponse>(`/api/tasks?${params.toString()}`, fetcher, {
-    dedupingInterval: 1000,
-    revalidateOnFocus: false,
+    dedupingInterval: 0,
+    revalidateOnFocus: true,
     revalidateOnReconnect: true,
+    refreshInterval: 10000,
   });
 
   const isLoading = !data && !error;
