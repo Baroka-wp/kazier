@@ -137,12 +137,12 @@ export async function createTask(data: CreateTaskData): Promise<TaskResult> {
     let dueDate: Date | null = null;
     if (data.due_date) {
       // Format attendu: "YYYY-MM-DD HH:MM"
-      const match = data.due_date.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/);
+      const match = data.due_date.match(/^(\d{4}-\d{2}-\d{2})[\sT](\d{2}:\d{2})/);
       if (match) {
         const [, datePart, timePart] = match;
         const [year, month, day] = datePart.split("-").map(Number);
         const [hour, minute] = timePart.split(":").map(Number);
-        dueDate = new Date(year, month - 1, day, hour, minute);
+        dueDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
       } else {
         dueDate = new Date(data.due_date);
       }
@@ -308,7 +308,7 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
         data.due_date !== undefined
           ? data.due_date
           : existing.due_date
-            ? existing.due_date.toISOString().split("T")[0]
+            ? serializeDueDate(existing.due_date) // ✅ au lieu de .toISOString().split("T")[0]
             : null,
     };
 
@@ -323,7 +323,7 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
         const [, datePart, timePart] = match;
         const [year, month, day] = datePart.split("-").map(Number);
         const [hour, minute] = timePart.split(":").map(Number);
-        dueDate = new Date(year, month - 1, day, hour, minute);
+        dueDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
       } else {
         dueDate = new Date(mergedData.due_date);
       }

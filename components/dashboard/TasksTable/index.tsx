@@ -25,6 +25,7 @@ type Props = {
   loading?: boolean;
   isEmpty?: boolean;
   onRefresh?: () => void;
+  defaultProjectId?: number;
   // Pagination serveur
   onPageChange?: (page: number) => void;
   onSearch?: (search: string) => void;
@@ -376,6 +377,7 @@ export default function TasksTable({
   onStatusFilter,
   priorityFilter: priorityFilterProp,
   onPriorityFilter,
+  defaultProjectId,
 }: Props) {
   const [teams, setTeams] = useState<TeamMember[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -385,7 +387,7 @@ export default function TasksTable({
   const [deleting, setDeleting] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const { canViewTeam, canManageTasks } = usePermissions();
+  const { canManageTasks } = usePermissions();
 
   // Utiliser les filtres externes (serveur) ou locaux
   const statusFilter = statusFilterProp ?? "";
@@ -540,6 +542,7 @@ export default function TasksTable({
           task={editTarget}
           projects={projects}
           teams={teams}
+          defaultProjectId={defaultProjectId}
           onClose={() => {
             setEditTarget(null);
             setEditMode("update");

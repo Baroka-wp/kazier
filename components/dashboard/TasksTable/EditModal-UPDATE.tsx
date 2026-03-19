@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { Task, TeamMember, Project } from "./types";
 import { updateTask, getTeamMembersByProject } from "@/lib/task-actions";
-import DateTimeInput from "@/components/dashboard/DateTimeInput";
+//import DateTimeInput from "@/components/dashboard/DateTimeInput";
+import DatePicker from "@/components/dashboard/DatePicker";
 
 // ✅ Parse manuel — évite le bug de new Date("YYYY-MM-DD HH:mm") invalide en prod
 function formatDateForPicker(raw: unknown): string {
@@ -35,11 +36,13 @@ function UpdateTaskForm({
   projects,
   onSaved,
   onClose,
+  defaultProjectId,
 }: {
   task: Task;
   projects: Project[];
   onSaved: (task: Task, created: boolean) => void;
   onClose: () => void;
+  defaultProjectId?: number;
 }) {
   const initialAssignedTo = Array.isArray(task.assigned_to) ? task.assigned_to : [];
 
@@ -250,21 +253,37 @@ function UpdateTaskForm({
         </div>
       </div>
 
-      {/* Projet */}
+      {/* Projet — grisé si defaultProjectId fourni */}
       <div style={{ marginBottom: "10px" }}>
-        <small style={labelStyle}>Projet</small>
-        <select
-          value={values.project_id || ""}
-          onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
-          style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}
-        >
-          <option value="">Aucun projet</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+        <small style={labelStyle}>Projet *</small>
+        {defaultProjectId ? (
+          // 👇 Affichage en lecture seule si projet imposé
+          <div
+            style={{
+              ...inputStyle,
+              display: "flex",
+              alignItems: "center",
+              opacity: 0.6,
+              cursor: "not-allowed",
+              background: "#E8E4DF",
+            }}
+          >
+            {projects.find((p) => p.id === defaultProjectId)?.name ?? "Projet sélectionné"}
+          </div>
+        ) : (
+          <select
+            value={values.project_id || ""}
+            onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
+            style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}
+          >
+            <option value="">Sélectionner un projet</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Assigné à */}
@@ -373,7 +392,8 @@ function UpdateTaskForm({
       {/* Due Date */}
       <div style={{ marginBottom: "10px" }}>
         <small style={labelStyle}>Date limite</small>
-        <DateTimeInput
+        <DatePicker
+          key={values.due_date}
           value={values.due_date}
           onChange={(e) => setField("due_date", e)}
           placeholder="Sélectionner date et heure"

@@ -22,8 +22,8 @@ async function main() {
     // Créer d'abord l'entrée dans teams
     const team = await prisma.teams.create({
       data: {
-        first_name: "Irotori",
-        last_name: "BAROKA",
+        first_name: "Djoni",
+        last_name: "OUEDANOU",
         is_boss: true,
         email: email,
       },
@@ -41,7 +41,7 @@ async function main() {
 
     console.log("✅ Admin créé avec succès !");
     console.log(`   Email: ${email}`);
-    console.log(`   Mot de passe: motdepasse123`);
+    console.log(`   Mot de passe: Djonny2022@`);
     console.log(`   Team ID: ${team.id}`);
   } catch (error) {
     console.error("❌ Erreur lors de la création de l'admin:", error);

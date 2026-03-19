@@ -27,6 +27,7 @@ model teams {
   // Relations
   users      users[]
   rapports   rapports[]
+  managed_projects project[] @relation("ProjectTM")
 }
 
 model users {
@@ -48,6 +49,8 @@ model project {
   description String?
   icon        String?
   team_ids    Int[]
+  team_manager_id Int?
+  team_manager    teams?    @relation("ProjectTM", fields: [team_manager_id], references: [id])
 
   // Relations
   tasks       tasks[]
@@ -62,8 +65,9 @@ model tasks {
   priority    String?
   project_id  Int?
   assigned_to Int[]
-  due_date    DateTime? @db.Date
+  due_date    DateTime? @db.Timestamptz
   created_at  DateTime  @default(now())
+  reminder_sent Boolean @default(false)
 
   // Relations
   project     project?  @relation(fields: [project_id], references: [id])

@@ -31,7 +31,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission> = {
     canEditReports: false,
     canDeleteReports: false,
     canViewTeam: true,
-    canManageTeam: false,
+    canManageTeam: true,
     canManageTasks: true,
     canAccessDashboard: true,
   },

@@ -36,8 +36,6 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useRouter } from "next/navigation";
 import DataTable from "@/components/dashboard/DataTable";
 
-// ── Icons disponibles ────────────────────────────────────────────────────────
-
 const AVAILABLE_ICONS = [
   { id: "database", label: "Database", component: Database },
   { id: "settings", label: "Settings", component: Settings },
@@ -53,23 +51,10 @@ const AVAILABLE_ICONS = [
   { id: "boxes", label: "Boxes", component: Boxes },
 ];
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type Props = {
-  projects?: Project[];
-};
-
-type Toast = {
-  id: number;
-  type: "success" | "error";
-  message: string;
-};
-
+type Props = { projects?: Project[] };
+type Toast = { id: number; type: "success" | "error"; message: string };
 type EditMode = "create" | "update";
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-// ── Toast ─────────────────────────────────────────────────────────────────────
 
 function ToastNotification({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const ok = toast.type === "success";
@@ -109,17 +94,10 @@ function ToastNotification({ toast, onClose }: { toast: Toast; onClose: () => vo
       >
         <X size={14} />
       </button>
-      <style>{`
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      <style>{`@keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     </div>
   );
 }
-
-// ── Avatar Membre ────────────────────────────────────────────────────────────
 
 function MemberAvatar({ name }: { name: string }) {
   const initials = name
@@ -150,14 +128,10 @@ function MemberAvatar({ name }: { name: string }) {
   );
 }
 
-// ── Badges pour les membres (similaire à TasksTable) ─────────────────────────
-
 function NamePills({ names }: { names?: string[] }) {
   if (!names?.length) return <span style={{ fontSize: "0.8rem", color: "#ccc" }}>—</span>;
-
   const visible = names.slice(0, 2);
   const extra = names.length - 2;
-
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
       {visible.map((name, i) => {
@@ -238,8 +212,6 @@ function NamePills({ names }: { names?: string[] }) {
   );
 }
 
-// ── Modal Edit / Create avec Sélection Icônes ────────────────────────────────
-
 function EditModal({
   mode,
   project,
@@ -281,19 +253,15 @@ function EditModal({
   async function handleSubmit() {
     setSaving(true);
     setServerError("");
-
     const data = {
       name: values.name,
       description: values.description,
       icon: values.icon || null,
       team_ids: values.team_ids,
     };
-
     const result =
       mode === "create" ? await createProject(data) : await updateProject(project!.id, data);
-
     setSaving(false);
-
     if (result.success) {
       onSaved(result.project, mode === "create");
       onClose();
@@ -329,7 +297,6 @@ function EditModal({
           animation: "popIn 0.2s ease",
         }}
       >
-        {/* Header */}
         <div
           style={{
             padding: "18px 22px",
@@ -380,7 +347,6 @@ function EditModal({
           </button>
         </div>
 
-        {/* Body */}
         <div style={{ padding: "18px 22px 22px" }}>
           {serverError && (
             <div
@@ -398,7 +364,7 @@ function EditModal({
             </div>
           )}
 
-          {/* Icône - Sélecteur avec Lucide */}
+          {/* Icônes */}
           <div style={{ marginBottom: "16px" }}>
             <small
               style={{
@@ -444,14 +410,11 @@ function EditModal({
                     transition: "all 0.15s",
                   }}
                   onMouseEnter={(e) => {
-                    if (values.icon !== id) {
+                    if (values.icon !== id)
                       e.currentTarget.style.background = "rgba(107,26,42,0.05)";
-                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (values.icon !== id) {
-                      e.currentTarget.style.background = "#fff";
-                    }
+                    if (values.icon !== id) e.currentTarget.style.background = "#fff";
                   }}
                 >
                   <IconComponent size={20} />
@@ -539,7 +502,7 @@ function EditModal({
             )}
           </div>
 
-          {/* Sélection Multiple des Équipes */}
+          {/* Équipes */}
           <div style={{ marginBottom: "10px" }}>
             <small
               style={{
@@ -647,18 +610,10 @@ function EditModal({
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes popIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
+      <style>{`@keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }`}</style>
     </div>
   );
 }
-
-// ── Modal Delete ──────────────────────────────────────────────────────────────
 
 function DeleteModal({
   project,
@@ -775,8 +730,6 @@ function DeleteModal({
   );
 }
 
-// ── Menu Actions (Three Dots) ─────────────────────────────────────────────────
-
 function ActionMenu({
   project,
   onEdit,
@@ -787,7 +740,6 @@ function ActionMenu({
   onDelete: (p: Project) => void;
 }) {
   const [open, setOpen] = useState(false);
-
   return (
     <div style={{ position: "relative" }}>
       <button
@@ -813,7 +765,6 @@ function ActionMenu({
       >
         <MoreVertical size={16} />
       </button>
-
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
@@ -886,8 +837,6 @@ function ActionMenu({
   );
 }
 
-// ── Project Card ──────────────────────────────────────────────────────────────
-
 function ProjectCard({
   project,
   onEdit,
@@ -901,9 +850,7 @@ function ProjectCard({
   canManage: boolean;
   onClick: () => void;
 }) {
-  const iconId = project.icon;
-  const IconComp = AVAILABLE_ICONS.find((i) => i.id === iconId)?.component;
-
+  const IconComp = AVAILABLE_ICONS.find((i) => i.id === project.icon)?.component;
   return (
     <div
       onClick={onClick}
@@ -930,7 +877,6 @@ function ProjectCard({
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -988,8 +934,6 @@ function ProjectCard({
         </div>
         {canManage && <ActionMenu project={project} onEdit={onEdit} onDelete={onDelete} />}
       </div>
-
-      {/* Description */}
       <p
         style={{
           fontSize: "0.82rem",
@@ -1003,8 +947,6 @@ function ProjectCard({
       >
         {project.description}
       </p>
-
-      {/* Members */}
       {project.team_members && project.team_members.length > 0 && (
         <div style={{ paddingTop: "8px", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
           <p
@@ -1039,8 +981,6 @@ function ProjectCard({
   );
 }
 
-// ── Composant principal ───────────────────────────────────────────────────────
-
 export default function ProjectsGrid({ projects: initialProjects }: Props) {
   const router = useRouter();
   const [teams, setTeams] = useState<TeamMember[]>([]);
@@ -1054,7 +994,6 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
 
   const { canManageTeam } = usePermissions();
 
-  // SWR pour fetch les projets
   const { data, error, mutate } = useSWR<{ data: Project[] }>("/api/projects", fetcher, {
     dedupingInterval: 500,
   });
@@ -1063,13 +1002,10 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
   const isLoading = !data && !error;
   const isEmpty = !isLoading && projects.length === 0;
 
-  // Charger les équipes au montage
   useEffect(() => {
     (async () => {
       const result = await getTeams();
-      if (result.success && result.teams) {
-        setTeams(result.teams);
-      }
+      if (result.success && result.teams) setTeams(result.teams);
     })();
   }, []);
 
@@ -1096,7 +1032,6 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
   return (
     <>
       <div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
-        {/* Toolbar simplifiée */}
         <div
           style={{
             display: "flex",
@@ -1107,21 +1042,10 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
             flexWrap: "wrap",
           }}
         >
-          {/* Titre */}
-          <h1
-            style={{
-              fontSize: "1.5rem",
-              fontWeight: 700,
-              color: "#1A1A1A",
-              margin: 0,
-            }}
-          >
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
             Projets
           </h1>
-
-          {/* Actions */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            {/* Toggle View Mode */}
             <div
               style={{
                 display: "flex",
@@ -1202,8 +1126,6 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                 <span style={{ fontSize: "0.75rem" }}>Tableau</span>
               </button>
             </div>
-
-            {/* Bouton Ajouter */}
             {canManageTeam && (
               <button
                 onClick={() => {
@@ -1237,14 +1159,12 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                <Plus size={16} />
-                Ajouter projet
+                <Plus size={16} /> Ajouter projet
               </button>
             )}
           </div>
         </div>
 
-        {/* Content - Grid or Table view */}
         {viewMode === "table" ? (
           <DataTable
             columns={[
@@ -1414,7 +1334,6 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
         )}
       </div>
 
-      {/* Modal Edit */}
       {isModalOpen && (
         <EditModal
           mode={editMode}
@@ -1426,18 +1345,16 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
             setEditMode("update");
           }}
           onSaved={async (updated, created) => {
-            if (created) {
-              addToast("success", `"${updated.name}" ajouté.`);
-            } else {
-              addToast("success", `"${updated.name}" mis à jour.`);
-            }
+            addToast(
+              "success",
+              created ? `"${updated.name}" ajouté.` : `"${updated.name}" mis à jour.`
+            );
             setIsModalOpen(false);
             await mutate();
           }}
         />
       )}
 
-      {/* Modal Delete */}
       {toDelete && (
         <DeleteModal
           project={toDelete}
@@ -1447,7 +1364,6 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
         />
       )}
 
-      {/* Toasts */}
       {toasts.map((t) => (
         <ToastNotification
           key={t.id}

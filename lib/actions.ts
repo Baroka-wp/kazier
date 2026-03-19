@@ -76,8 +76,8 @@ export async function getTasksByMember(team_id: number) {
 export async function sendToSlack(data: {
   team_id: number;
   full_name: string;
-  projects: string[]; // noms des projets sélectionnés
-  validated_tasks: number[]; // IDs des tâches validées
+  projects: string[];
+  validated_tasks: number[];
   challenges: string;
   needed_learning: string;
   tomorrow_build: string;
@@ -92,42 +92,24 @@ export async function sendToSlack(data: {
     tomorrow_build,
   } = data;
 
-  // Récupérer titres + project_id des tâches validées
   const taskRows =
     validated_tasks.length > 0
       ? await prisma.tasks.findMany({
-          where: {
-            id: {
-              in: validated_tasks,
-            },
-          },
-          select: {
-            id: true,
-            title: true,
-            project_id: true,
-          },
+          where: { id: { in: validated_tasks } },
+          select: { id: true, title: true, project_id: true },
         })
       : [];
 
   const taskTitles = taskRows.map((r) => r.title || "");
 
-  // Récupérer les project_id depuis les noms
   const projectRows =
     projects.length > 0
       ? await prisma.project.findMany({
-          where: {
-            name: {
-              in: projects,
-            },
-          },
-          select: {
-            id: true,
-            name: true,
-          },
+          where: { name: { in: projects } },
+          select: { id: true, name: true },
         })
       : [];
 
-  // ── Message Slack ──────────────────────────────────────────────────────────
   const slackPayload = {
     username: "Groot_Bot",
     icon_emoji: ":robot_face:",
@@ -148,7 +130,9 @@ export async function sendToSlack(data: {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: `*✅ Tâches validées :*\n${taskTitles.length > 0 ? taskTitles.map((t) => `• ${t}`).join("\n") : "_Aucune_"}`,
+          text: `*✅ Tâches validées :*\n${
+            taskTitles.length > 0 ? taskTitles.map((t) => `• ${t}`).join("\n") : "_Aucune_"
+          }`,
         },
       },
       {
@@ -173,18 +157,22 @@ export async function sendToSlack(data: {
         },
       },
       { type: "divider" },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "📊 Voir le dashboard" },
+            url: `${process.env.NEXTAUTH_URL}/dashboard`,
+            style: "primary",
+          },
+        ],
+      },
     ],
   };
 
   try {
-    // ── INSERT — on conserve l'ancien schéma de rapports ──────────────────────
-    // Mapping :
-    //   working_built      ← titres des tâches validées de ce projet
-    //   validated_learning ← vide (champ supprimé du formulaire)
-    //   broken_features    ← challenges (commun à tous les projets)
-    //   needed_learning    ← needed_learning
-    //   tomorrow_build     ← tomorrow_build
-
+    // ── INSERT rapports ────────────────────────────────────────────────────
     const inserts = projectRows.map((p) => {
       const projectTaskTitles = taskRows
         .filter((t) => t.project_id === p.id)
@@ -204,7 +192,6 @@ export async function sendToSlack(data: {
       });
     });
 
-    // Cas sans projet sélectionné (sécurité)
     if (inserts.length === 0) {
       await prisma.rapports.create({
         data: {
@@ -221,21 +208,15 @@ export async function sendToSlack(data: {
       await Promise.all(inserts);
     }
 
-    // ── Mise à jour statut tâches validées → "terminée" ────────────────────────
+    // ── Mise à jour statut tâches → "review" ──────────────────────────────
     if (validated_tasks.length > 0) {
       await prisma.tasks.updateMany({
-        where: {
-          id: {
-            in: validated_tasks,
-          },
-        },
-        data: {
-          status: "terminée",
-        },
+        where: { id: { in: validated_tasks } },
+        data: { status: "review" },
       });
     }
 
-    // ── Envoi Slack ────────────────────────────────────────────────────────────
+    // ── Envoi Slack au Boss ────────────────────────────────────────────────
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: {
@@ -250,6 +231,98 @@ export async function sendToSlack(data: {
 
     const result = await response.json();
     if (!result.ok) throw new Error(`Slack DM failed: ${result.error}`);
+
+    // ── Notification review au Boss + TM des projets ───────────────────────
+    if (validated_tasks.length > 0) {
+      const reviewMessage = {
+        username: "Groot_Bot",
+        icon_emoji: ":eyes:",
+        blocks: [
+          {
+            type: "header",
+            text: { type: "plain_text", text: "👀 Tâches en attente de review" },
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*${full_name}* vient de soumettre son rapport.\nLes tâches suivantes sont maintenant en *review* :`,
+            },
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: taskTitles.map((t) => `• ${t}`).join("\n"),
+            },
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `👉 *Merci d'aller consulter et valider ces tâches dans l'application.*`,
+            },
+          },
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: { type: "plain_text", text: "📋 Voir les tâches" },
+                url: `${process.env.NEXTAUTH_URL}/dashboard/tasks`,
+                style: "primary",
+              },
+            ],
+          },
+        ],
+      };
+
+      // Récupérer tous les team_ids des projets concernés
+      const projectIds = projectRows.map((p) => p.id);
+      const projectsWithTeams = await prisma.project.findMany({
+        where: { id: { in: projectIds } },
+        select: { team_ids: true },
+      });
+
+      const allTeamIds = [...new Set(projectsWithTeams.flatMap((p) => p.team_ids))];
+
+      // Parmi ces membres, récupérer ceux qui ont le rôle "TM" via users
+      const tmMembers =
+        allTeamIds.length > 0
+          ? await prisma.teams.findMany({
+              where: {
+                id: { in: allTeamIds },
+                slack_id: { not: null },
+                users: {
+                  some: { role: "TM" },
+                },
+              },
+              select: { slack_id: true },
+            })
+          : [];
+
+      // Destinataires : SA + TM uniques
+      const recipients = [
+        ...new Set([
+          process.env.SLACK_BOSS_USER_ID!,
+          ...tmMembers.map((m) => m.slack_id).filter((id): id is string => id !== null),
+        ]),
+      ];
+
+      await Promise.all(
+        recipients.map((channel) =>
+          fetch("https://slack.com/api/chat.postMessage", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+            },
+            body: JSON.stringify({ ...reviewMessage, channel }),
+          })
+        )
+      );
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Erreur détaillée :", error);
