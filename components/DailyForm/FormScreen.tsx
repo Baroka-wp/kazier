@@ -279,7 +279,6 @@ function ProjectTaskAccordion({
 
   return (
     <div style={{ borderRadius: "16px", border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden" }}>
-      {/* Header accordion */}
       <button
         type="button"
         onClick={() => setIsOpen((o) => !o)}
@@ -300,8 +299,6 @@ function ProjectTaskAccordion({
         <span style={{ flex: 1, fontWeight: 700, fontSize: "13px", color: BRAND }}>
           {project.name}
         </span>
-
-        {/* Compteur sélectionnés */}
         {selectedCount > 0 && (
           <span
             style={{
@@ -316,13 +313,9 @@ function ProjectTaskAccordion({
             {selectedCount} ✓
           </span>
         )}
-
-        {/* Total tâches */}
         <span style={{ fontSize: "11px", color: "#aaa" }}>
           {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
         </span>
-
-        {/* Chevron */}
         <span
           style={{
             fontSize: "12px",
@@ -336,10 +329,8 @@ function ProjectTaskAccordion({
         </span>
       </button>
 
-      {/* Contenu */}
       {isOpen && (
         <div style={{ background: "#fafafa" }}>
-          {/* Liste tâches de la page courante */}
           <div
             style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: "6px" }}
           >
@@ -364,7 +355,6 @@ function ProjectTaskAccordion({
                     width: "100%",
                   }}
                 >
-                  {/* Checkbox */}
                   <div
                     style={{
                       width: "17px",
@@ -421,7 +411,6 @@ function ProjectTaskAccordion({
             })}
           </div>
 
-          {/* Pagination — seulement si plus d'une page */}
           {totalPages > 1 && (
             <div
               style={{
@@ -450,7 +439,6 @@ function ProjectTaskAccordion({
               >
                 ← Préc.
               </button>
-
               <span style={{ fontSize: "11px", color: "#aaa" }}>
                 {page} / {totalPages}
                 <span style={{ color: "#ccc", marginLeft: "4px" }}>
@@ -458,7 +446,6 @@ function ProjectTaskAccordion({
                   {tasks.length})
                 </span>
               </span>
-
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -485,42 +472,24 @@ function ProjectTaskAccordion({
   );
 }
 
-// ── Sélection tâches validées ─────────────────────────────────────────────────
+// ── Sélection tâches validées + message libre ─────────────────────────────────
 
 function TasksStep({
   tasks,
   selectedProjects,
   selectedTaskIds,
   onTaskToggle,
+  extraMessage, // ← nouveau
+  onExtraMessage, // ← nouveau
 }: {
   tasks: Task[];
   selectedProjects: Project[];
   selectedTaskIds: number[];
   onTaskToggle: (id: number) => void;
+  extraMessage: string;
+  onExtraMessage: (val: string) => void;
 }) {
   const relevantTasks = tasks.filter((t) => selectedProjects.some((p) => p.id === t.project_id));
-
-  if (relevantTasks.length === 0) {
-    return (
-      <div
-        style={{
-          padding: "24px",
-          borderRadius: "16px",
-          background: "rgba(107,26,42,0.04)",
-          border: "1px dashed rgba(107,26,42,0.2)",
-          textAlign: "center",
-        }}
-      >
-        <p style={{ fontSize: "24px", marginBottom: "8px" }}>📭</p>
-        <p style={{ fontSize: "14px", fontWeight: 600, color: "#1A1A1A", marginBottom: "4px" }}>
-          Aucune tâche trouvée
-        </p>
-        <p style={{ fontSize: "13px", color: "#666" }}>
-          Les projets sélectionnés n&apos;ont pas de tâches assignées.
-        </p>
-      </div>
-    );
-  }
 
   const byProject = selectedProjects
     .map((project) => ({
@@ -530,17 +499,78 @@ function TasksStep({
     .filter((g) => g.tasks.length > 0);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-      {byProject.map(({ project, tasks: projectTasks }, i) => (
-        <ProjectTaskAccordion
-          key={project.id}
-          project={project}
-          tasks={projectTasks}
-          selectedTaskIds={selectedTaskIds}
-          onTaskToggle={onTaskToggle}
-          defaultOpen={i === 0} // Premier projet ouvert par défaut
-        />
-      ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {/* Liste des tâches par projet */}
+      {byProject.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {byProject.map(({ project, tasks: projectTasks }, i) => (
+            <ProjectTaskAccordion
+              key={project.id}
+              project={project}
+              tasks={projectTasks}
+              selectedTaskIds={selectedTaskIds}
+              onTaskToggle={onTaskToggle}
+              defaultOpen={i === 0}
+            />
+          ))}
+        </div>
+      ) : (
+        <div
+          style={{
+            padding: "20px 24px",
+            borderRadius: "16px",
+            background: "rgba(107,26,42,0.04)",
+            border: "1px dashed rgba(107,26,42,0.2)",
+            textAlign: "center",
+          }}
+        >
+          <p style={{ fontSize: "22px", marginBottom: "6px" }}>📭</p>
+          <p style={{ fontSize: "13px", fontWeight: 600, color: "#1A1A1A", marginBottom: "4px" }}>
+            Aucune tâche assignée
+          </p>
+          <p style={{ fontSize: "12px", color: "#888" }}>
+            Décrivez ce que vous avez accompli dans le champ ci-dessous.
+          </p>
+        </div>
+      )}
+
+      {/* ✅ Champ message libre — toujours visible */}
+      <div
+        style={{
+          borderRadius: "16px",
+          border: "1px solid rgba(0,0,0,0.07)",
+          overflow: "hidden",
+          background: "#fff",
+        }}
+      >
+        <div
+          style={{
+            padding: "10px 14px",
+            borderBottom: "1px solid rgba(0,0,0,0.05)",
+            background: `${BRAND}06`,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span style={{ fontSize: "14px" }}>💬</span>
+          <span style={{ fontSize: "12px", fontWeight: 600, color: BRAND }}>Message libre</span>
+          <span
+            style={{
+              fontSize: "10px",
+              color: "#aaa",
+              marginLeft: "auto",
+              fontStyle: "italic",
+            }}
+          >
+            optionnel
+          </span>
+        </div>
+        {/* ✅ RichTextArea au lieu du textarea simple */}
+        <div style={{ padding: "8px" }}>
+          <RichTextArea value={extraMessage} onChange={onExtraMessage} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -679,7 +709,7 @@ export default function FormScreen({
             </>
           )}
 
-          {/* Sélection projets + badge tâches */}
+          {/* Sélection projets */}
           {q.type === "projects" && (
             <>
               {projects.length === 0 ? (
@@ -760,13 +790,15 @@ export default function FormScreen({
             </>
           )}
 
-          {/* Sélection tâches — accordion + pagination */}
+          {/* ✅ Sélection tâches + message libre intégré */}
           {q.type === "tasks" && (
             <TasksStep
               tasks={tasks}
               selectedProjects={selectedProjects}
               selectedTaskIds={selectedTaskIds}
               onTaskToggle={onTaskToggle ?? (() => {})}
+              extraMessage={answers["extra_message"] || ""}
+              onExtraMessage={(val) => onAnswer("extra_message", val)}
             />
           )}
 

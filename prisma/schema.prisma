@@ -80,6 +80,7 @@ model rapports {
   broken_features    String?
   needed_learning    String?
   tomorrow_build     String?
+  extra_message      String?
   created_at         DateTime  @default(now())
 
   // Relations

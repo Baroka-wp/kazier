@@ -152,7 +152,14 @@ export default function DailyForm() {
     const q = QUESTIONS_GLOBAL[step];
     if (!q) return false;
     if (q.type === "projects") return selectedProjects.length > 0;
-    if (q.type === "tasks") return true; // optionnel : pas obligé de sélectionner
+
+    // ✅ Étape tâches : valide si au moins une tâche cochée OU message renseigné
+    if (q.type === "tasks") {
+      const hasTask = selectedTaskIds.length > 0;
+      const hasMessage = (answers["extra_message"] || "").replace(/<[^>]*>/g, "").trim().length > 0;
+      return hasTask || hasMessage;
+    }
+
     const val = answers[q.id] || "";
     return val.replace(/<[^>]*>/g, "").trim().length > 0;
   }
@@ -167,6 +174,7 @@ export default function DailyForm() {
       challenges: answers["challenges"] || "",
       needed_learning: answers["needed_learning"] || "",
       tomorrow_build: answers["tomorrow_build"] || "",
+      extra_message: answers["extra_message"] || "",
     });
     if (result.success) {
       setDone(true);

@@ -2,31 +2,17 @@
 
 import { prisma } from "./prisma";
 
-// Nettoyer les balises HTML
 function stripHtml(html: string) {
   if (!html) return "";
   return html.replace(/<[^>]*>/g, "").trim();
 }
 
-// Récupérer tous les projets
 export async function getProjectsByMember(team_id: number) {
   const result = await prisma.project.findMany({
-    where: {
-      team_ids: {
-        has: team_id,
-      },
-    },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      icon: true,
-    },
-    orderBy: {
-      name: "asc",
-    },
+    where: { team_ids: { has: team_id } },
+    select: { id: true, name: true, description: true, icon: true },
+    orderBy: { name: "asc" },
   });
-
   return result.map((r) => ({
     id: r.id,
     name: r.name || "",
@@ -35,30 +21,17 @@ export async function getProjectsByMember(team_id: number) {
   }));
 }
 
-// Récupérer les tâches assignées au membre
 export async function getTasksByMember(team_id: number) {
   const result = await prisma.tasks.findMany({
     where: {
-      assigned_to: {
-        has: team_id,
-      },
-      status: {
-        not: "terminée",
-      },
+      assigned_to: { has: team_id },
+      status: { not: "terminée" },
     },
     include: {
-      project: {
-        select: {
-          name: true,
-          icon: true,
-        },
-      },
+      project: { select: { name: true, icon: true } },
     },
-    orderBy: {
-      due_date: "asc",
-    },
+    orderBy: { due_date: "asc" },
   });
-
   return result.map((t) => ({
     id: t.id,
     title: t.title || "",
@@ -72,7 +45,6 @@ export async function getTasksByMember(team_id: number) {
   }));
 }
 
-// Envoyer le rapport à Slack et l'enregistrer dans Neon
 export async function sendToSlack(data: {
   team_id: number;
   full_name: string;
@@ -81,6 +53,7 @@ export async function sendToSlack(data: {
   challenges: string;
   needed_learning: string;
   tomorrow_build: string;
+  extra_message?: string; // ← nouveau champ optionnel
 }) {
   const {
     team_id,
@@ -90,6 +63,7 @@ export async function sendToSlack(data: {
     challenges,
     needed_learning,
     tomorrow_build,
+    extra_message,
   } = data;
 
   const taskRows =
@@ -135,6 +109,18 @@ export async function sendToSlack(data: {
           }`,
         },
       },
+      // ✅ Bloc message libre — affiché seulement si renseigné
+      ...(extra_message && stripHtml(extra_message).length > 0
+        ? [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `*💬 Message :*\n${stripHtml(extra_message)}`,
+              },
+            },
+          ]
+        : []),
       {
         type: "section",
         text: {
@@ -208,14 +194,6 @@ export async function sendToSlack(data: {
       await Promise.all(inserts);
     }
 
-    // ── Mise à jour statut tâches → "review" ──────────────────────────────
-    // if (validated_tasks.length > 0) {
-    //   await prisma.tasks.updateMany({
-    //     where: { id: { in: validated_tasks } },
-    //     data: { status: "review" },
-    //   });
-    // }
-
     // ── Envoi Slack au Boss ────────────────────────────────────────────────
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
@@ -232,97 +210,6 @@ export async function sendToSlack(data: {
     const result = await response.json();
     if (!result.ok) throw new Error(`Slack DM failed: ${result.error}`);
 
-    // ── Notification review au Boss + TM des projets ───────────────────────
-    // if (validated_tasks.length > 0) {
-    //   const reviewMessage = {
-    //     username: "Groot_Bot",
-    //     icon_emoji: ":eyes:",
-    //     blocks: [
-    //       {
-    //         type: "header",
-    //         text: { type: "plain_text", text: "👀 Tâches en attente de review" },
-    //       },
-    //       {
-    //         type: "section",
-    //         text: {
-    //           type: "mrkdwn",
-    //           text: `*${full_name}* vient de soumettre son rapport.\nLes tâches suivantes sont maintenant en *review* :`,
-    //         },
-    //       },
-    //       {
-    //         type: "section",
-    //         text: {
-    //           type: "mrkdwn",
-    //           text: taskTitles.map((t) => `• ${t}`).join("\n"),
-    //         },
-    //       },
-    //       {
-    //         type: "section",
-    //         text: {
-    //           type: "mrkdwn",
-    //           text: `👉 *Merci d'aller consulter et valider ces tâches dans l'application.*`,
-    //         },
-    //       },
-    //       {
-    //         type: "actions",
-    //         elements: [
-    //           {
-    //             type: "button",
-    //             text: { type: "plain_text", text: "📋 Voir les tâches" },
-    //             url: `${process.env.NEXTAUTH_URL}/dashboard/tasks`,
-    //             style: "primary",
-    //           },
-    //         ],
-    //       },
-    //     ],
-    //   };
-
-    //   // Récupérer tous les team_ids des projets concernés
-    //   const projectIds = projectRows.map((p) => p.id);
-    //   const projectsWithTeams = await prisma.project.findMany({
-    //     where: { id: { in: projectIds } },
-    //     select: { team_ids: true },
-    //   });
-
-    //   const allTeamIds = [...new Set(projectsWithTeams.flatMap((p) => p.team_ids))];
-
-    //   // Parmi ces membres, récupérer ceux qui ont le rôle "TM" via users
-    //   const tmMembers =
-    //     allTeamIds.length > 0
-    //       ? await prisma.teams.findMany({
-    //           where: {
-    //             id: { in: allTeamIds },
-    //             slack_id: { not: null },
-    //             users: {
-    //               some: { role: "TM" },
-    //             },
-    //           },
-    //           select: { slack_id: true },
-    //         })
-    //       : [];
-
-    //   // Destinataires : SA + TM uniques
-    //   const recipients = [
-    //     ...new Set([
-    //       process.env.SLACK_BOSS_USER_ID!,
-    //       ...tmMembers.map((m) => m.slack_id).filter((id): id is string => id !== null),
-    //     ]),
-    //   ];
-
-    //   await Promise.all(
-    //     recipients.map((channel) =>
-    //       fetch("https://slack.com/api/chat.postMessage", {
-    //         method: "POST",
-    //         headers: {
-    //           "Content-Type": "application/json",
-    //           Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-    //         },
-    //         body: JSON.stringify({ ...reviewMessage, channel }),
-    //       })
-    //     )
-    //   );
-    // }
-
     return { success: true };
   } catch (error) {
     console.error("Erreur détaillée :", error);
@@ -330,59 +217,35 @@ export async function sendToSlack(data: {
   }
 }
 
-// Vérifier si un rapport a déjà été soumis aujourd'hui
 export async function checkAlreadySubmitted(team_id: number) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   const result = await prisma.rapports.findFirst({
     where: {
       team_id,
-      created_at: {
-        gte: today,
-        lt: tomorrow,
-      },
+      created_at: { gte: today, lt: tomorrow },
     },
-    select: {
-      id: true,
-    },
+    select: { id: true },
   });
 
   return result !== null;
 }
 
-// Recherche de membres pour l'autocomplétion
 export async function searchNames(query: string) {
   if (!query || query.trim().length < 2) return [];
 
   const result = await prisma.teams.findMany({
     where: {
       OR: [
-        {
-          first_name: {
-            contains: query,
-            mode: "insensitive",
-          },
-        },
-        {
-          last_name: {
-            contains: query,
-            mode: "insensitive",
-          },
-        },
+        { first_name: { contains: query, mode: "insensitive" } },
+        { last_name: { contains: query, mode: "insensitive" } },
       ],
     },
-    select: {
-      id: true,
-      first_name: true,
-      last_name: true,
-    },
-    orderBy: {
-      first_name: "asc",
-    },
+    select: { id: true, first_name: true, last_name: true },
+    orderBy: { first_name: "asc" },
     take: 5,
   });
 
@@ -392,62 +255,34 @@ export async function searchNames(query: string) {
   }));
 }
 
-// Vérifier si le team_id existe dans la table teams
 export async function isNameInTeam(team_id: number) {
   const result = await prisma.teams.findFirst({
-    where: {
-      id: team_id,
-      is_boss: false,
-    },
-    select: {
-      id: true,
-    },
+    where: { id: team_id, is_boss: false },
+    select: { id: true },
   });
-
   return result !== null;
 }
 
-// Récupérer les membres qui n'ont pas soumis leur rapport aujourd'hui
 export async function getMissingMembers() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // Récupérer tous les membres qui ne sont pas boss
   const allMembers = await prisma.teams.findMany({
-    where: {
-      is_boss: false,
-    },
-    select: {
-      id: true,
-      first_name: true,
-      last_name: true,
-      slack_id: true,
-    },
-    orderBy: {
-      first_name: "asc",
-    },
+    where: { is_boss: false },
+    select: { id: true, first_name: true, last_name: true, slack_id: true },
+    orderBy: { first_name: "asc" },
   });
 
-  // Récupérer les IDs des membres qui ont soumis aujourd'hui
   const submittedToday = await prisma.rapports.findMany({
-    where: {
-      created_at: {
-        gte: today,
-        lt: tomorrow,
-      },
-    },
-    select: {
-      team_id: true,
-    },
+    where: { created_at: { gte: today, lt: tomorrow } },
+    select: { team_id: true },
     distinct: ["team_id"],
   });
 
   const submittedIds = new Set(submittedToday.map((r) => r.team_id).filter(Boolean));
 
-  // Filtrer les membres qui n'ont pas soumis
   return allMembers
     .filter((m) => !submittedIds.has(m.id))
     .map((r) => ({
