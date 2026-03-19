@@ -27,6 +27,8 @@ model teams {
   // Relations
   users      users[]
   rapports   rapports[]
+  evaluations_given    Evaluation[] @relation("EvaluatorRelation")
+  evaluations_received Evaluation[] @relation("EvaluatedRelation")
 }
 
 model users {
@@ -80,9 +82,28 @@ model rapports {
   broken_features    String?
   needed_learning    String?
   tomorrow_build     String?
+  extra_message      String?
   created_at         DateTime  @default(now())
 
   // Relations
   team               teams?    @relation(fields: [team_id], references: [id])
   project            project?  @relation(fields: [project_id], references: [id])
+}
+
+model Evaluation {
+  id            Int      @id @default(autoincrement())
+  evaluator_id  Int
+  evaluated_id  Int
+  report_date   DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
+  communication Int
+  collaboration Int
+  punctuality   Int
+  comment       String?
+  created_at    DateTime @default(now())
+
+  evaluator     teams    @relation("EvaluatorRelation", fields: [evaluator_id], references: [id])
+  evaluated     teams    @relation("EvaluatedRelation", fields: [evaluated_id], references: [id])
+
+  @@unique([evaluator_id, evaluated_id, report_date])
+  @@map("evaluations")
 }

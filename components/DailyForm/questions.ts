@@ -30,8 +30,14 @@ export const QUESTIONS_GLOBAL = [
   {
     id: "tomorrow_build",
     short: "Demain",
-    label: "Quels sont vos objectis de demain ?",
+    label: "Quels sont vos objectifs de demain ?",
     type: "textarea",
+  },
+  {
+    id: "evaluations",
+    short: "Évaluations",
+    label: "Évaluez vos coéquipiers",
+    type: "evaluations",
   },
 ];
 
