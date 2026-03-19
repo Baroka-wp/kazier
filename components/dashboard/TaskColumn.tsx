@@ -10,6 +10,7 @@ type Props = {
   tasks: Task[];
   teamMemberId: number;
   onTaskUpdated: (task: Task) => void;
+  readOnly?: boolean;
 };
 
 const STATUS_LABELS = {
@@ -26,8 +27,17 @@ const STATUS_COLORS = {
   terminée: "#10b981",
 };
 
-export default function TaskColumn({ status, tasks, teamMemberId, onTaskUpdated }: Props) {
-  const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
+export default function TaskColumn({
+  status,
+  tasks,
+  teamMemberId,
+  onTaskUpdated,
+  readOnly,
+}: Props) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `column-${status}`,
+    disabled: readOnly,
+  });
 
   return (
     <div
@@ -103,6 +113,7 @@ export default function TaskColumn({ status, tasks, teamMemberId, onTaskUpdated 
                 isFree={isFree}
                 teamMemberId={teamMemberId}
                 onTaskUpdated={onTaskUpdated}
+                readOnly={readOnly}
               />
             );
           })}
