@@ -174,6 +174,7 @@ export async function sendToSlack(data: {
           broken_features: challenges ?? "",
           needed_learning: needed_learning ?? "",
           tomorrow_build: tomorrow_build ?? "",
+          extra_message: extra_message ? stripHtml(extra_message) : "", // ← nouveau
         },
       });
     });
@@ -188,6 +189,7 @@ export async function sendToSlack(data: {
           broken_features: challenges ?? "",
           needed_learning: needed_learning ?? "",
           tomorrow_build: tomorrow_build ?? "",
+          extra_message: extra_message ? stripHtml(extra_message) : "", // ← nouveau
         },
       });
     } else {

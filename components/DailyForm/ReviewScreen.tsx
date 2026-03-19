@@ -181,6 +181,19 @@ function useReviewSections(
       ),
     },
     {
+      id: "extra_message",
+      short: "Message libre",
+      questionIndex: 2, // même index que tasks (renvoie vers l'étape tâches)
+      isEmpty: !answers["extra_message"]?.replace(/<[^>]*>/g, "").trim(),
+      content: (
+        <div
+          className="prose prose-sm max-w-none"
+          style={{ fontSize: "0.85rem", color: "#1A1A1A", lineHeight: 1.7 }}
+          dangerouslySetInnerHTML={{ __html: answers["extra_message"] || "" }}
+        />
+      ),
+    },
+    {
       id: "challenges",
       short: "Challenges",
       questionIndex: 3,
