@@ -16,6 +16,7 @@ export type RapportWithDetails = {
   validated_learning: string | null;
   needed_learning: string | null;
   tomorrow_build: string | null;
+  extra_message: string | null;
   submitted_at: Date;
   project_name: string;
   project_icon?: string;
@@ -180,6 +181,7 @@ export async function getRapportsData(
       validated_learning: r.validated_learning,
       needed_learning: r.needed_learning,
       tomorrow_build: r.tomorrow_build,
+      extra_message: r.extra_message,
       submitted_at: r.created_at,
       project_name: r.project?.name ?? "Sans projet",
       project_icon: r.project?.icon ?? undefined,
@@ -260,6 +262,7 @@ export async function getRapportsDataLegacy(): Promise<RapportsDataResult> {
       validated_learning: r.validated_learning,
       needed_learning: r.needed_learning,
       tomorrow_build: r.tomorrow_build,
+      extra_message: r.extra_message,
       submitted_at: r.created_at,
       project_name: r.project?.name ?? "Sans projet",
     };

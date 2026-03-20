@@ -23,6 +23,8 @@ import { getReportsWithProjects } from "@/lib/report-actions";
 import { Task } from "@/lib/task-actions";
 import dynamic from "next/dynamic";
 import { ClientOnly } from "@/components/dashboard/ClientOnly";
+import { useSession } from "next-auth/react";
+import { isTeamManager } from "@/lib/permissions";
 
 const RapportsTable = dynamic(() => import("@/components/dashboard/RapportsTable"), { ssr: false });
 const TasksTable = dynamic(() => import("@/components/dashboard/TasksTable/"), { ssr: false });
@@ -55,6 +57,7 @@ type Report = {
   validated_learning: string;
   needed_learning: string;
   tomorrow_build: string;
+  extra_message: string;
   submitted_at: string;
   project_id: number | null;
   project_name: string;
@@ -95,6 +98,9 @@ type Props = {
 };
 
 export default function ProjectDetailClient({ project }: Props) {
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string })?.role ?? null;
+  const isTM = isTeamManager(userRole);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("team");
 
@@ -176,6 +182,7 @@ export default function ProjectDetailClient({ project }: Props) {
               validated_learning: r.validated_learning ?? "",
               needed_learning: r.needed_learning ?? "",
               tomorrow_build: r.tomorrow_build ?? "",
+              extra_message: r.extra_message ?? "",
               submitted_at: r.created_at,
               project_id: r.project_id,
               project_name: r.project_name,
@@ -323,6 +330,7 @@ export default function ProjectDetailClient({ project }: Props) {
               members={members}
               roles={[...new Set(members.map((m) => m.role).filter(Boolean) as string[])]}
               loading={loadingMembers}
+              readOnly={isTM}
               onPageChange={undefined}
               onSearch={undefined}
               totalItems={undefined}

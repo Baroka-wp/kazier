@@ -734,10 +734,12 @@ function ActionMenu({
   project,
   onEdit,
   onDelete,
+  canDelete,
 }: {
   project: Project;
   onEdit: (p: Project) => void;
   onDelete: (p: Project) => void;
+  canDelete: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -806,30 +808,34 @@ function ActionMenu({
             >
               Modifier
             </button>
-            <div style={{ height: "1px", background: "rgba(0,0,0,0.06)" }} />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(project);
-                setOpen(false);
-              }}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                border: "none",
-                background: "transparent",
-                color: "#e53e3e",
-                fontSize: "0.8rem",
-                fontWeight: 500,
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(229,62,62,0.07)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              Supprimer
-            </button>
+            {canDelete && (
+              <>
+                <div style={{ height: "1px", background: "rgba(0,0,0,0.06)" }} />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(project);
+                    setOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "none",
+                    background: "transparent",
+                    color: "#e53e3e",
+                    fontSize: "0.8rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(229,62,62,0.07)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  Supprimer
+                </button>
+              </>
+            )}
           </div>
         </>
       )}
@@ -842,12 +848,14 @@ function ProjectCard({
   onEdit,
   onDelete,
   canManage,
+  canDelete,
   onClick,
 }: {
   project: Project;
   onEdit: (p: Project) => void;
   onDelete: (p: Project) => void;
   canManage: boolean;
+  canDelete: boolean;
   onClick: () => void;
 }) {
   const IconComp = AVAILABLE_ICONS.find((i) => i.id === project.icon)?.component;
@@ -932,7 +940,9 @@ function ProjectCard({
             </p>
           </div>
         </div>
-        {canManage && <ActionMenu project={project} onEdit={onEdit} onDelete={onDelete} />}
+        {canManage && (
+          <ActionMenu project={project} onEdit={onEdit} onDelete={onDelete} canDelete={canDelete} />
+        )}
       </div>
       <p
         style={{
@@ -992,7 +1002,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
 
-  const { canManageTeam } = usePermissions();
+  const { isSuperAdmin } = usePermissions();
 
   const { data, error, mutate } = useSWR<{ data: Project[] }>("/api/projects", fetcher, {
     dedupingInterval: 500,
@@ -1126,7 +1136,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                 <span style={{ fontSize: "0.75rem" }}>Tableau</span>
               </button>
             </div>
-            {canManageTeam && (
+            {isSuperAdmin && (
               <button
                 onClick={() => {
                   setEditMode("create");
@@ -1229,7 +1239,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                 label: "Voir",
                 onClick: (p: Project) => router.push(`/dashboard/projects/${p.id}`),
               },
-              ...(canManageTeam
+              ...(isSuperAdmin
                 ? [
                     {
                       icon: "edit" as const,
@@ -1242,7 +1252,7 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                     },
                   ]
                 : []),
-              ...(canManageTeam
+              ...(isSuperAdmin
                 ? [
                     {
                       icon: "delete" as const,
@@ -1324,7 +1334,8 @@ export default function ProjectsGrid({ projects: initialProjects }: Props) {
                       setIsModalOpen(true);
                     }}
                     onDelete={(p) => setToDelete(p)}
-                    canManage={canManageTeam}
+                    canManage={isSuperAdmin}
+                    canDelete={isSuperAdmin}
                     onClick={() => router.push(`/dashboard/projects/${project.id}`)}
                   />
                 ))}
