@@ -4,6 +4,7 @@ import useSWR from "swr";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { isTeamManager } from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { LayoutGrid, List } from "lucide-react";
 import TasksTable from "@/components/dashboard/TasksTable/";
 import TMKanbanWrapper from "@/components/dashboard/TMKanbanWrapper";
@@ -17,6 +18,8 @@ export default function TasksPage() {
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string })?.role ?? null;
   const isTM = isTeamManager(userRole);
+  const { isSuperAdmin } = usePermissions();
+  const showKanban = isTM || isSuperAdmin;
 
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -26,7 +29,10 @@ export default function TasksPage() {
   const [priorityFilter, setPriorityFilter] = useState("");
 
   // Fetch projets pour le dropdown kanban TM
-  const { data: projectsData } = useSWR<ProjectsResponse>(isTM ? "/api/projects" : null, fetcher);
+  const { data: projectsData } = useSWR<ProjectsResponse>(
+    showKanban ? "/api/projects" : null,
+    fetcher
+  );
   const projects = projectsData?.data ?? [];
 
   // Fetch tâches tableau
@@ -50,7 +56,7 @@ export default function TasksPage() {
   if (selectedProjectId) kanbanParams.set("projectId", String(selectedProjectId));
 
   const { data: kanbanData } = useSWR(
-    isTM && viewMode === "kanban" && selectedProjectId
+    showKanban && viewMode === "kanban" && selectedProjectId
       ? `/api/tasks?${kanbanParams.toString()}`
       : null,
     fetcher,
@@ -63,7 +69,7 @@ export default function TasksPage() {
   return (
     <div>
       {/* Toggle Tableau/Kanban — visible seulement pour TM */}
-      {isTM && (
+      {showKanban && (
         <div
           style={{
             display: "flex",
@@ -158,7 +164,7 @@ export default function TasksPage() {
           </div>
         </div>
       )}
-
+      <br />
       {/* Vue Tableau */}
       {viewMode === "table" && (
         <TasksTable
@@ -181,7 +187,7 @@ export default function TasksPage() {
       )}
 
       {/* Vue Kanban — seulement TM */}
-      {isTM && viewMode === "kanban" && (
+      {showKanban && viewMode === "kanban" && (
         <div style={{ padding: "20px" }}>
           {!selectedProjectId ? (
             <div

@@ -4,8 +4,14 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar } from "lucide-react";
 import { useState } from "react";
+import { MessageSquare } from "lucide-react";
+import dynamic from "next/dynamic";
 import { updateTaskStatus, assignTaskToSelf } from "@/lib/team-actions";
 import { type Task } from "@/lib/task-actions";
+
+const TaskDetailModal = dynamic(() => import("@/components/dashboard/TaskDetailModal"), {
+  ssr: false,
+});
 
 type Props = {
   task: Task;
@@ -97,6 +103,7 @@ export default function TaskCard({
   isTM = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
 
   const {
     attributes,
@@ -237,6 +244,41 @@ export default function TaskCard({
                 isTM={isTM}
               />
             )}
+
+            {/* Bouton détails/commentaires */}
+            <button
+              onClick={() => setShowDetail(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "3px",
+                padding: "3px 8px",
+                borderRadius: "6px",
+                border: "1px solid rgba(0,0,0,0.08)",
+                background: "#F5F2ED",
+                color: "#888",
+                fontSize: "0.65rem",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(107,26,42,0.07)";
+                e.currentTarget.style.color = "#6B1A2A";
+                e.currentTarget.style.borderColor = "rgba(107,26,42,0.2)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#F5F2ED";
+                e.currentTarget.style.color = "#888";
+                e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
+              }}
+            >
+              <MessageSquare size={11} />
+              Détails
+            </button>
+
+            {/* Modal détails */}
+            {showDetail && <TaskDetailModal task={task} onClose={() => setShowDetail(false)} />}
 
             {/* Bouton s'assigner — visible seulement si tâche libre */}
             {isFree && !isTM && (

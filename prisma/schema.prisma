@@ -27,6 +27,7 @@ model teams {
   // Relations
   users      users[]
   rapports   rapports[]
+  task_comments  task_comments[]
 }
 
 model users {
@@ -68,6 +69,18 @@ model tasks {
 
   // Relations
   project     project?  @relation(fields: [project_id], references: [id])
+  comments    task_comments[]
+}
+
+model task_comments {
+  id         Int      @id @default(autoincrement())
+  task_id    Int
+  team_id    Int
+  content    String
+  created_at DateTime @default(now())
+
+  task       tasks    @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  team       teams    @relation(fields: [team_id], references: [id])
 }
 
 model rapports {
