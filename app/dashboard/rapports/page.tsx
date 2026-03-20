@@ -14,6 +14,7 @@ type Report = {
   validated_learning: string;
   needed_learning: string;
   tomorrow_build: string;
+  extra_message: string;
   submitted_at: string;
   project_id: number;
   project_name: string;

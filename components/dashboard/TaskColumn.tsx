@@ -11,6 +11,7 @@ type Props = {
   teamMemberId: number;
   onTaskUpdated: (task: Task) => void;
   readOnly?: boolean;
+  isTM?: boolean;
 };
 
 const STATUS_LABELS = {
@@ -33,6 +34,7 @@ export default function TaskColumn({
   teamMemberId,
   onTaskUpdated,
   readOnly,
+  isTM = false,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({
     id: `column-${status}`,
@@ -114,6 +116,7 @@ export default function TaskColumn({
                 teamMemberId={teamMemberId}
                 onTaskUpdated={onTaskUpdated}
                 readOnly={readOnly}
+                isTM={isTM}
               />
             );
           })}

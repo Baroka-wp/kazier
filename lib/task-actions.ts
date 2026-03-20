@@ -63,6 +63,7 @@ export type PaginationParams = {
   priority?: string;
   projectId?: number;
   assignedTo?: number;
+  allowedProjectIds?: number[];
 };
 
 export type PaginatedResult<T> = {
@@ -312,7 +313,7 @@ export async function getTasks(
     }>;
     status?: string;
     priority?: string;
-    project_id?: number;
+    project_id?: number | { in: number[] };
     assigned_to?: { has: number };
   };
   const where: WhereClause = {};
@@ -325,7 +326,12 @@ export async function getTasks(
   }
   if (params.status) where.status = params.status;
   if (params.priority) where.priority = params.priority;
-  if (params.projectId) where.project_id = params.projectId;
+  if (params.projectId) {
+    where.project_id = params.projectId;
+  } else if (params.allowedProjectIds) {
+    // 👇 seulement si pas de projectId spécifique
+    where.project_id = { in: params.allowedProjectIds };
+  }
   if (params.assignedTo) where.assigned_to = { has: params.assignedTo };
 
   const total = await prisma.tasks.count({ where });
