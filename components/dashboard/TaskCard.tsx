@@ -16,6 +16,7 @@ type Props = {
   onTaskUpdated: (updated: Task) => void;
   isDragging?: boolean;
   readOnly?: boolean;
+  isTM?: boolean;
 };
 
 function PriorityDot({ priority }: { priority: string }) {
@@ -52,32 +53,35 @@ function StatusSelect({
   status,
   onStatusChange,
   disabled,
+  isTM,
 }: {
   status: string;
   onStatusChange: (s: string) => void;
   disabled: boolean;
+  isTM?: boolean;
 }) {
-  const isReview = status === "review";
+  const isLocked = !isTM && status === "review";
   return (
     <select
       value={status}
       onChange={(e) => onStatusChange(e.target.value)}
-      disabled={disabled || isReview}
+      disabled={disabled || isLocked}
       style={{
         padding: "4px 6px",
         borderRadius: "6px",
         border: "1px solid rgba(0,0,0,0.1)",
-        background: disabled || isReview ? "rgba(0,0,0,0.05)" : "rgba(107,26,42,0.1)",
-        color: disabled || isReview ? "#999" : "#6B1A2A",
+        background: disabled || isLocked ? "rgba(0,0,0,0.05)" : "rgba(107,26,42,0.1)",
+        color: disabled || isLocked ? "#999" : "#6B1A2A",
         fontSize: "0.7rem",
         fontFamily: "inherit",
-        cursor: disabled || isReview ? "not-allowed" : "pointer",
-        opacity: disabled || isReview ? 0.6 : 1,
+        cursor: disabled || isLocked ? "not-allowed" : "pointer",
+        opacity: disabled || isLocked ? 0.6 : 1,
       }}
     >
       <option value="à faire">À faire</option>
       <option value="en cours">En cours</option>
       <option value="review">Review</option>
+      {isTM && <option value="terminée">Terminée</option>}
     </select>
   );
 }
@@ -90,6 +94,7 @@ export default function TaskCard({
   onTaskUpdated,
   isDragging = false,
   readOnly = false,
+  isTM = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
 
@@ -175,7 +180,7 @@ export default function TaskCard({
       {task.assigned_to_names && task.assigned_to_names.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
           {task.assigned_to_names.map((name, i) => {
-            const isMe = task.assigned_to?.[i] === teamMemberId;
+            const isMe = !isTM && task.assigned_to?.[i] === teamMemberId;
             return (
               <span
                 key={i}
@@ -224,16 +229,17 @@ export default function TaskCard({
         ) : (
           <>
             {/* Select statut — visible seulement si assigné à moi */}
-            {isAssignedToMe && (
+            {(isAssignedToMe || isTM) && !readOnly && (
               <StatusSelect
                 status={task.status}
                 onStatusChange={handleStatusChange}
                 disabled={loading}
+                isTM={isTM}
               />
             )}
 
             {/* Bouton s'assigner — visible seulement si tâche libre */}
-            {isFree && (
+            {isFree && !isTM && (
               <button
                 onClick={handleAssign}
                 disabled={loading}

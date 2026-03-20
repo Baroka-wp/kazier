@@ -40,6 +40,7 @@ type Props = {
   members: TeamMember[];
   roles: string[];
   loading?: boolean;
+  readOnly?: boolean;
   // Pagination serveur
   onPageChange?: (page: number) => void;
   onSearch?: (search: string) => void;
@@ -829,6 +830,7 @@ export default function TeamsTable({
   members,
   roles,
   loading: loadingProp,
+  readOnly = false,
   onPageChange,
   onSearch,
   totalItems,
@@ -845,6 +847,7 @@ export default function TeamsTable({
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const { canManageTeam } = usePermissions();
+  const canManage = canManageTeam && !readOnly;
 
   // Utiliser le filtre externe (serveur) ou local
   const roleFilter = roleFilterProp ?? "";
@@ -927,7 +930,7 @@ export default function TeamsTable({
       )}
 
       {/* ✅ Bouton "Ajouter membre" visible seulement pour SA */}
-      {canManageTeam && (
+      {canManage && (
         <button
           onClick={() => {
             setEditMode("create");
@@ -958,7 +961,7 @@ export default function TeamsTable({
   // ✅ Construire les actions en fonction des permissions
   const actions: Action[] = [
     { icon: "view", label: "Voir", onClick: (m) => setSelected(m) },
-    ...(canManageTeam
+    ...(canManage
       ? [
           {
             icon: "edit" as const,
@@ -970,7 +973,7 @@ export default function TeamsTable({
           },
         ]
       : []),
-    ...(canManageTeam
+    ...(canManage
       ? [
           {
             icon: "delete" as const,

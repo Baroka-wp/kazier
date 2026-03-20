@@ -32,6 +32,7 @@ export type Report = {
   validated_learning: string | null;
   needed_learning: string | null;
   tomorrow_build: string | null;
+  extra_message: string | null;
   created_at: string;
   submitted_at?: string;
   team_id: number | null;
@@ -67,6 +68,7 @@ export async function updateReport(
     validated_learning?: string;
     needed_learning?: string;
     tomorrow_build?: string;
+    extra_message?: string;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -81,6 +83,7 @@ export async function updateReport(
       validated_learning?: string;
       needed_learning?: string;
       tomorrow_build?: string;
+      extra_message?: string;
     };
     const updateData: UpdateData = {};
     if (data.work_built !== undefined) updateData.work_built = data.work_built;
@@ -90,6 +93,7 @@ export async function updateReport(
       updateData.validated_learning = data.validated_learning;
     if (data.needed_learning !== undefined) updateData.needed_learning = data.needed_learning;
     if (data.tomorrow_build !== undefined) updateData.tomorrow_build = data.tomorrow_build;
+    if (data.extra_message !== undefined) updateData.extra_message = data.extra_message;
 
     if (Object.keys(updateData).length === 0) {
       return { success: true };
@@ -164,6 +168,7 @@ export async function getReportsWithProjects(): Promise<{
       validated_learning: r.validated_learning,
       needed_learning: r.needed_learning,
       tomorrow_build: r.tomorrow_build,
+      extra_message: r.extra_message,
       created_at: r.created_at.toISOString(),
       team_id: r.team_id,
       project_id: r.project_id,

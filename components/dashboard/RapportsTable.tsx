@@ -24,6 +24,7 @@ type Report = {
   validated_learning: string;
   needed_learning: string;
   tomorrow_build: string;
+  extra_message: string;
   submitted_at: string;
   project_id: number | null;
   project_name: string;
@@ -529,6 +530,7 @@ function DeleteModal({
 
 const TABS = [
   { key: "working_built", short: "En cours", label: "En cours de construction" },
+  { key: "extra_message", short: "Extra", label: "Message supplémentaire" },
   { key: "blocked", short: "Bloqué", label: "Ce qui est cassé / bloqué" },
   { key: "validated_learning", short: "Validé", label: "Apprentissages validés" },
   { key: "needed_learning", short: "À apprendre", label: "Apprentissages nécessaires" },
@@ -879,9 +881,11 @@ function EditModal({
     validated_learning: report.validated_learning || "",
     needed_learning: report.needed_learning || "",
     tomorrow_build: report.tomorrow_build || "",
+    extra_message: report.extra_message || "",
   });
   const fields = [
     { key: "working_built", label: "En cours de construction" },
+    { key: "extra_message", label: "Message supplémentaire" },
     { key: "blocked", label: "Ce qui est cassé / bloqué" },
     { key: "validated_learning", label: "Apprentissages validés" },
     { key: "needed_learning", label: "Apprentissages nécessaires" },
@@ -1066,6 +1070,7 @@ function exportCSV(reports: Report[]) {
     "Rôle",
     "Projet",
     "En cours",
+    "Message supplémentaire",
     "Bloqué",
     "Apprentissages validés",
     "Apprentissages nécessaires",
@@ -1081,6 +1086,7 @@ function exportCSV(reports: Report[]) {
     r.validated_learning,
     r.needed_learning,
     r.tomorrow_build,
+    r.extra_message,
     new Date(r.submitted_at).toLocaleDateString("fr-FR"),
   ]);
   const csv = [headers, ...rows]
@@ -1164,6 +1170,7 @@ export default function RapportsTable({
       validated_learning: data.validated_learning,
       needed_learning: data.needed_learning,
       tomorrow_build: data.tomorrow_build,
+      extra_message: data.extra_message,
     });
     setSaving(false);
     if (result.success) {

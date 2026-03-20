@@ -2,6 +2,8 @@
 
 import useSWR from "swr";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { isTeamManager } from "@/lib/permissions";
 import TeamsTable from "@/components/dashboard/TeamsTable";
 
 type TeamMember = {
@@ -31,9 +33,12 @@ type ApiResponse = {
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function EquipePage() {
+  const { data: session } = useSession();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const userRole = (session?.user as { role?: string })?.role ?? null;
+  const isTM = isTeamManager(userRole);
 
   const params = new URLSearchParams({
     page: String(page),
@@ -55,6 +60,7 @@ export default function EquipePage() {
       members={data?.data ?? []}
       roles={data?.roles ?? []}
       loading={isLoading}
+      readOnly={isTM}
       // Pagination
       onPageChange={setPage}
       onSearch={setSearch}

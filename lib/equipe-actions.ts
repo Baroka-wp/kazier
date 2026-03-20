@@ -35,6 +35,7 @@ export type PaginationParams = {
   limit?: number;
   search?: string;
   role?: string;
+  allowedTeamIds?: number[]; // Pour filtrer les équipes accessibles à un TM
 };
 
 export type PaginatedResult<T> = {
@@ -64,6 +65,7 @@ export async function getTeamsData(
       phone?: { contains: string; mode: "insensitive" };
     }>;
     role?: string;
+    id?: { in: number[] };
   };
   const where: WhereClause = {};
 
@@ -78,6 +80,10 @@ export async function getTeamsData(
 
   if (role) {
     where.role = role;
+  }
+
+  if (params?.allowedTeamIds) {
+    where.id = { in: params.allowedTeamIds };
   }
 
   // Récupérer le total
