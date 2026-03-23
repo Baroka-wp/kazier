@@ -156,7 +156,6 @@ export default function TaskCard({
   const formattedDate = formatDate(task.due_date);
   const isBeingDragged = isDragging || isSortableDragging;
   const isReview = task.status === "review";
-  const isTerminee = task.status === "terminée";
 
   return (
     <>
