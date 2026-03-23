@@ -12,23 +12,10 @@ import {
 } from "@/lib/register-actions";
 import { usePermissions } from "@/hooks/usePermissions";
 import { X, AlertTriangle, Plus, CheckCircle2, XCircle, Crown } from "lucide-react";
+import TeamMemberProfileModal from "@/components/dashboard/TeamMemberProfileModal";
+import type { TeamMember } from "@/app/api/equipe/[id]/profile/route";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-type TeamMember = {
-  id: number;
-  first_name: string | null;
-  last_name: string | null;
-  full_name: string;
-  phone: string | null;
-  age: number | null;
-  is_boss: boolean;
-  slack_id: string | null;
-  created_at: string;
-  user_id: number | null;
-  email: string | null;
-  role: string | null;
-};
 
 type Action = {
   icon: "view" | "edit" | "delete";
@@ -51,6 +38,7 @@ type Props = {
   roleFilter?: string;
   onRoleFilter?: (role: string) => void;
 };
+
 type Toast = { id: number; type: "success" | "error"; message: string };
 type EditMode = "create" | "update";
 
@@ -154,125 +142,6 @@ function ToastNotification({ toast, onClose }: { toast: Toast; onClose: () => vo
         @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         @keyframes popIn   { from { opacity:0; transform:scale(0.95);      } to { opacity:1; transform:scale(1);      } }
       `}</style>
-    </div>
-  );
-}
-
-// ── Modal View ────────────────────────────────────────────────────────────────
-
-function ViewModal({ member, onClose }: { member: TeamMember; onClose: () => void }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.35)",
-        zIndex: 120,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "20px",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "#fff",
-          borderRadius: "20px",
-          width: "100%",
-          maxWidth: "460px",
-          overflow: "hidden",
-          boxShadow: "0 24px 60px rgba(0,0,0,0.15)",
-          animation: "popIn 0.2s ease",
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: "20px 24px",
-            borderBottom: "1px solid rgba(0,0,0,0.06)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Avatar name={member.full_name} />
-            <div>
-              <div
-                style={{
-                  fontWeight: 600,
-                  fontSize: "0.9rem",
-                  color: "#1A1A1A",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                {member.full_name}
-                {member.is_boss && <Crown size={13} color="#f59e0b" />}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>
-                Inscrit le{" "}
-                {new Date(member.created_at).toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {member.role && <RoleBadge role={member.role} />}
-            <button
-              onClick={onClose}
-              style={{
-                width: "30px",
-                height: "30px",
-                borderRadius: "8px",
-                border: "1px solid rgba(0,0,0,0.08)",
-                background: "#F5F2ED",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#888",
-              }}
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div style={{ padding: "18px 24px 22px" }}>
-          {[
-            { label: "E-mail", value: member.email ?? "—" },
-            { label: "Téléphone", value: member.phone },
-            { label: "Âge", value: String(member.age) },
-            { label: "Slack ID", value: member.slack_id ?? "—" },
-            { label: "Compte", value: member.user_id ? "✓ Actif" : "✗ Aucun" },
-          ].map(({ label, value }) => (
-            <div
-              key={label}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "10px",
-                gap: "16px",
-              }}
-            >
-              <span style={{ fontSize: "0.72rem", color: "#999" }}>{label}</span>
-              <span style={{ fontSize: "0.83rem", color: "#1A1A1A", fontWeight: 500 }}>
-                {value || "—"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
@@ -381,7 +250,6 @@ function EditModal({
     setServerError("");
   }
 
-  // Vérification doublon en temps réel au blur
   async function handleBlurCheck(
     field: "email" | "phone" | "full_name" | "slack_id",
     value: string
@@ -849,10 +717,7 @@ export default function TeamsTable({
   const { canManageTeam } = usePermissions();
   const canManage = canManageTeam && !readOnly;
 
-  // Utiliser le filtre externe (serveur) ou local
   const roleFilter = roleFilterProp ?? "";
-
-  // Pas de filtrage client pour la pagination serveur
   const filtered = members;
 
   function addToast(type: Toast["type"], message: string) {
@@ -869,7 +734,6 @@ export default function TeamsTable({
     if (res.success) {
       addToast("success", `Membre "${toDelete.full_name}" supprimé.`);
       setToDelete(null);
-      // ✅ Refresh optimiste des données
       await mutate((key) => typeof key === "string" && key.startsWith("/api/equipe"));
     } else {
       addToast("error", res.error ?? "Erreur lors de la suppression.");
@@ -929,7 +793,6 @@ export default function TeamsTable({
         </button>
       )}
 
-      {/* ✅ Bouton "Ajouter membre" visible seulement pour SA */}
       {canManage && (
         <button
           onClick={() => {
@@ -958,7 +821,6 @@ export default function TeamsTable({
     </div>
   );
 
-  // ✅ Construire les actions en fonction des permissions
   const actions: Action[] = [
     { icon: "view", label: "Voir", onClick: (m) => setSelected(m) },
     ...(canManage
@@ -1065,7 +927,6 @@ export default function TeamsTable({
         emptyMessage="Aucun membre dans l'équipe."
         filters={filtersSlot}
         loading={loadingProp}
-        // Pagination serveur
         onPageChange={onPageChange}
         onSearch={onSearch}
         totalItems={totalItems}
@@ -1073,7 +934,8 @@ export default function TeamsTable({
         currentPage={currentPage}
       />
 
-      {selected && <ViewModal member={selected} onClose={() => setSelected(null)} />}
+      {/* Overlay du profil */}
+      {selected && <TeamMemberProfileModal member={selected} onClose={() => setSelected(null)} />}
 
       {(editMode === "create" || editTarget) && (
         <EditModal
@@ -1089,7 +951,6 @@ export default function TeamsTable({
             } else {
               addToast("success", `Profil de "${updated.full_name}" mis à jour.`);
             }
-            // ✅ Refresh optimiste des données
             await mutate((key) => typeof key === "string" && key.startsWith("/api/equipe"));
           }}
         />

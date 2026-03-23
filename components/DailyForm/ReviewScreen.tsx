@@ -5,7 +5,7 @@ import { ClipboardEdit } from "lucide-react";
 import { BRAND } from "./questions";
 import Screen from "./Screen";
 import SubmitButton from "./SubmitButton";
-import type { Project } from "./index";
+import type { Project, Evaluation } from "./index";
 
 type Task = {
   id: number;
@@ -23,6 +23,8 @@ type Props = {
   selectedProjects: Project[];
   selectedTaskIds: number[];
   tasks: Task[];
+  teammates: { id: number; full_name: string }[];
+  evaluations: Record<number, Evaluation>;
   onEdit: (questionIndex: number) => void;
   onBack: () => void;
   onSubmit: () => Promise<void>;
@@ -56,12 +58,17 @@ function useReviewSections(
   answers: Record<string, string>,
   selectedProjects: Project[],
   selectedTaskIds: number[],
-  tasks: Task[]
+  tasks: Task[],
+  teammates: { id: number; full_name: string }[],
+  evaluations: Record<number, Evaluation>
 ) {
   const selectedTasks = tasks.filter((t) => selectedTaskIds.includes(t.id));
   const tasksByProject = selectedProjects
     .map((p) => ({ project: p, tasks: selectedTasks.filter((t) => t.project_id === p.id) }))
     .filter((g) => g.tasks.length > 0);
+
+  // Index de la question "evaluations" dans QUESTIONS_GLOBAL (index 6)
+  const EVAL_QUESTION_INDEX = 6;
 
   return [
     {
@@ -183,7 +190,7 @@ function useReviewSections(
     {
       id: "extra_message",
       short: "Message libre",
-      questionIndex: 2, // même index que tasks (renvoie vers l'étape tâches)
+      questionIndex: 2,
       isEmpty: !answers["extra_message"]?.replace(/<[^>]*>/g, "").trim(),
       content: (
         <div
@@ -232,6 +239,187 @@ function useReviewSections(
         />
       ),
     },
+    {
+      id: "evaluations",
+      short: "Évaluations",
+      questionIndex: EVAL_QUESTION_INDEX,
+      isEmpty: teammates.length === 0 || Object.keys(evaluations).length === 0,
+      content: (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {teammates.length === 0 ? (
+            <p style={{ fontSize: "0.83rem", color: "#bbb", fontStyle: "italic" }}>
+              Aucun coéquipier sur ces projets
+            </p>
+          ) : (
+            teammates.map((m) => {
+              const e = evaluations[m.id];
+              if (!e)
+                return (
+                  <div
+                    key={m.id}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: "12px",
+                      background: "rgba(245,158,11,0.05)",
+                      border: "1px solid rgba(245,158,11,0.2)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "9px",
+                        background: "rgba(0,0,0,0.06)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: "#999",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {m.full_name
+                        .split(" ")
+                        .map((n) => n[0] || "")
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#1A1A1A", flex: 1 }}>
+                      {m.full_name}
+                    </span>
+                    <span style={{ fontSize: "10px", color: "#F59E0B", fontWeight: 600 }}>
+                      ⚠ Non évalué
+                    </span>
+                  </div>
+                );
+
+              return (
+                <div
+                  key={m.id}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: "14px",
+                    background: "#fff",
+                    border: `1px solid ${BRAND}20`,
+                  }}
+                >
+                  {/* En-tête membre */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "9px",
+                        background: `${BRAND}18`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: BRAND,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {m.full_name
+                        .split(" ")
+                        .map((n) => n[0] || "")
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#1A1A1A" }}>
+                      {m.full_name}
+                    </span>
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        fontSize: "10px",
+                        color: BRAND,
+                        fontWeight: 600,
+                        background: `${BRAND}10`,
+                        padding: "2px 8px",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      ✓ Évalué
+                    </span>
+                  </div>
+
+                  {/* Notes */}
+                  <div
+                    style={{ display: "flex", gap: "12px", marginBottom: e.comment ? "10px" : 0 }}
+                  >
+                    {[
+                      { label: "Communication", emoji: "📢", val: e.communication },
+                      { label: "Collaboration", emoji: "🤝", val: e.collaboration },
+                      { label: "Ponctualité", emoji: "⏰", val: e.punctuality },
+                    ].map(({ label, emoji, val }) => (
+                      <div
+                        key={label}
+                        style={{
+                          flex: 1,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "2px",
+                          padding: "8px 4px",
+                          borderRadius: "10px",
+                          background: "rgba(0,0,0,0.02)",
+                          border: "1px solid rgba(0,0,0,0.04)",
+                        }}
+                      >
+                        <span style={{ fontSize: "14px" }}>{emoji}</span>
+                        <span style={{ fontSize: "16px", fontWeight: 700, color: BRAND }}>
+                          {val}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "9px",
+                            color: "#aaa",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                          }}
+                        >
+                          {label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Commentaire */}
+                  {e.comment && e.comment.replace(/<[^>]*>/g, "").trim() && (
+                    <div
+                      style={{
+                        borderTop: "1px solid rgba(0,0,0,0.05)",
+                        paddingTop: "8px",
+                      }}
+                    >
+                      <div
+                        className="prose prose-sm"
+                        style={{ fontSize: "12px", color: "#555", lineHeight: 1.6 }}
+                        dangerouslySetInnerHTML={{ __html: e.comment }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      ),
+    },
   ];
 }
 
@@ -242,6 +430,8 @@ export default function ReviewScreen({
   selectedProjects,
   selectedTaskIds,
   tasks,
+  teammates,
+  evaluations,
   onEdit,
   onBack,
   onSubmit,
@@ -250,7 +440,14 @@ export default function ReviewScreen({
   const [activeCard, setActiveCard] = useState(0);
   const [fading, setFading] = useState(false);
 
-  const sections = useReviewSections(answers, selectedProjects, selectedTaskIds, tasks);
+  const sections = useReviewSections(
+    answers,
+    selectedProjects,
+    selectedTaskIds,
+    tasks,
+    teammates,
+    evaluations
+  );
   const section = sections[activeCard];
   const total = sections.length;
 

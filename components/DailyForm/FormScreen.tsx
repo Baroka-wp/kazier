@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BRAND, QUESTIONS_GLOBAL } from "./questions";
 import Screen from "./Screen";
 import RichTextArea from "./RichTextArea";
-import type { Project } from "./index";
+import type { Project, Evaluation } from "./index";
 
 type Task = {
   id: number;
@@ -31,6 +31,14 @@ type Props = {
   tasks: Task[];
   selectedTaskIds?: number[];
   onTaskToggle?: (taskId: number) => void;
+  // ── Évaluations ────────────────────────────────────────────────────────────
+  teammates?: { id: number; full_name: string }[];
+  evaluations?: Record<number, Evaluation>;
+  onEvaluationChange?: (
+    evaluated_id: number,
+    field: keyof Omit<Evaluation, "evaluated_id">,
+    value: number | string
+  ) => void;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -479,8 +487,8 @@ function TasksStep({
   selectedProjects,
   selectedTaskIds,
   onTaskToggle,
-  extraMessage, // ← nouveau
-  onExtraMessage, // ← nouveau
+  extraMessage,
+  onExtraMessage,
 }: {
   tasks: Task[];
   selectedProjects: Project[];
@@ -500,7 +508,6 @@ function TasksStep({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-      {/* Liste des tâches par projet */}
       {byProject.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {byProject.map(({ project, tasks: projectTasks }, i) => (
@@ -534,7 +541,6 @@ function TasksStep({
         </div>
       )}
 
-      {/* ✅ Champ message libre — toujours visible */}
       <div
         style={{
           borderRadius: "16px",
@@ -556,21 +562,350 @@ function TasksStep({
           <span style={{ fontSize: "14px" }}>💬</span>
           <span style={{ fontSize: "12px", fontWeight: 600, color: BRAND }}>Message libre</span>
           <span
-            style={{
-              fontSize: "10px",
-              color: "#aaa",
-              marginLeft: "auto",
-              fontStyle: "italic",
-            }}
+            style={{ fontSize: "10px", color: "#aaa", marginLeft: "auto", fontStyle: "italic" }}
           >
             optionnel
           </span>
         </div>
-        {/* ✅ RichTextArea au lieu du textarea simple */}
         <div style={{ padding: "8px" }}>
           <RichTextArea value={extraMessage} onChange={onExtraMessage} />
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Notation étoiles ──────────────────────────────────────────────────────────
+
+function StarRating({
+  value,
+  onChange,
+  label,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  label: string;
+}) {
+  const [hovered, setHovered] = useState(0);
+  const active = hovered || value;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+      <span
+        style={{
+          fontSize: "10px",
+          fontWeight: 700,
+          color: "#888",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        {label}
+      </span>
+      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onMouseEnter={() => setHovered(star)}
+            onMouseLeave={() => setHovered(0)}
+            onClick={() => onChange(star)}
+            style={{
+              width: "34px",
+              height: "34px",
+              borderRadius: "9px",
+              border: `1.5px solid ${active >= star ? BRAND : "rgba(0,0,0,0.1)"}`,
+              background: active >= star ? `${BRAND}15` : "transparent",
+              fontSize: "15px",
+              cursor: "pointer",
+              transition: "all 0.12s",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span style={{ color: active >= star ? BRAND : "#ccc", lineHeight: 1 }}>★</span>
+          </button>
+        ))}
+        <span style={{ fontSize: "11px", color: "#bbb", marginLeft: "4px", minWidth: "24px" }}>
+          {value > 0 ? `${value}/5` : "—"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Accordion évaluation par coéquipier ───────────────────────────────────────
+
+function EvalAccordion({
+  member,
+  evaluation,
+  onChange,
+  isComplete,
+}: {
+  member: { id: number; full_name: string };
+  evaluation: Evaluation | undefined;
+  onChange: (field: keyof Omit<Evaluation, "evaluated_id">, value: number | string) => void;
+  isComplete: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ev = evaluation ?? {
+    evaluated_id: member.id,
+    communication: 0,
+    collaboration: 0,
+    punctuality: 0,
+    comment: "",
+  };
+
+  const initials = member.full_name
+    .split(" ")
+    .map((n) => n[0] || "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <div
+      style={{
+        borderRadius: "16px",
+        border: `1.5px solid ${isComplete ? `${BRAND}35` : "rgba(0,0,0,0.07)"}`,
+        overflow: "hidden",
+        transition: "border-color 0.2s",
+      }}
+    >
+      {/* Header accordion */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "12px 16px",
+          background: isComplete ? `${BRAND}06` : "#fff",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          transition: "background 0.15s",
+        }}
+      >
+        {/* Avatar initiales */}
+        <div
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            background: isComplete ? `${BRAND}20` : "rgba(0,0,0,0.06)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            fontSize: "13px",
+            fontWeight: 700,
+            color: isComplete ? BRAND : "#999",
+            transition: "all 0.2s",
+          }}
+        >
+          {initials}
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: "13px", fontWeight: 700, color: "#1A1A1A" }}>
+            {member.full_name}
+          </div>
+          {isComplete ? (
+            <div
+              style={{
+                fontSize: "10px",
+                color: BRAND,
+                fontWeight: 600,
+                marginTop: "2px",
+                display: "flex",
+                gap: "8px",
+              }}
+            >
+              <span>✓ Évalué</span>
+              <span style={{ color: "#ccc" }}>·</span>
+              <span>📢 {ev.communication}★</span>
+              <span>🤝 {ev.collaboration}★</span>
+              <span>⏰ {ev.punctuality}★</span>
+            </div>
+          ) : (
+            <div style={{ fontSize: "10px", color: "#F59E0B", fontWeight: 600, marginTop: "2px" }}>
+              ⚠ Non évalué
+            </div>
+          )}
+        </div>
+
+        <span
+          style={{
+            fontSize: "12px",
+            color: "#bbb",
+            transition: "transform 0.2s",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            flexShrink: 0,
+          }}
+        >
+          ▾
+        </span>
+      </button>
+
+      {/* Contenu déroulant */}
+      {open && (
+        <div
+          style={{
+            background: "#fafafa",
+            padding: "14px 16px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "14px",
+            borderTop: "1px solid rgba(0,0,0,0.05)",
+          }}
+        >
+          <StarRating
+            label="Communication"
+            value={ev.communication}
+            onChange={(v) => onChange("communication", v)}
+          />
+          <StarRating
+            label="Collaboration"
+            value={ev.collaboration}
+            onChange={(v) => onChange("collaboration", v)}
+          />
+          <StarRating
+            label="Ponctualité"
+            value={ev.punctuality}
+            onChange={(v) => onChange("punctuality", v)}
+          />
+
+          {/* Commentaire libre */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 700,
+                color: "#888",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              Commentaire <span style={{ color: "#ccc", fontWeight: 400 }}>(optionnel)</span>
+            </span>
+            <RichTextArea value={ev.comment} onChange={(val) => onChange("comment", val)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Étape évaluations ─────────────────────────────────────────────────────────
+
+function EvaluationsStep({
+  teammates,
+  evaluations,
+  onEvaluationChange,
+}: {
+  teammates: { id: number; full_name: string }[];
+  evaluations: Record<number, Evaluation>;
+  onEvaluationChange: (
+    id: number,
+    field: keyof Omit<Evaluation, "evaluated_id">,
+    value: number | string
+  ) => void;
+}) {
+  if (teammates.length === 0) {
+    return (
+      <div
+        style={{
+          padding: "28px 24px",
+          borderRadius: "16px",
+          background: "rgba(107,26,42,0.04)",
+          border: "1px dashed rgba(107,26,42,0.2)",
+          textAlign: "center",
+        }}
+      >
+        <p style={{ fontSize: "28px", marginBottom: "8px" }}>👥</p>
+        <p style={{ fontSize: "14px", fontWeight: 600, color: "#1A1A1A", marginBottom: "4px" }}>
+          Aucun coéquipier à évaluer
+        </p>
+        <p style={{ fontSize: "13px", color: "#888" }}>Vous êtes seul(e) sur ces projets.</p>
+      </div>
+    );
+  }
+
+  const completedCount = teammates.filter((m) => {
+    const e = evaluations[m.id];
+    return e && e.communication > 0 && e.collaboration > 0 && e.punctuality > 0;
+  }).length;
+
+  const allDone = completedCount === teammates.length;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      {/* Barre de progression globale */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "8px 14px",
+          borderRadius: "12px",
+          background: allDone ? `${BRAND}08` : "rgba(245,158,11,0.07)",
+          border: `1px solid ${allDone ? `${BRAND}20` : "rgba(245,158,11,0.2)"}`,
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            height: "4px",
+            borderRadius: "2px",
+            background: "rgba(0,0,0,0.08)",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              borderRadius: "2px",
+              background: allDone ? BRAND : "#F59E0B",
+              width: `${(completedCount / teammates.length) * 100}%`,
+              transition: "width 0.3s ease",
+            }}
+          />
+        </div>
+        <span
+          style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            color: allDone ? BRAND : "#F59E0B",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {completedCount} / {teammates.length} évalué{completedCount > 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Liste des accordions */}
+      {teammates.map((member) => {
+        const ev = evaluations[member.id];
+        const isComplete = !!(
+          ev &&
+          ev.communication > 0 &&
+          ev.collaboration > 0 &&
+          ev.punctuality > 0
+        );
+        return (
+          <EvalAccordion
+            key={member.id}
+            member={member}
+            evaluation={ev}
+            onChange={(field, value) => onEvaluationChange(member.id, field, value)}
+            isComplete={isComplete}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -595,9 +930,12 @@ export default function FormScreen({
   tasks,
   selectedTaskIds = [],
   onTaskToggle,
+  teammates = [],
+  evaluations = {},
+  onEvaluationChange,
 }: Props) {
   const q = QUESTIONS_GLOBAL[step];
-  const isScrollable = q.type === "projects" || q.type === "tasks";
+  const isScrollable = q.type === "projects" || q.type === "tasks" || q.type === "evaluations";
   const [modalProject, setModalProject] = useState<Project | null>(null);
   const modalTasks = modalProject ? tasks.filter((t) => t.project_id === modalProject.id) : [];
 
@@ -790,7 +1128,7 @@ export default function FormScreen({
             </>
           )}
 
-          {/* ✅ Sélection tâches + message libre intégré */}
+          {/* Sélection tâches + message libre */}
           {q.type === "tasks" && (
             <TasksStep
               tasks={tasks}
@@ -808,6 +1146,15 @@ export default function FormScreen({
               key={q.id}
               value={answers[q.id] || ""}
               onChange={(val) => onAnswer(q.id, val)}
+            />
+          )}
+
+          {/* Évaluations */}
+          {q.type === "evaluations" && (
+            <EvaluationsStep
+              teammates={teammates}
+              evaluations={evaluations}
+              onEvaluationChange={onEvaluationChange ?? (() => {})}
             />
           )}
         </div>
