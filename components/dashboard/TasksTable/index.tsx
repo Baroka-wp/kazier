@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import DataTable from "@/components/dashboard/DataTable";
 import { deleteTask, getTeamsForAssignment, getProjectsForTasks } from "@/lib/task-actions";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -19,6 +20,10 @@ import { ToastNotification } from "./ToastNotification";
 import { DeleteModal } from "./DeleteModal";
 import { EditModal } from "./EditModal-Wrapper";
 import { FilterSlot } from "./Filters";
+
+const TaskDetailModal = dynamic(() => import("@/components/dashboard/TaskDetailModal"), {
+  ssr: false,
+});
 
 type Props = {
   tasks: Task[];
@@ -386,6 +391,7 @@ export default function TasksTable({
   const [toDelete, setToDelete] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
 
   const { canManageTasks } = usePermissions();
 
@@ -443,6 +449,11 @@ export default function TasksTable({
   );
 
   const actions: Action[] = [
+    {
+      icon: "view" as const,
+      label: "Détails",
+      onClick: (t: Task) => setDetailTask(t), // 👈 ajouté
+    },
     ...(canManageTasks
       ? [
           {
@@ -575,6 +586,7 @@ export default function TasksTable({
           onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
         />
       ))}
+      {detailTask && <TaskDetailModal task={detailTask} onClose={() => setDetailTask(null)} />}
     </>
   );
 }
