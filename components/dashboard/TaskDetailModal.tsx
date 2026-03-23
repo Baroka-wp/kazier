@@ -471,7 +471,6 @@ export default function TaskDetailModal({ task, onClose }: Props) {
               ) : (
                 comments.map((c) => {
                   const isMe = c.team_id === teamId;
-                  const canDelete = isMe || userRole === "SA";
                   return (
                     <div
                       key={c.id}
