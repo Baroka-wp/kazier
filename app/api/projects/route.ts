@@ -1,10 +1,14 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getProjects } from "@/lib/project-actions";
 import { auth } from "@/auth";
 import { isTeamManager } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
+  //Vérification de l'authentification
+  if (!session) {
+    return new NextResponse("Non authentifié : Session manquante", { status: 401 });
+  }
   const user = session?.user as { role?: string; team_id?: number };
   const role = user?.role ?? null;
 
