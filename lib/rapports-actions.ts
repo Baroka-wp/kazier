@@ -1,6 +1,8 @@
 "use server";
 
 import { prisma } from "./prisma";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,6 +64,9 @@ export async function getRapportsData(
   const role = params?.role;
   const projectId = params?.projectId;
   const dateFilter = params?.dateFilter;
+
+  const session = await auth();
+  if (!session) redirect("/login");
 
   // ✅ WHERE clause avec nested relations
   type WhereClause = {

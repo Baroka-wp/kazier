@@ -7,6 +7,12 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: Request) {
   try {
     const session = await auth();
+
+    //Vérification de l'authentification
+    if (!session) {
+      return new NextResponse("Non authentifié : Session manquante", { status: 401 });
+    }
+
     const user = session?.user as { role?: string; team_id?: number };
     const role = user?.role ?? null;
 
