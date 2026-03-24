@@ -3,10 +3,13 @@ import { getTasks } from "@/lib/task-actions";
 import { auth } from "@/auth";
 import { isTeamManager } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
 export async function GET(request: Request) {
   try {
     const session = await auth();
+    if (!session) redirect("/login");
+
     const user = session?.user as { role?: string; team_id?: number };
     const role = user?.role ?? null;
 

@@ -27,9 +27,9 @@ model teams {
   // Relations
   users      users[]
   rapports   rapports[]
-  task_comments  task_comments[]
   evaluations_given    Evaluation[] @relation("EvaluatorRelation")
   evaluations_received Evaluation[] @relation("EvaluatedRelation")
+  task_comments  task_comments[]
 }
 
 model users {
