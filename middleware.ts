@@ -7,31 +7,38 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   const isDashboard = pathname.startsWith("/dashboard");
-  const isApi = pathname.startsWith("/api"); // 👈 On détecte les appels API
+  const isApi = pathname.startsWith("/api");
+  const isAuthRoute = pathname.startsWith("/api/auth"); // ✅ Routes internes Auth.js
 
-  // 1. Gérer les appels API non authentifiés
+  // 1. Ne jamais toucher aux routes Auth.js
+  if (isAuthRoute) return NextResponse.next();
+
+  // 2. Gérer les appels API non authentifiés
   if (!isLoggedIn && isApi) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  // 2. Non authentifié tente d'accéder au dashboard (Page HTML)
+  // 3. Non authentifié tente d'accéder au dashboard
   if (!isLoggedIn && isDashboard) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return Response.redirect(loginUrl);
   }
 
-  // 3. Protection TEAM (Rapports)
+  // 4. Protection TEAM (Rapports)
   if (isLoggedIn && userRole === "T") {
     if (pathname.startsWith("/dashboard/rapports") || pathname === "/dashboard") {
       return NextResponse.redirect(new URL("/dashboard/teams", req.nextUrl.origin));
     }
   }
 
-  return;
+  return NextResponse.next();
 });
 
 export const config = {
-  // On ajoute /api/:path* pour protéger aussi les routes de données
-  matcher: ["/dashboard/:path*", "/api/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    // ✅ Exclut explicitement /api/auth/* du matcher
+    "/api/((?!auth/).*)",
+  ],
 };
