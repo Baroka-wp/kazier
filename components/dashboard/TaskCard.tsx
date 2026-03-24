@@ -3,7 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar, MessageSquare, Lock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { updateTaskStatus, assignTaskToSelf } from "@/lib/team-actions";
 import { type Task } from "@/lib/task-actions";
@@ -94,6 +94,107 @@ function StatusSelect({
   );
 }
 
+// ── Timer ─────────────────────────────────────────────────────────────────────
+
+function useCountdown(dueDate: string | null) {
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!dueDate) return;
+
+    const target = new Date(dueDate).getTime();
+    if (isNaN(target)) return;
+
+    const tick = () => setTimeLeft(target - Date.now());
+    tick();
+    const interval = setInterval(tick, 60_000); // mise à jour toutes les minutes
+    return () => clearInterval(interval);
+  }, [dueDate]);
+
+  return timeLeft;
+}
+
+function TimerBadge({ dueDate, status }: { dueDate: string | null; status: string }) {
+  const ms = useCountdown(dueDate);
+
+  if (!dueDate || ms === null || status === "terminée") return null;
+
+  const isExpired = ms <= 0;
+  const isCritical = ms <= 24 * 60 * 60 * 1000; // ≤ 24h
+  const isWarning = ms <= 3 * 24 * 60 * 60 * 1000; // ≤ 3j
+  const isNear = ms <= 7 * 24 * 60 * 60 * 1000; // ≤ 7j
+
+  // Couleurs
+  const color = isExpired
+    ? "#dc2626"
+    : isCritical
+      ? "#ef4444"
+      : isWarning
+        ? "#f97316"
+        : isNear
+          ? "#eab308"
+          : "#6b7280";
+
+  const bg = isExpired
+    ? "rgba(220,38,38,0.10)"
+    : isCritical
+      ? "rgba(239,68,68,0.08)"
+      : isWarning
+        ? "rgba(249,115,22,0.08)"
+        : isNear
+          ? "rgba(234,179,8,0.08)"
+          : "rgba(107,114,128,0.07)";
+
+  const border = isExpired
+    ? "rgba(220,38,38,0.25)"
+    : isCritical
+      ? "rgba(239,68,68,0.20)"
+      : isWarning
+        ? "rgba(249,115,22,0.20)"
+        : isNear
+          ? "rgba(234,179,8,0.20)"
+          : "rgba(107,114,128,0.15)";
+
+  // Formatage du label
+  let label: string;
+  if (isExpired) {
+    const overMs = Math.abs(ms);
+    const overDays = Math.floor(overMs / (24 * 60 * 60 * 1000));
+    const overHrs = Math.floor((overMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    label = overDays > 0 ? `Expiré · ${overDays}j ${overHrs}h` : `Expiré · ${overHrs}h`;
+  } else {
+    const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+    const hrs = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    const mins = Math.floor((ms % (60 * 60 * 1000)) / 60_000);
+    label = days > 0 ? `${days}j ${hrs}h` : hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+  }
+
+  const icon = isExpired ? "⚠️" : isCritical ? "🔴" : isWarning ? "🟠" : isNear ? "🟡" : "🟢";
+
+  return (
+    <div
+      title={`Échéance : ${new Date(dueDate).toLocaleString("fr-FR")}`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        padding: "3px 7px",
+        borderRadius: "8px",
+        fontSize: "0.62rem",
+        fontWeight: 600,
+        background: bg,
+        color,
+        border: `1px solid ${border}`,
+        letterSpacing: "0.01em",
+        animation: isExpired || isCritical ? "pulse 1.8s ease-in-out infinite" : undefined,
+      }}
+    >
+      <span style={{ fontSize: "0.6rem" }}>{icon}</span>
+      {label}
+    </div>
+  );
+}
+
 // ── TaskCard ──────────────────────────────────────────────────────────────────
 
 export default function TaskCard({
@@ -121,7 +222,7 @@ export default function TaskCard({
     isDragging: isSortableDragging,
   } = useSortable({
     id: `task-${task.id}`,
-    disabled: readOnly || task.status === "review", // 👈 bloquer drag si review
+    disabled: readOnly || task.status === "review", // bloquer drag si review
   });
 
   const style = {
@@ -167,7 +268,7 @@ export default function TaskCard({
           borderRadius: "10px",
           border:
             isReview && !isTM
-              ? "1.5px solid rgba(139,92,246,0.25)" // 👈 bordure violette si review
+              ? "1.5px solid rgba(139,92,246,0.25)" // bordure violette si review
               : "1.5px solid rgba(0,0,0,0.06)",
           padding: "12px",
           marginBottom: "10px",
@@ -176,7 +277,7 @@ export default function TaskCard({
           cursor:
             readOnly || (isReview && !isTM) ? "default" : isBeingDragged ? "grabbing" : "grab",
           transition: "box-shadow 0.15s, opacity 0.15s",
-          animation: shaking ? "shake 0.4s ease" : undefined, // 👈 shake
+          animation: shaking ? "shake 0.4s ease" : undefined,
         }}
         {...attributes}
         {...(readOnly || (isReview && !isTM) ? {} : listeners)}
@@ -197,7 +298,7 @@ export default function TaskCard({
           >
             {task.title}
           </h4>
-          {/* 👇 Icône cadenas si review et pas TM */}
+          {/* Icône cadenas si review et pas TM */}
           {isReview && !isTM && (
             <div title="En attente de validation — déplacement bloqué">
               <Lock size={12} color="#8b5cf6" />
@@ -381,20 +482,34 @@ export default function TaskCard({
           )}
         </div>
 
-        {/* Due Date */}
+        {/* Due Date + Timer */}
         {formattedDate && (
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "4px",
-              fontSize: "0.65rem",
-              color: "#999",
-              marginTop: "6px",
+              justifyContent: "space-between",
+              gap: "6px",
+              marginTop: "8px",
+              flexWrap: "wrap",
             }}
           >
-            <Calendar size={12} color="#999" />
-            {formattedDate}
+            {/* Date fixe à gauche */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                fontSize: "0.65rem",
+                color: "#999",
+              }}
+            >
+              <Calendar size={12} color="#999" />
+              {formattedDate}
+            </div>
+
+            {/* Timer dynamique à droite */}
+            <TimerBadge dueDate={task.due_date} status={task.status} />
           </div>
         )}
       </div>
@@ -428,6 +543,10 @@ export default function TaskCard({
         @keyframes popIn {
           from { opacity: 0; transform: scale(0.95); }
           to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.55; }
         }
       `}</style>
     </>

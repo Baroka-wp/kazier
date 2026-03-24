@@ -8,6 +8,18 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { LayoutGrid, List } from "lucide-react";
 import TasksTable from "@/components/dashboard/TasksTable/";
 import TMKanbanWrapper from "@/components/dashboard/TMKanbanWrapper";
+import { Plus } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useSWRConfig } from "swr"; // 👈 useSWRConfig ajouté
+import { type Project as TaskProject } from "@/components/dashboard/TasksTable/types";
+
+const EditModal = dynamic(
+  () =>
+    import("@/components/dashboard/TasksTable/EditModal-Wrapper").then((m) => ({
+      default: m.EditModal,
+    })),
+  { ssr: false }
+);
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -15,6 +27,7 @@ type Project = { id: number; name: string };
 type ProjectsResponse = { data: Project[] };
 
 export default function TasksPage() {
+  const { mutate: globalMutate } = useSWRConfig(); // 👈 AJOUTE
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string })?.role ?? null;
   const isTM = isTeamManager(userRole);
@@ -27,6 +40,7 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
+  const [showAddTask, setShowAddTask] = useState(false);
 
   // Fetch projets pour le dropdown kanban TM
   const { data: projectsData } = useSWR<ProjectsResponse>(
@@ -55,7 +69,7 @@ export default function TasksPage() {
   const kanbanParams = new URLSearchParams({ limit: "100" });
   if (selectedProjectId) kanbanParams.set("projectId", String(selectedProjectId));
 
-  const { data: kanbanData } = useSWR(
+  const { data: kanbanData, mutate: refreshKanban } = useSWR(
     showKanban && viewMode === "kanban" && selectedProjectId
       ? `/api/tasks?${kanbanParams.toString()}`
       : null,
@@ -74,37 +88,72 @@ export default function TasksPage() {
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
             padding: "16px 20px 0",
             gap: "12px",
           }}
         >
-          {/* Dropdown projet — visible en mode kanban */}
+          {/* Dropdown projet + Bouton ajouter — visible en mode kanban */}
           {viewMode === "kanban" && (
-            <select
-              value={selectedProjectId ?? ""}
-              onChange={(e) =>
-                setSelectedProjectId(e.target.value ? parseInt(e.target.value) : null)
-              }
-              style={{
-                padding: "8px 12px",
-                borderRadius: "10px",
-                border: "1.5px solid rgba(0,0,0,0.08)",
-                background: "#F5F2ED",
-                fontSize: "0.82rem",
-                fontFamily: "'DM Sans', sans-serif",
-                color: selectedProjectId ? "#1A1A1A" : "#aaa",
-                outline: "none",
-                cursor: "pointer",
-              }}
-            >
-              <option value="">Sélectionner un projet</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <select
+                value={selectedProjectId ?? ""}
+                onChange={(e) =>
+                  setSelectedProjectId(e.target.value ? parseInt(e.target.value) : null)
+                }
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "10px",
+                  border: "1.5px solid rgba(0,0,0,0.08)",
+                  background: "#F5F2ED",
+                  fontSize: "0.82rem",
+                  fontFamily: "'DM Sans', sans-serif",
+                  color: selectedProjectId ? "#1A1A1A" : "#aaa",
+                  outline: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="">Sélectionner un projet</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => setShowAddTask(true)}
+                disabled={!selectedProjectId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 14px",
+                  borderRadius: "10px",
+                  border: "none",
+                  background: selectedProjectId ? "#6B1A2A" : "#ccc",
+                  color: "white",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  cursor: selectedProjectId ? "pointer" : "not-allowed",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedProjectId) {
+                    e.currentTarget.style.background = "#8B2A3A";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(107,26,42,0.25)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = selectedProjectId ? "#6B1A2A" : "#ccc";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <Plus size={16} />
+                Ajouter tâche
+              </button>
+            </div>
           )}
 
           {/* Toggle */}
@@ -165,6 +214,7 @@ export default function TasksPage() {
         </div>
       )}
       <br />
+
       {/* Vue Tableau */}
       {viewMode === "table" && (
         <TasksTable
@@ -206,6 +256,29 @@ export default function TasksPage() {
             <TMKanbanWrapper tasks={kanbanData.data} />
           )}
         </div>
+      )}
+
+      {/* Modal ajout tâche */}
+      {showAddTask && selectedProjectId && (
+        <EditModal
+          mode="create"
+          task={null}
+          projects={projects as unknown as TaskProject[]}
+          teams={[]}
+          defaultProjectId={selectedProjectId}
+          onClose={() => setShowAddTask(false)}
+          onSaved={async () => {
+            setShowAddTask(false);
+
+            // ✅ Force re-fetch de TOUS les caches tasks (revalide depuis API)
+            await globalMutate((key) => typeof key === "string" && key.startsWith("/api/tasks"), {
+              revalidate: true,
+            }); // 👈 AJOUTE ça !
+
+            // ✅ Force aussi le Kanban spécifique
+            await refreshKanban();
+          }}
+        />
       )}
     </div>
   );
