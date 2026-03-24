@@ -5,8 +5,6 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { isTeamManager } from "@/lib/permissions";
 import TeamsTable from "@/components/dashboard/TeamsTable";
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 
 type TeamMember = {
   id: number;

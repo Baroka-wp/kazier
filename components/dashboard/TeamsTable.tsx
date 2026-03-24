@@ -12,8 +12,8 @@ import {
 } from "@/lib/register-actions";
 import { usePermissions } from "@/hooks/usePermissions";
 import { X, AlertTriangle, Plus, CheckCircle2, XCircle, Crown } from "lucide-react";
-import TeamMemberProfileModal from "@/components/dashboard/TeamMemberProfileModal";
 import type { TeamMember } from "@/app/api/equipe/[id]/profile/route";
+import { useRouter } from "next/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -707,7 +707,7 @@ export default function TeamsTable({
   roleFilter: roleFilterProp,
   onRoleFilter,
 }: Props) {
-  const [selected, setSelected] = useState<TeamMember | null>(null);
+  const router = useRouter();
   const [editTarget, setEditTarget] = useState<TeamMember | null>(null);
   const [editMode, setEditMode] = useState<EditMode>("update");
   const [toDelete, setToDelete] = useState<TeamMember | null>(null);
@@ -822,7 +822,11 @@ export default function TeamsTable({
   );
 
   const actions: Action[] = [
-    { icon: "view", label: "Voir", onClick: (m) => setSelected(m) },
+    {
+      icon: "view",
+      label: "Voir",
+      onClick: (m) => router.push(`/dashboard/teams/team-member/${m.id}`), // ✅ Navigation vers page profil
+    },
     ...(canManage
       ? [
           {
@@ -933,9 +937,6 @@ export default function TeamsTable({
         totalPages={totalPages}
         currentPage={currentPage}
       />
-
-      {/* Overlay du profil */}
-      {selected && <TeamMemberProfileModal member={selected} onClose={() => setSelected(null)} />}
 
       {(editMode === "create" || editTarget) && (
         <EditModal

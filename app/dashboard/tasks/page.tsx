@@ -10,7 +10,7 @@ import TasksTable from "@/components/dashboard/TasksTable/";
 import TMKanbanWrapper from "@/components/dashboard/TMKanbanWrapper";
 import { Plus } from "lucide-react";
 import dynamic from "next/dynamic";
-import { type Task } from "@/lib/task-actions";
+import { useSWRConfig } from "swr"; // 👈 useSWRConfig ajouté
 import { type Project as TaskProject } from "@/components/dashboard/TasksTable/types";
 
 const EditModal = dynamic(
@@ -27,6 +27,7 @@ type Project = { id: number; name: string };
 type ProjectsResponse = { data: Project[] };
 
 export default function TasksPage() {
+  const { mutate: globalMutate } = useSWRConfig(); // 👈 AJOUTE
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string })?.role ?? null;
   const isTM = isTeamManager(userRole);
@@ -268,6 +269,13 @@ export default function TasksPage() {
           onClose={() => setShowAddTask(false)}
           onSaved={async () => {
             setShowAddTask(false);
+
+            // ✅ Force re-fetch de TOUS les caches tasks (revalide depuis API)
+            await globalMutate((key) => typeof key === "string" && key.startsWith("/api/tasks"), {
+              revalidate: true,
+            }); // 👈 AJOUTE ça !
+
+            // ✅ Force aussi le Kanban spécifique
             await refreshKanban();
           }}
         />
