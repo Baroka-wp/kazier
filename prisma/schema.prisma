@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,26 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Models ────────────────────────────────────────────────────────────────────
-
 model teams {
-  id         Int       @id @default(autoincrement())
-  first_name String?
-  last_name  String?
-  role       String?
-  email      String?
-  phone      String?
-  age        Int?
-  slack_id   String?
-  is_boss    Boolean   @default(false)
-  created_at DateTime  @default(now())
-
-  // Relations
-  users      users[]
-  rapports   rapports[]
-  evaluations_given    Evaluation[] @relation("EvaluatorRelation")
-  evaluations_received Evaluation[] @relation("EvaluatedRelation")
-  task_comments  task_comments[]
+  id                   Int             @id @default(autoincrement())
+  first_name           String?
+  last_name            String?
+  role                 String?
+  email                String?
+  phone                String?
+  age                  Int?
+  slack_id             String?
+  is_boss              Boolean         @default(false)
+  created_at           DateTime        @default(now())
+  evaluations_received Evaluation[]    @relation("EvaluatedRelation")
+  evaluations_given    Evaluation[]    @relation("EvaluatorRelation")
+  rapports             rapports[]
+  task_comments        task_comments[]
+  users                users[]
 }
 
 model users {
@@ -40,38 +33,32 @@ model users {
   team_id             Int?
   reset_token         String?   @unique
   reset_token_expires DateTime?
-
-  // Relations
   team                teams?    @relation(fields: [team_id], references: [id])
 }
 
 model project {
-  id          Int     @id @default(autoincrement())
+  id          Int        @id @default(autoincrement())
   name        String?
   description String?
   icon        String?
   team_ids    Int[]
-
-  // Relations
-  tasks       tasks[]
   rapports    rapports[]
+  tasks       tasks[]
 }
 
 model tasks {
-  id          Int       @id @default(autoincrement())
-  title       String?
-  description String?
-  status      String?
-  priority    String?
-  project_id  Int?
-  assigned_to Int[]
-  due_date    DateTime? @db.Timestamptz
-  created_at  DateTime  @default(now())
-  reminder_sent Boolean @default(false)
-
-  // Relations
-  project     project?  @relation(fields: [project_id], references: [id])
-  comments    task_comments[]
+  id            Int             @id @default(autoincrement())
+  title         String?
+  description   String?
+  status        String?
+  priority      String?
+  project_id    Int?
+  assigned_to   Int[]
+  due_date      DateTime?       @db.Timestamptz(6)
+  created_at    DateTime        @default(now())
+  reminder_sent Boolean         @default(false)
+  comments      task_comments[]
+  project       project?        @relation(fields: [project_id], references: [id])
 }
 
 model task_comments {
@@ -80,13 +67,12 @@ model task_comments {
   team_id    Int
   content    String
   created_at DateTime @default(now())
-
   task       tasks    @relation(fields: [task_id], references: [id], onDelete: Cascade)
   team       teams    @relation(fields: [team_id], references: [id])
 }
 
 model rapports {
-  id                 Int       @id @default(autoincrement())
+  id                 Int      @id @default(autoincrement())
   team_id            Int?
   project_id         Int?
   work_built         String?
@@ -95,12 +81,10 @@ model rapports {
   broken_features    String?
   needed_learning    String?
   tomorrow_build     String?
+  created_at         DateTime @default(now())
   extra_message      String?
-  created_at         DateTime  @default(now())
-
-  // Relations
-  team               teams?    @relation(fields: [team_id], references: [id])
-  project            project?  @relation(fields: [project_id], references: [id])
+  project            project? @relation(fields: [project_id], references: [id])
+  team               teams?   @relation(fields: [team_id], references: [id])
 }
 
 model Evaluation {
@@ -113,9 +97,8 @@ model Evaluation {
   punctuality   Int
   comment       String?
   created_at    DateTime @default(now())
-
-  evaluator     teams    @relation("EvaluatorRelation", fields: [evaluator_id], references: [id])
   evaluated     teams    @relation("EvaluatedRelation", fields: [evaluated_id], references: [id])
+  evaluator     teams    @relation("EvaluatorRelation", fields: [evaluator_id], references: [id])
 
   @@unique([evaluator_id, evaluated_id, report_date])
   @@map("evaluations")
@@ -124,7 +107,7 @@ model Evaluation {
 model api_keys {
   id         Int       @id @default(autoincrement())
   key        String    @unique
-  label      String?   // ex: "Zapier", "Dashboard externe", etc.
+  label      String?
   is_active  Boolean   @default(true)
   created_at DateTime  @default(now())
   last_used  DateTime?

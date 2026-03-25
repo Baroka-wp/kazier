@@ -27,7 +27,7 @@ type Props = {
   evaluations: Record<number, Evaluation>;
   onEdit: (questionIndex: number) => void;
   onBack: () => void;
-  onSubmit: () => Promise<void>;
+  onSubmit: () => Promise<void | { success: boolean }>;
   onCitationsReady: (citations: Citation[]) => void;
 };
 

@@ -5,7 +5,7 @@ import { BRAND } from "./questions";
 
 type Props = {
   disabled?: boolean;
-  onClick: () => Promise<void>;
+  onClick: () => Promise<void | { success: boolean }>;
 };
 
 export default function SubmitButton({ disabled = false, onClick }: Props) {
