@@ -9,9 +9,11 @@ export default auth((req) => {
   const isDashboard = pathname.startsWith("/dashboard");
   const isApi = pathname.startsWith("/api");
   const isAuthRoute = pathname.startsWith("/api/auth"); // ✅ Routes internes Auth.js
+  const isCronRoute = pathname.startsWith("/api/cron");
+  const isCitationRoute = pathname.startsWith("/api/citation");
 
-  // 1. Ne jamais toucher aux routes Auth.js
-  if (isAuthRoute) return NextResponse.next();
+  // 1. Ne jamais toucher aux routes Auth.js, Cron, Citation
+  if (isAuthRoute || isCronRoute || isCitationRoute) return NextResponse.next();
 
   // 2. Gérer les appels API non authentifiés
   if (!isLoggedIn && isApi) {
