@@ -24,17 +24,15 @@ jobs:
           npm run type-check
 
       - name: Build Next.js
-        # On passe l'URL de la DB (Secret GitHub) uniquement pour le build
         run: npm run build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
 
-      - name: 📦 Archiver le build
-        # On compresse uniquement ce qui est nécessaire pour l'exécution
-        run: tar -czf deploy.tar.gz .next public package.json package-lock.json next.config.js prisma
+      - name: Archiver le build
+        run: tar -czf deploy.tar.gz .next public package.json package-lock.json next.config.* prisma
 
-      - name: 🚚 Transfert vers VPS
+      - name: Transfert vers VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
