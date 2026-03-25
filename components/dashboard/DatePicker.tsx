@@ -507,9 +507,6 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
             </button>
             <button
               onClick={() => {
-                const now = new Date();
-                const currentHour = now.getHours();
-                const currentMinute = now.getMinutes();
                 // ✅ Vérifier que 18:00 n'est pas antérieur
                 if (selectedDate && !isPastDateTime(selectedDate, "18", "00")) {
                   setSelectedHour("18");
