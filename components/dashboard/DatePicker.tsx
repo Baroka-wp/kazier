@@ -60,6 +60,28 @@ function getFirstDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 1).getDay();
 }
 
+// ✅ Vérifie si une date est antérieure à aujourd'hui (sans heure)
+function isPastDate(year: number, month: number, day: number): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const compareDate = new Date(year, month, day);
+  compareDate.setHours(0, 0, 0, 0);
+
+  return compareDate < today;
+}
+
+// ✅ Vérifie si la date+heure sélectionnée est antérieure à maintenant
+function isPastDateTime(dateStr: string, hour: string, minute: string): boolean {
+  if (!dateStr) return false;
+
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const selectedDate = new Date(year, month - 1, day, parseInt(hour), parseInt(minute));
+  const now = new Date();
+
+  return selectedDate < now;
+}
+
 export default function DatePicker({ value, onChange, placeholder }: Props) {
   const { date, hour, minute } = parseDateTime(value);
 
@@ -91,11 +113,15 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
   function handleDateSelect(day: number) {
     const newDate = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     setSelectedDate(newDate);
-    // ✅ Ne pas fermer ni confirmer ici
-    // L'utilisateur choisit ensuite l'heure puis clique "Confirmer"
   }
 
   function handleConfirm() {
+    // ✅ Vérifier que la date/heure n'est pas antérieure
+    if (isPastDateTime(selectedDate, selectedHour, selectedMinute)) {
+      alert("Impossible de sélectionner une date ou une heure antérieure à maintenant");
+      return;
+    }
+
     const newValue = formatDateTimeValue(selectedDate, selectedHour, selectedMinute);
     onChange(newValue);
     setShowCalendar(false);
@@ -129,8 +155,47 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
 
-  // ✅ Affiche date ET heure dans l'input
   const displayLabel = formatDisplayLabel(selectedDate, selectedHour, selectedMinute);
+
+  // ✅ Vérifier si l'heure sélectionnée est valide (pas antérieure pour la date du jour)
+  const isSelectedDateTimeValid =
+    selectedDate && !isPastDateTime(selectedDate, selectedHour, selectedMinute);
+
+  // ✅ Générer les options d'heures disponibles pour la date sélectionnée
+  const getAvailableHours = () => {
+    if (!selectedDate) return Array.from({ length: 24 }, (_, i) => i);
+
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    // Si la date sélectionnée est aujourd'hui, limiter les heures à partir de l'heure actuelle
+    if (selectedDate === todayStr) {
+      const currentHour = today.getHours();
+      return Array.from({ length: 24 - currentHour }, (_, i) => currentHour + i);
+    }
+
+    // Sinon, toutes les heures sont disponibles
+    return Array.from({ length: 24 }, (_, i) => i);
+  };
+
+  // ✅ Générer les options de minutes disponibles pour l'heure sélectionnée
+  const getAvailableMinutes = (hour: string) => {
+    if (!selectedDate) return Array.from({ length: 60 }, (_, i) => i);
+
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const currentHour = today.getHours();
+    const currentMinute = today.getMinutes();
+
+    // Si la date est aujourd'hui et l'heure est l'heure actuelle, limiter les minutes
+    if (selectedDate === todayStr && parseInt(hour) === currentHour) {
+      return Array.from({ length: 60 - currentMinute }, (_, i) => currentMinute + i);
+    }
+
+    // Sinon, toutes les minutes sont disponibles
+    return Array.from({ length: 60 }, (_, i) => i);
+  };
+
+  const availableHours = getAvailableHours();
+  const availableMinutes = getAvailableMinutes(selectedHour);
 
   const selectStyle = {
     width: "100%",
@@ -168,7 +233,6 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
           minHeight: "36px",
         }}
       >
-        {/* ✅ Affiche "25 mar. 2026 18:30" au lieu de juste la date */}
         <span>{displayLabel || placeholder || "Sélectionner date et heure"}</span>
         {selectedDate && hovered && (
           <button
@@ -231,6 +295,8 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
                 color: "#666",
                 padding: "4px",
               }}
+              // ✅ Désactiver si on est sur un mois antérieur à aujourd'hui
+              disabled={currentYear === today.getFullYear() && currentMonth === today.getMonth()}
             >
               <ChevronLeft size={16} />
             </button>
@@ -283,32 +349,41 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
               </div>
             ))}
             {calendarDays.map((day, idx) => {
+              const isPast = day && isPastDate(currentYear, currentMonth, day);
               const isSelected =
                 day &&
                 selectedDate ===
                   `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
               return (
                 <div
                   key={idx}
-                  onClick={() => day && handleDateSelect(day)}
+                  onClick={() => {
+                    if (day && !isPast) {
+                      handleDateSelect(day);
+                    }
+                  }}
                   style={{
                     textAlign: "center",
                     padding: "6px",
                     borderRadius: "6px",
                     fontSize: "0.8rem",
                     fontWeight: day ? 500 : 400,
-                    color: isSelected ? "#6B1A2A" : day ? "#1A1A1A" : "#ddd",
+                    color: isSelected ? "#6B1A2A" : isPast ? "#ccc" : day ? "#1A1A1A" : "#ddd",
                     background: isSelected ? "rgba(107,26,42,0.15)" : "transparent",
-                    cursor: day ? "pointer" : "default",
+                    cursor: day && !isPast ? "pointer" : "not-allowed",
+                    opacity: isPast ? 0.5 : 1,
                     transition: "all 0.15s",
                   }}
                   onMouseEnter={(e) => {
-                    if (day && !isSelected)
+                    if (day && !isPast && !isSelected) {
                       (e.currentTarget as HTMLElement).style.background = "rgba(107,26,42,0.08)";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (day && !isSelected)
+                    if (day && !isPast && !isSelected) {
                       (e.currentTarget as HTMLElement).style.background = "transparent";
+                    }
                   }}
                 >
                   {day}
@@ -343,12 +418,13 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
                 value={selectedHour}
                 onChange={(e) => setSelectedHour(e.target.value)}
                 style={selectStyle}
+                disabled={!selectedDate}
               >
-                {Array.from({ length: 24 }, (_, i) => {
-                  const h = String(i).padStart(2, "0");
+                {availableHours.map((h) => {
+                  const hourStr = String(h).padStart(2, "0");
                   return (
-                    <option key={h} value={h}>
-                      {h}h
+                    <option key={hourStr} value={hourStr}>
+                      {hourStr}h
                     </option>
                   );
                 })}
@@ -371,12 +447,13 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
                 value={selectedMinute}
                 onChange={(e) => setSelectedMinute(e.target.value)}
                 style={selectStyle}
+                disabled={!selectedDate}
               >
-                {Array.from({ length: 60 }, (_, i) => {
-                  const m = String(i).padStart(2, "0");
+                {availableMinutes.map((m) => {
+                  const minuteStr = String(m).padStart(2, "0");
                   return (
-                    <option key={m} value={m}>
-                      {m}
+                    <option key={minuteStr} value={minuteStr}>
+                      {minuteStr}
                     </option>
                   );
                 })}
@@ -390,15 +467,22 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
               style={{
                 textAlign: "center",
                 fontSize: "0.75rem",
-                color: "#6B1A2A",
+                color: isSelectedDateTimeValid ? "#6B1A2A" : "#e74c3c",
                 fontWeight: 600,
                 marginBottom: "12px",
                 padding: "6px",
-                background: "rgba(107,26,42,0.05)",
+                background: isSelectedDateTimeValid
+                  ? "rgba(107,26,42,0.05)"
+                  : "rgba(231,76,60,0.05)",
                 borderRadius: "8px",
               }}
             >
               {formatDisplayLabel(selectedDate, selectedHour, selectedMinute)}
+              {!isSelectedDateTimeValid && selectedDate && (
+                <div style={{ fontSize: "0.7rem", marginTop: "4px", color: "#e74c3c" }}>
+                  ⚠️ Date ou heure antérieure à maintenant
+                </div>
+              )}
             </div>
           )}
 
@@ -423,8 +507,16 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
             </button>
             <button
               onClick={() => {
-                setSelectedHour("18");
-                setSelectedMinute("00");
+                // ✅ Vérifier que 18:00 n'est pas antérieur
+                if (selectedDate && !isPastDateTime(selectedDate, "18", "00")) {
+                  setSelectedHour("18");
+                  setSelectedMinute("00");
+                } else if (!selectedDate) {
+                  setSelectedHour("18");
+                  setSelectedMinute("00");
+                } else {
+                  alert("Impossible de sélectionner 18:00 car cette heure est déjà passée");
+                }
               }}
               style={{
                 flex: 1,
@@ -438,6 +530,7 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
                 cursor: "pointer",
                 fontFamily: "'DM Sans', sans-serif",
               }}
+              disabled={selectedDate ? isPastDateTime(selectedDate, "18", "00") : false}
             >
               18:00
             </button>
@@ -469,13 +562,15 @@ export default function DatePicker({ value, onChange, placeholder }: Props) {
                 padding: "8px",
                 borderRadius: "8px",
                 border: "none",
-                background: "#6B1A2A",
+                background: isSelectedDateTimeValid ? "#6B1A2A" : "#ccc",
                 color: "white",
                 fontSize: "0.8rem",
                 fontWeight: 500,
-                cursor: "pointer",
+                cursor: isSelectedDateTimeValid ? "pointer" : "not-allowed",
                 fontFamily: "'DM Sans', sans-serif",
+                opacity: isSelectedDateTimeValid ? 1 : 0.6,
               }}
+              disabled={!isSelectedDateTimeValid}
             >
               Confirmer
             </button>

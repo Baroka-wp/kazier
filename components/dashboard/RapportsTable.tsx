@@ -526,28 +526,24 @@ function DeleteModal({
   );
 }
 
-// ── Modal vue rapport — navigation projet + onglets questions ─────────────────
-
-const TABS = [
-  { key: "working_built", short: "En cours", label: "En cours de construction" },
-  { key: "extra_message", short: "Extra", label: "Message supplémentaire" },
-  { key: "blocked", short: "Bloqué", label: "Ce qui est cassé / bloqué" },
-  { key: "validated_learning", short: "Validé", label: "Apprentissages validés" },
-  { key: "needed_learning", short: "À apprendre", label: "Apprentissages nécessaires" },
-  { key: "tomorrow_build", short: "Demain", label: "Construction de demain" },
-];
+// ── Modal vue rapport — affichage liste complète ─────────────────────────────
 
 function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => void }) {
   const [activeProject, setActiveProject] = useState(0);
-  const [activeTab, setActiveTab] = useState(0);
-
   const report = group.reports[activeProject];
-  const tab = TABS[activeTab];
-  const value = (report?.[tab.key as keyof Report] as string) ?? "";
+
+  // Définition des champs à afficher
+  const fields = [
+    { key: "working_built", label: "En cours de construction" },
+    { key: "extra_message", label: "Message supplémentaire" },
+    { key: "blocked", label: "Ce qui est cassé / bloqué" },
+    { key: "validated_learning", label: "Apprentissages validés" },
+    { key: "needed_learning", label: "Apprentissages nécessaires" },
+    { key: "tomorrow_build", label: "Construction de demain" },
+  ];
 
   function goToProject(i: number) {
     setActiveProject(i);
-    setActiveTab(0);
   }
 
   return (
@@ -570,7 +566,7 @@ function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => voi
           background: "#fff",
           borderRadius: "20px",
           width: "100%",
-          maxWidth: "600px",
+          maxWidth: "700px",
           maxHeight: "85vh",
           overflow: "hidden",
           display: "flex",
@@ -582,20 +578,22 @@ function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => voi
         {/* ── Header utilisateur ── */}
         <div
           style={{
-            padding: "18px 24px",
+            padding: "20px 24px",
             borderBottom: "1px solid rgba(0,0,0,0.07)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <Avatar name={group.full_name} />
             <div>
-              <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1A1A1A" }}>
+              <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1A1A1A" }}>
                 {group.full_name}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>
+              <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: "2px" }}>
                 {new Date(group.submitted_at).toLocaleDateString("fr-FR", {
                   weekday: "long",
                   day: "numeric",
@@ -615,8 +613,8 @@ function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => voi
             <button
               onClick={onClose}
               style={{
-                width: "30px",
-                height: "30px",
+                width: "32px",
+                height: "32px",
                 borderRadius: "8px",
                 border: "1px solid rgba(0,0,0,0.08)",
                 background: "#F5F2ED",
@@ -625,9 +623,16 @@ function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => voi
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#888",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#e8e4df";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#F5F2ED";
               }}
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           </div>
         </div>
@@ -637,223 +642,160 @@ function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => voi
           style={{
             background: "rgba(107,26,42,0.04)",
             borderBottom: "1px solid rgba(107,26,42,0.08)",
-            padding: "8px 16px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
+            padding: "12px 20px",
           }}
         >
-          <button
-            onClick={() => goToProject(Math.max(0, activeProject - 1))}
-            disabled={activeProject === 0}
-            style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "1.5px solid rgba(0,0,0,0.08)",
-              background: activeProject === 0 ? "transparent" : "#fff",
-              color: activeProject === 0 ? "#ddd" : "#6B1A2A",
-              fontSize: "0.9rem",
-              cursor: activeProject === 0 ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            ‹
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button
+              onClick={() => goToProject(Math.max(0, activeProject - 1))}
+              disabled={activeProject === 0}
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "6px",
+                border: "1.5px solid rgba(0,0,0,0.08)",
+                background: activeProject === 0 ? "transparent" : "#fff",
+                color: activeProject === 0 ? "#ddd" : "#6B1A2A",
+                fontSize: "1rem",
+                cursor: activeProject === 0 ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                transition: "all 0.15s",
+              }}
+            >
+              ‹
+            </button>
 
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "6px",
-            }}
-          >
-            <ProjectIcon name={report?.project_icon} size={13} color="#6B1A2A" />
-            <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#6B1A2A" }}>
-              {report?.project_name}
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+            >
+              <ProjectIcon name={report?.project_icon} size={14} color="#6B1A2A" />
+              <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#6B1A2A" }}>
+                {report?.project_name}
+              </span>
+            </div>
+
+            <span style={{ fontSize: "0.7rem", color: "#bbb", flexShrink: 0 }}>
+              {activeProject + 1}/{group.reports.length}
             </span>
+            <button
+              onClick={() => goToProject(Math.min(group.reports.length - 1, activeProject + 1))}
+              disabled={activeProject === group.reports.length - 1}
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "6px",
+                border: "1.5px solid rgba(0,0,0,0.08)",
+                background: activeProject === group.reports.length - 1 ? "transparent" : "#fff",
+                color: activeProject === group.reports.length - 1 ? "#ddd" : "#6B1A2A",
+                fontSize: "1rem",
+                cursor: activeProject === group.reports.length - 1 ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                transition: "all 0.15s",
+              }}
+            >
+              ›
+            </button>
           </div>
 
-          <span style={{ fontSize: "0.65rem", color: "#bbb", flexShrink: 0 }}>
-            {activeProject + 1}/{group.reports.length}
-          </span>
-          <button
-            onClick={() => goToProject(Math.min(group.reports.length - 1, activeProject + 1))}
-            disabled={activeProject === group.reports.length - 1}
-            style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "1.5px solid rgba(0,0,0,0.08)",
-              background: activeProject === group.reports.length - 1 ? "transparent" : "#fff",
-              color: activeProject === group.reports.length - 1 ? "#ddd" : "#6B1A2A",
-              fontSize: "0.9rem",
-              cursor: activeProject === group.reports.length - 1 ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            ›
-          </button>
-        </div>
-
-        {/* Pastilles projets */}
-        {group.reports.length > 1 && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "5px",
-              padding: "6px 16px 0",
-              background: "#fff",
-            }}
-          >
-            {group.reports.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => goToProject(i)}
-                style={{
-                  width: i === activeProject ? "18px" : "6px",
-                  height: "6px",
-                  borderRadius: "3px",
-                  border: "none",
-                  background: i === activeProject ? "#6B1A2A" : "rgba(0,0,0,0.12)",
-                  cursor: "pointer",
-                  padding: 0,
-                  transition: "all 0.2s",
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* ── Onglets questions ── */}
-        <div
-          style={{
-            display: "flex",
-            gap: "2px",
-            overflowX: "auto",
-            scrollbarWidth: "none",
-            padding: "0 16px",
-            borderBottom: "1px solid rgba(0,0,0,0.06)",
-            background: "#fff",
-          }}
-        >
-          {TABS.map((t, i) => {
-            const val = report?.[t.key as keyof Report] as string;
-            const isActive = i === activeTab;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setActiveTab(i)}
-                style={{
-                  flexShrink: 0,
-                  padding: "8px 12px",
-                  borderRadius: "8px 8px 0 0",
-                  border: "none",
-                  background: "transparent",
-                  color: isActive ? "#6B1A2A" : "#aaa",
-                  fontSize: "0.75rem",
-                  fontWeight: isActive ? 700 : 500,
-                  cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                  borderBottom: isActive ? "2px solid #6B1A2A" : "2px solid transparent",
-                  transition: "all 0.15s",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                {t.short}
-                <span
+          {/* Pastilles projets */}
+          {group.reports.length > 1 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: "6px",
+                marginTop: "10px",
+              }}
+            >
+              {group.reports.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => goToProject(i)}
                   style={{
-                    width: "5px",
-                    height: "5px",
-                    borderRadius: "50%",
-                    flexShrink: 0,
-                    background: val
-                      ? isActive
-                        ? "#6B1A2A"
-                        : "rgba(107,26,42,0.3)"
-                      : "rgba(0,0,0,0.1)",
+                    width: i === activeProject ? "20px" : "6px",
+                    height: "6px",
+                    borderRadius: "3px",
+                    border: "none",
+                    background: i === activeProject ? "#6B1A2A" : "rgba(107,26,42,0.2)",
+                    cursor: "pointer",
+                    padding: 0,
+                    transition: "all 0.2s",
                   }}
                 />
-              </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Contenu en liste complète ── */}
+        <div style={{ overflowY: "auto", padding: "24px", flex: 1 }}>
+          {fields.map(({ key, label }) => {
+            const value = (report?.[key as keyof Report] as string) ?? "";
+            return (
+              <div key={key} style={{ marginBottom: "20px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.65rem",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    color: "#aaa",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {label}
+                </label>
+                <ReportField value={value} />
+              </div>
             );
           })}
         </div>
 
-        {/* ── Contenu ── */}
-        <div style={{ overflowY: "auto", padding: "16px 24px", flex: 1, minHeight: "160px" }}>
-          <div
-            style={{
-              fontSize: "0.63rem",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "#aaa",
-              marginBottom: "8px",
-            }}
-          >
-            {tab.label}
-          </div>
-          <ReportField value={value} />
-        </div>
-
-        {/* ── Navigation questions ── */}
+        {/* ── Footer avec bouton fermer ── */}
         <div
           style={{
-            padding: "10px 24px",
+            padding: "16px 24px",
             borderTop: "1px solid rgba(0,0,0,0.06)",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "flex-end",
           }}
         >
           <button
-            onClick={() => setActiveTab((i) => Math.max(0, i - 1))}
-            disabled={activeTab === 0}
+            onClick={onClose}
             style={{
-              padding: "6px 14px",
-              borderRadius: "8px",
+              padding: "8px 20px",
+              borderRadius: "10px",
               border: "1.5px solid rgba(0,0,0,0.08)",
               background: "#F5F2ED",
-              color: activeTab === 0 ? "#ccc" : "#666",
-              fontSize: "0.78rem",
+              color: "#666",
+              fontSize: "0.85rem",
               fontWeight: 600,
-              cursor: activeTab === 0 ? "not-allowed" : "pointer",
+              cursor: "pointer",
               fontFamily: "'DM Sans', sans-serif",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#e8e4df";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#F5F2ED";
             }}
           >
-            ← Précédent
-          </button>
-          <span style={{ fontSize: "0.7rem", color: "#bbb" }}>
-            {activeTab + 1} / {TABS.length}
-          </span>
-          <button
-            onClick={() => setActiveTab((i) => Math.min(TABS.length - 1, i + 1))}
-            disabled={activeTab === TABS.length - 1}
-            style={{
-              padding: "6px 14px",
-              borderRadius: "8px",
-              border: "1.5px solid rgba(0,0,0,0.08)",
-              background: "#F5F2ED",
-              color: activeTab === TABS.length - 1 ? "#ccc" : "#666",
-              fontSize: "0.78rem",
-              fontWeight: 600,
-              cursor: activeTab === TABS.length - 1 ? "not-allowed" : "pointer",
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            Suivant →
+            Fermer
           </button>
         </div>
       </div>

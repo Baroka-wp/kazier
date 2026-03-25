@@ -87,7 +87,7 @@ export async function notifyTaskAssigned({
                 emoji: true,
               },
               style: "primary",
-              url: `${process.env.NEXT_PUBLIC_FORM_URL?.replace(/\/$/, "")}/dashboard`,
+              url: `${process.env.NEXT_PUBLIC_FORM_URL?.replace(/\/$/, "")}/dashboard/tasks`,
             },
           ],
         },

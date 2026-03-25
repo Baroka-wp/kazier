@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ClipboardEdit } from "lucide-react";
 import { BRAND } from "./questions";
 import Screen from "./Screen";
@@ -52,375 +52,108 @@ const priorityColor = (p: string) =>
 const statusLabel = (s: string) =>
   s === "à faire" ? "À faire" : s === "en cours" ? "En cours" : "Terminé";
 
-// ── Sections de review ────────────────────────────────────────────────────────
+// ── Section row ───────────────────────────────────────────────────────────────
 
-function useReviewSections(
-  answers: Record<string, string>,
-  selectedProjects: Project[],
-  selectedTaskIds: number[],
-  tasks: Task[],
-  teammates: { id: number; full_name: string }[],
-  evaluations: Record<number, Evaluation>
-) {
-  const selectedTasks = tasks.filter((t) => selectedTaskIds.includes(t.id));
-  const tasksByProject = selectedProjects
-    .map((p) => ({ project: p, tasks: selectedTasks.filter((t) => t.project_id === p.id) }))
-    .filter((g) => g.tasks.length > 0);
-
-  // Index de la question "evaluations" dans QUESTIONS_GLOBAL (index 6)
-  const EVAL_QUESTION_INDEX = 6;
-
-  return [
-    {
-      id: "full_name",
-      short: "Nom",
-      questionIndex: 0,
-      isEmpty: !answers["full_name"],
-      content: (
-        <p style={{ fontSize: "1rem", fontWeight: 600, color: "#1A1A1A" }}>
-          {answers["full_name"]}
-        </p>
-      ),
-    },
-    {
-      id: "projects",
-      short: "Projets",
-      questionIndex: 1,
-      isEmpty: selectedProjects.length === 0,
-      content: (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-          {selectedProjects.map((p) => (
+function SectionBlock({
+  short,
+  questionIndex,
+  isEmpty,
+  children,
+  onEdit,
+}: {
+  short: string;
+  questionIndex: number;
+  isEmpty: boolean;
+  children: React.ReactNode;
+  onEdit: (idx: number) => void;
+}) {
+  return (
+    <div
+      style={{
+        borderRadius: "16px",
+        border: "1px solid rgba(0,0,0,0.07)",
+        overflow: "hidden",
+        background: "#fff",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          padding: "10px 16px",
+          background: `${BRAND}08`,
+          borderBottom: `1px solid ${BRAND}15`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span
+            style={{
+              fontSize: "10px",
+              fontWeight: 700,
+              color: BRAND,
+              textTransform: "uppercase",
+              letterSpacing: "0.07em",
+            }}
+          >
+            {short}
+          </span>
+          {isEmpty && (
             <span
-              key={p.id}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "5px 12px",
-                borderRadius: "20px",
-                background: `${BRAND}12`,
-                border: `1px solid ${BRAND}25`,
-                fontSize: "13px",
+                fontSize: "10px",
+                color: "#F59E0B",
                 fontWeight: 600,
-                color: BRAND,
+                background: "rgba(245,158,11,0.1)",
+                padding: "2px 8px",
+                borderRadius: "10px",
               }}
             >
-              📁 {p.name}
+              Non renseigné
             </span>
-          ))}
-        </div>
-      ),
-    },
-    {
-      id: "validated_tasks",
-      short: "Tâches validées",
-      questionIndex: 2,
-      isEmpty: selectedTasks.length === 0,
-      content: (
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {tasksByProject.length > 0 ? (
-            tasksByProject.map(({ project, tasks: ptasks }) => (
-              <div key={project.id}>
-                <div
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    color: BRAND,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    marginBottom: "6px",
-                  }}
-                >
-                  📁 {project.name}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                  {ptasks.map((task) => (
-                    <div
-                      key={task.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "7px 10px",
-                        borderRadius: "10px",
-                        background: "rgba(0,0,0,0.03)",
-                        border: "1px solid rgba(0,0,0,0.05)",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "7px",
-                          height: "7px",
-                          borderRadius: "50%",
-                          background: priorityColor(task.priority),
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span
-                        style={{ fontSize: "12px", fontWeight: 500, color: "#1A1A1A", flex: 1 }}
-                      >
-                        {task.title}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "10px",
-                          fontWeight: 600,
-                          color: "#666",
-                          background: "rgba(0,0,0,0.05)",
-                          padding: "2px 8px",
-                          borderRadius: "20px",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {statusLabel(task.status)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          ) : (
-            <p style={{ fontSize: "0.83rem", color: "#bbb", fontStyle: "italic" }}>
-              Aucune tâche sélectionnée
-            </p>
           )}
         </div>
-      ),
-    },
-    {
-      id: "extra_message",
-      short: "Message libre",
-      questionIndex: 2,
-      isEmpty: !answers["extra_message"]?.replace(/<[^>]*>/g, "").trim(),
-      content: (
-        <div
-          className="prose prose-sm max-w-none"
-          style={{ fontSize: "0.85rem", color: "#1A1A1A", lineHeight: 1.7 }}
-          dangerouslySetInnerHTML={{ __html: answers["extra_message"] || "" }}
-        />
-      ),
-    },
-    {
-      id: "challenges",
-      short: "Challenges",
-      questionIndex: 3,
-      isEmpty: !answers["challenges"]?.replace(/<[^>]*>/g, "").trim(),
-      content: (
-        <div
-          className="prose prose-sm max-w-none"
-          style={{ fontSize: "0.85rem", color: "#1A1A1A", lineHeight: 1.7 }}
-          dangerouslySetInnerHTML={{ __html: answers["challenges"] || "" }}
-        />
-      ),
-    },
-    {
-      id: "needed_learning",
-      short: "À apprendre",
-      questionIndex: 4,
-      isEmpty: !answers["needed_learning"]?.replace(/<[^>]*>/g, "").trim(),
-      content: (
-        <div
-          className="prose prose-sm max-w-none"
-          style={{ fontSize: "0.85rem", color: "#1A1A1A", lineHeight: 1.7 }}
-          dangerouslySetInnerHTML={{ __html: answers["needed_learning"] || "" }}
-        />
-      ),
-    },
-    {
-      id: "tomorrow_build",
-      short: "Demain",
-      questionIndex: 5,
-      isEmpty: !answers["tomorrow_build"]?.replace(/<[^>]*>/g, "").trim(),
-      content: (
-        <div
-          className="prose prose-sm max-w-none"
-          style={{ fontSize: "0.85rem", color: "#1A1A1A", lineHeight: 1.7 }}
-          dangerouslySetInnerHTML={{ __html: answers["tomorrow_build"] || "" }}
-        />
-      ),
-    },
-    {
-      id: "evaluations",
-      short: "Évaluations",
-      questionIndex: EVAL_QUESTION_INDEX,
-      isEmpty: teammates.length === 0 || Object.keys(evaluations).length === 0,
-      content: (
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {teammates.length === 0 ? (
-            <p style={{ fontSize: "0.83rem", color: "#bbb", fontStyle: "italic" }}>
-              Aucun coéquipier sur ces projets
-            </p>
-          ) : (
-            teammates.map((m) => {
-              const e = evaluations[m.id];
-              if (!e)
-                return (
-                  <div
-                    key={m.id}
-                    style={{
-                      padding: "10px 14px",
-                      borderRadius: "12px",
-                      background: "rgba(245,158,11,0.05)",
-                      border: "1px solid rgba(245,158,11,0.2)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "9px",
-                        background: "rgba(0,0,0,0.06)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        color: "#999",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {m.full_name
-                        .split(" ")
-                        .map((n) => n[0] || "")
-                        .join("")
-                        .slice(0, 2)
-                        .toUpperCase()}
-                    </div>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#1A1A1A", flex: 1 }}>
-                      {m.full_name}
-                    </span>
-                    <span style={{ fontSize: "10px", color: "#F59E0B", fontWeight: 600 }}>
-                      ⚠ Non évalué
-                    </span>
-                  </div>
-                );
+        <button
+          type="button"
+          onClick={() => onEdit(questionIndex)}
+          title="Modifier"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "4px",
+            borderRadius: "7px",
+            color: "#999",
+            display: "flex",
+            alignItems: "center",
+            transition: "color 0.15s, background 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = BRAND;
+            e.currentTarget.style.background = `${BRAND}12`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "#999";
+            e.currentTarget.style.background = "none";
+          }}
+        >
+          <ClipboardEdit size={15} />
+        </button>
+      </div>
 
-              return (
-                <div
-                  key={m.id}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: "14px",
-                    background: "#fff",
-                    border: `1px solid ${BRAND}20`,
-                  }}
-                >
-                  {/* En-tête membre */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      marginBottom: "10px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "9px",
-                        background: `${BRAND}18`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        color: BRAND,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {m.full_name
-                        .split(" ")
-                        .map((n) => n[0] || "")
-                        .join("")
-                        .slice(0, 2)
-                        .toUpperCase()}
-                    </div>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#1A1A1A" }}>
-                      {m.full_name}
-                    </span>
-                    <span
-                      style={{
-                        marginLeft: "auto",
-                        fontSize: "10px",
-                        color: BRAND,
-                        fontWeight: 600,
-                        background: `${BRAND}10`,
-                        padding: "2px 8px",
-                        borderRadius: "10px",
-                      }}
-                    >
-                      ✓ Évalué
-                    </span>
-                  </div>
-
-                  {/* Notes */}
-                  <div
-                    style={{ display: "flex", gap: "12px", marginBottom: e.comment ? "10px" : 0 }}
-                  >
-                    {[
-                      { label: "Communication", emoji: "📢", val: e.communication },
-                      { label: "Collaboration", emoji: "🤝", val: e.collaboration },
-                      { label: "Ponctualité", emoji: "⏰", val: e.punctuality },
-                    ].map(({ label, emoji, val }) => (
-                      <div
-                        key={label}
-                        style={{
-                          flex: 1,
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          gap: "2px",
-                          padding: "8px 4px",
-                          borderRadius: "10px",
-                          background: "rgba(0,0,0,0.02)",
-                          border: "1px solid rgba(0,0,0,0.04)",
-                        }}
-                      >
-                        <span style={{ fontSize: "14px" }}>{emoji}</span>
-                        <span style={{ fontSize: "16px", fontWeight: 700, color: BRAND }}>
-                          {val}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "9px",
-                            color: "#aaa",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          {label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Commentaire */}
-                  {e.comment && e.comment.replace(/<[^>]*>/g, "").trim() && (
-                    <div
-                      style={{
-                        borderTop: "1px solid rgba(0,0,0,0.05)",
-                        paddingTop: "8px",
-                      }}
-                    >
-                      <div
-                        className="prose prose-sm"
-                        style={{ fontSize: "12px", color: "#555", lineHeight: 1.6 }}
-                        dangerouslySetInnerHTML={{ __html: e.comment }}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      ),
-    },
-  ];
+      {/* Content */}
+      <div style={{ padding: "14px 16px", background: "#F5F2ED" }}>
+        {isEmpty ? (
+          <p style={{ fontSize: "0.83rem", color: "#bbb", fontStyle: "italic", margin: 0 }}>
+            Non renseigné
+          </p>
+        ) : (
+          children
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ── Composant principal ───────────────────────────────────────────────────────
@@ -437,19 +170,10 @@ export default function ReviewScreen({
   onSubmit,
   onCitationsReady,
 }: Props) {
-  const [activeCard, setActiveCard] = useState(0);
-  const [fading, setFading] = useState(false);
-
-  const sections = useReviewSections(
-    answers,
-    selectedProjects,
-    selectedTaskIds,
-    tasks,
-    teammates,
-    evaluations
-  );
-  const section = sections[activeCard];
-  const total = sections.length;
+  const selectedTasks = tasks.filter((t) => selectedTaskIds.includes(t.id));
+  const tasksByProject = selectedProjects
+    .map((p) => ({ project: p, tasks: selectedTasks.filter((t) => t.project_id === p.id) }))
+    .filter((g) => g.tasks.length > 0);
 
   useEffect(() => {
     fetch("/api/citation")
@@ -459,22 +183,9 @@ export default function ReviewScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function navigate(dir: number) {
-    const next = activeCard + dir;
-    if (next < 0 || next >= total) return;
-    setFading(true);
-    setTimeout(() => {
-      setActiveCard(next);
-      setFading(false);
-    }, 150);
-  }
-
   return (
     <Screen>
-      <div
-        className="w-full max-w-xl mx-auto"
-        style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}
-      >
+      <div className="w-full max-w-xl mx-auto" style={{ display: "flex", flexDirection: "column" }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6" style={{ flexShrink: 0 }}>
           <img src="/africa-samurai-logo.png" alt="Africa Samurai" className="h-12" />
@@ -488,192 +199,365 @@ export default function ReviewScreen({
           </span>
         </div>
 
-        <h2 className="text-2xl font-bold text-[#1A1A1A] mb-1" style={{ flexShrink: 0 }}>
-          Vérifiez votre rapport
-        </h2>
-        <p className="text-sm text-[#666666] mb-5" style={{ flexShrink: 0 }}>
+        <h2 className="text-2xl font-bold text-[#1A1A1A] mb-1">Vérifiez votre rapport</h2>
+        <p className="text-sm text-[#666666] mb-5">
           Tout est correct ? Modifiez avant d&apos;envoyer.
         </p>
 
-        {/* Pastilles de navigation */}
-        <div className="flex gap-1.5 mb-5" style={{ flexShrink: 0 }}>
-          {sections.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => {
-                setFading(true);
-                setTimeout(() => {
-                  setActiveCard(i);
-                  setFading(false);
-                }, 150);
-              }}
-              title={s.short}
-              style={{
-                height: "6px",
-                borderRadius: "3px",
-                border: "none",
-                background:
-                  i === activeCard ? BRAND : s.isEmpty ? "rgba(0,0,0,0.08)" : `${BRAND}30`,
-                width: i === activeCard ? "32px" : "8px",
-                cursor: "pointer",
-                padding: 0,
-                transition: "all 0.25s",
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Card unique — scrollable si contenu long */}
-        <div
-          style={{
-            flex: 1,
-            overflow: "hidden",
-            borderRadius: "20px",
-            border: "1px solid rgba(0,0,0,0.07)",
-            display: "flex",
-            flexDirection: "column",
-            opacity: fading ? 0 : 1,
-            transform: fading ? "translateX(8px)" : "translateX(0)",
-            transition: "opacity 0.15s, transform 0.15s",
-          }}
-        >
-          {/* Header de la card */}
-          <div
-            style={{
-              padding: "14px 18px",
-              background: `${BRAND}08`,
-              borderBottom: `1px solid ${BRAND}15`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexShrink: 0,
-            }}
+        {/* All sections */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {/* Nom */}
+          <SectionBlock
+            short="Nom"
+            questionIndex={0}
+            isEmpty={!answers["full_name"]}
+            onEdit={onEdit}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  color: BRAND,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.07em",
-                }}
-              >
-                {section.short}
-              </span>
-              {section.isEmpty && (
+            <p style={{ fontSize: "1rem", fontWeight: 600, color: "#1A1A1A", margin: 0 }}>
+              {answers["full_name"]}
+            </p>
+          </SectionBlock>
+
+          {/* Projets */}
+          <SectionBlock
+            short="Projets"
+            questionIndex={1}
+            isEmpty={selectedProjects.length === 0}
+            onEdit={onEdit}
+          >
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {selectedProjects.map((p) => (
                 <span
+                  key={p.id}
                   style={{
-                    fontSize: "10px",
-                    color: "#F59E0B",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    padding: "5px 12px",
+                    borderRadius: "20px",
+                    background: `${BRAND}12`,
+                    border: `1px solid ${BRAND}25`,
+                    fontSize: "13px",
                     fontWeight: 600,
-                    background: "rgba(245,158,11,0.1)",
-                    padding: "2px 8px",
-                    borderRadius: "10px",
+                    color: BRAND,
                   }}
                 >
-                  Non renseigné
+                  📁 {p.name}
                 </span>
+              ))}
+            </div>
+          </SectionBlock>
+
+          {/* Tâches validées */}
+          <SectionBlock
+            short="Tâches validées"
+            questionIndex={2}
+            isEmpty={selectedTasks.length === 0}
+            onEdit={onEdit}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {tasksByProject.map(({ project, tasks: ptasks }) => (
+                <div key={project.id}>
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      color: BRAND,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    📁 {project.name}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                    {ptasks.map((task) => (
+                      <div
+                        key={task.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "7px 10px",
+                          borderRadius: "10px",
+                          background: "rgba(0,0,0,0.03)",
+                          border: "1px solid rgba(0,0,0,0.05)",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "7px",
+                            height: "7px",
+                            borderRadius: "50%",
+                            background: priorityColor(task.priority),
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span
+                          style={{ fontSize: "12px", fontWeight: 500, color: "#1A1A1A", flex: 1 }}
+                        >
+                          {task.title}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: 600,
+                            color: "#666",
+                            background: "rgba(0,0,0,0.05)",
+                            padding: "2px 8px",
+                            borderRadius: "20px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {statusLabel(task.status)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionBlock>
+
+          {/* Message libre */}
+          <SectionBlock
+            short="Message libre"
+            questionIndex={2}
+            isEmpty={!answers["extra_message"]?.replace(/<[^>]*>/g, "").trim()}
+            onEdit={onEdit}
+          >
+            <div
+              className="prose prose-sm max-w-none"
+              style={{ fontSize: "0.85rem", color: "#1A1A1A", lineHeight: 1.7 }}
+              dangerouslySetInnerHTML={{ __html: answers["extra_message"] || "" }}
+            />
+          </SectionBlock>
+
+          {/* Challenges */}
+          <SectionBlock
+            short="Challenges"
+            questionIndex={3}
+            isEmpty={!answers["challenges"]?.replace(/<[^>]*>/g, "").trim()}
+            onEdit={onEdit}
+          >
+            <div
+              className="prose prose-sm max-w-none"
+              style={{ fontSize: "0.85rem", color: "#1A1A1A", lineHeight: 1.7 }}
+              dangerouslySetInnerHTML={{ __html: answers["challenges"] || "" }}
+            />
+          </SectionBlock>
+
+          {/* À apprendre */}
+          <SectionBlock
+            short="À apprendre"
+            questionIndex={4}
+            isEmpty={!answers["needed_learning"]?.replace(/<[^>]*>/g, "").trim()}
+            onEdit={onEdit}
+          >
+            <div
+              className="prose prose-sm max-w-none"
+              style={{ fontSize: "0.85rem", color: "#1A1A1A", lineHeight: 1.7 }}
+              dangerouslySetInnerHTML={{ __html: answers["needed_learning"] || "" }}
+            />
+          </SectionBlock>
+
+          {/* Demain */}
+          <SectionBlock
+            short="Demain"
+            questionIndex={5}
+            isEmpty={!answers["tomorrow_build"]?.replace(/<[^>]*>/g, "").trim()}
+            onEdit={onEdit}
+          >
+            <div
+              className="prose prose-sm max-w-none"
+              style={{ fontSize: "0.85rem", color: "#1A1A1A", lineHeight: 1.7 }}
+              dangerouslySetInnerHTML={{ __html: answers["tomorrow_build"] || "" }}
+            />
+          </SectionBlock>
+
+          {/* Évaluations */}
+          <SectionBlock
+            short="Évaluations"
+            questionIndex={6}
+            isEmpty={teammates.length === 0 || Object.keys(evaluations).length === 0}
+            onEdit={onEdit}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {teammates.length === 0 ? (
+                <p style={{ fontSize: "0.83rem", color: "#bbb", fontStyle: "italic", margin: 0 }}>
+                  Aucun coéquipier sur ces projets
+                </p>
+              ) : (
+                teammates.map((m) => {
+                  const e = evaluations[m.id];
+                  if (!e)
+                    return (
+                      <div
+                        key={m.id}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: "12px",
+                          background: "rgba(245,158,11,0.05)",
+                          border: "1px solid rgba(245,158,11,0.2)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "9px",
+                            background: "rgba(0,0,0,0.06)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: "#999",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {m.full_name
+                            .split(" ")
+                            .map((n) => n[0] || "")
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </div>
+                        <span
+                          style={{ fontSize: "13px", fontWeight: 600, color: "#1A1A1A", flex: 1 }}
+                        >
+                          {m.full_name}
+                        </span>
+                        <span style={{ fontSize: "10px", color: "#F59E0B", fontWeight: 600 }}>
+                          ⚠ Non évalué
+                        </span>
+                      </div>
+                    );
+
+                  return (
+                    <div
+                      key={m.id}
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: "14px",
+                        background: "#fff",
+                        border: `1px solid ${BRAND}20`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "9px",
+                            background: `${BRAND}18`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: BRAND,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {m.full_name
+                            .split(" ")
+                            .map((n) => n[0] || "")
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </div>
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#1A1A1A" }}>
+                          {m.full_name}
+                        </span>
+                        <span
+                          style={{
+                            marginLeft: "auto",
+                            fontSize: "10px",
+                            color: BRAND,
+                            fontWeight: 600,
+                            background: `${BRAND}10`,
+                            padding: "2px 8px",
+                            borderRadius: "10px",
+                          }}
+                        >
+                          ✓ Évalué
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "12px",
+                          marginBottom: e.comment ? "10px" : 0,
+                        }}
+                      >
+                        {[
+                          { label: "Communication", emoji: "📢", val: e.communication },
+                          { label: "Collaboration", emoji: "🤝", val: e.collaboration },
+                          { label: "Ponctualité", emoji: "⏰", val: e.punctuality },
+                        ].map(({ label, emoji, val }) => (
+                          <div
+                            key={label}
+                            style={{
+                              flex: 1,
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "2px",
+                              padding: "8px 4px",
+                              borderRadius: "10px",
+                              background: "rgba(0,0,0,0.02)",
+                              border: "1px solid rgba(0,0,0,0.04)",
+                            }}
+                          >
+                            <span style={{ fontSize: "14px" }}>{emoji}</span>
+                            <span style={{ fontSize: "16px", fontWeight: 700, color: BRAND }}>
+                              {val}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "9px",
+                                color: "#aaa",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              {label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {e.comment && e.comment.replace(/<[^>]*>/g, "").trim() && (
+                        <div style={{ borderTop: "1px solid rgba(0,0,0,0.05)", paddingTop: "8px" }}>
+                          <div
+                            className="prose prose-sm"
+                            style={{ fontSize: "12px", color: "#555", lineHeight: 1.6 }}
+                            dangerouslySetInnerHTML={{ __html: e.comment }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => onEdit(section.questionIndex)}
-              title="Modifier"
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: "5px",
-                borderRadius: "8px",
-                color: "#999",
-                display: "flex",
-                alignItems: "center",
-                transition: "color 0.15s, background 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = BRAND;
-                e.currentTarget.style.background = `${BRAND}12`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#999";
-                e.currentTarget.style.background = "none";
-              }}
-            >
-              <ClipboardEdit size={16} />
-            </button>
-          </div>
-
-          {/* Contenu scrollable */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "18px", background: "#F5F2ED" }}>
-            {section.isEmpty ? (
-              <p style={{ fontSize: "0.85rem", color: "#bbb", fontStyle: "italic" }}>
-                Non renseigné
-              </p>
-            ) : (
-              section.content
-            )}
-          </div>
-
-          {/* Navigation ← → dans la card */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "10px 16px",
-              borderTop: "1px solid rgba(0,0,0,0.05)",
-              background: "#fff",
-              flexShrink: 0,
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              disabled={activeCard === 0}
-              style={{
-                padding: "5px 14px",
-                borderRadius: "10px",
-                border: "1.5px solid rgba(0,0,0,0.08)",
-                background: activeCard === 0 ? "transparent" : "#F5F2ED",
-                color: activeCard === 0 ? "#ddd" : "#666",
-                fontSize: "12px",
-                fontWeight: 600,
-                cursor: activeCard === 0 ? "not-allowed" : "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              ← Préc.
-            </button>
-
-            <span style={{ fontSize: "11px", color: "#bbb" }}>
-              {activeCard + 1} / {total}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => navigate(1)}
-              disabled={activeCard === total - 1}
-              style={{
-                padding: "5px 14px",
-                borderRadius: "10px",
-                border: "1.5px solid rgba(0,0,0,0.08)",
-                background: activeCard === total - 1 ? "transparent" : "#F5F2ED",
-                color: activeCard === total - 1 ? "#ddd" : "#666",
-                fontSize: "12px",
-                fontWeight: 600,
-                cursor: activeCard === total - 1 ? "not-allowed" : "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              Suiv. →
-            </button>
-          </div>
+          </SectionBlock>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 mt-4" style={{ flexShrink: 0 }}>
+        <div className="flex gap-3 mt-6 mb-2" style={{ flexShrink: 0 }}>
           <button
             type="button"
             onClick={onBack}

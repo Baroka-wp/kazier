@@ -120,3 +120,12 @@ model Evaluation {
   @@unique([evaluator_id, evaluated_id, report_date])
   @@map("evaluations")
 }
+
+model api_keys {
+  id         Int       @id @default(autoincrement())
+  key        String    @unique
+  label      String?   // ex: "Zapier", "Dashboard externe", etc.
+  is_active  Boolean   @default(true)
+  created_at DateTime  @default(now())
+  last_used  DateTime?
+}
