@@ -275,10 +275,6 @@ export async function sendToSlack(data: {
       await Promise.all(inserts);
     }
 
-    console.log("Slack payload:", slackPayload);
-    console.log("Slack bot token:", process.env.SLACK_BOT_TOKEN);
-    console.log("Slack boss user ID:", process.env.SLACK_BOSS_USER_ID);
-
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: {
@@ -290,8 +286,6 @@ export async function sendToSlack(data: {
         channel: process.env.SLACK_BOSS_USER_ID,
       }),
     });
-
-    console.log("Slack response:", response);
 
     const result = await response.json();
     if (!result.ok) throw new Error(`Slack DM failed: ${result.error}`);
