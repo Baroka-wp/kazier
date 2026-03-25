@@ -3,6 +3,7 @@
 import { prisma } from "./prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { notifyTaskComment } from "./notify-task-comment";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -89,6 +90,16 @@ export async function addTaskComment(
     });
 
     revalidatePath("/dashboard/tasks");
+
+    //Notifier les membres liés à la tâche omis le propriétaire du commentaire
+    await notifyTaskComment({
+      taskId,
+      authorId: comment.team_id,
+      authorName: `${comment.team.first_name ?? ""} ${comment.team.last_name ?? ""}`.trim(),
+      content: comment.content,
+    });
+
+    console.log("Après notifyTaskComment");
 
     return {
       success: true,
