@@ -16,6 +16,7 @@ import { updateTaskStatus } from "@/lib/team-actions";
 import TaskColumn from "./TaskColumn";
 import TaskCard from "./TaskCard";
 import ReviewConfirmModal from "@/components/dashboard/ReviewConfirmModal"; // 👈 ajouter
+import TaskDetailPage from "./TaskDetailPage";
 
 type Props = {
   tasks: Task[];
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [pendingDrop, setPendingDrop] = useState<{ taskId: number; status: Task["status"] } | null>(
@@ -84,6 +86,21 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
     await applyDrop(taskId, resolvedStatus);
   }
 
+  if (detailTask) {
+    return (
+      <TaskDetailPage
+        task={detailTask}
+        onBack={() => setDetailTask(null)}
+        teamMemberId={teamMemberId}
+        isTM={false}
+        onUpdated={(updated) => {
+          setLocalTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+          setDetailTask(updated);
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <DndContext
@@ -104,6 +121,7 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
                   prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
                 );
               }}
+              onCardClick={(task) => setDetailTask(task)}
               readOnly={status === "terminée"}
             />
           ))}
