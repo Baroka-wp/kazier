@@ -40,6 +40,8 @@ const RichTextArea = dynamic(() => import("@/components/DailyForm/RichTextArea")
   ssr: false,
 });
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 type Toast = {
   id: number;
   type: "success" | "error";
@@ -50,16 +52,17 @@ type Props = {
   task: Task;
   onBack: () => void;
   onUpdated?: (updated: Task) => void;
-  teamMemberId?: number; // ✅ Ajouté
+  teamMemberId?: number;
   isTM?: boolean;
   projects?: Project[];
   teams?: TeamMember[];
   canManageTasks?: boolean;
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("fr-FR", {
+  return new Date(iso).toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -69,15 +72,13 @@ function formatDate(iso: string): string {
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
   return (
-    d.toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }) +
+    d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) +
     " " +
     d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
   );
 }
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function Avatar({ name, size = 34 }: { name: string; size?: number }) {
   const initials = name
@@ -86,7 +87,6 @@ function Avatar({ name, size = 34 }: { name: string; size?: number }) {
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase())
     .join("");
-
   return (
     <div
       style={{
@@ -121,7 +121,7 @@ function StatusBadge({ status }: { status: string }) {
     <span
       style={{
         padding: "4px 10px",
-        borderRadius: "999px",
+        borderRadius: "6px",
         fontSize: "0.72rem",
         fontWeight: 600,
         background: s.bg,
@@ -144,7 +144,7 @@ function PriorityBadge({ priority }: { priority: string }) {
     <span
       style={{
         padding: "4px 10px",
-        borderRadius: "999px",
+        borderRadius: "6px",
         fontSize: "0.72rem",
         fontWeight: 600,
         background: s.bg,
@@ -170,10 +170,11 @@ function ToastNotification({ toast, onClose }: { toast: Toast; onClose: () => vo
         gap: "10px",
         background: "#fff",
         border: `1.5px solid ${ok ? "rgba(22,163,74,0.22)" : "rgba(229,62,62,0.22)"}`,
-        borderRadius: "12px",
+        borderRadius: "10px",
         padding: "12px 16px",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
-        minWidth: "280px",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
+        minWidth: "260px",
+        maxWidth: "calc(100vw - 48px)",
       }}
     >
       {ok ? <CheckCircle2 size={18} color="#16a34a" /> : <XCircle size={18} color="#e53e3e" />}
@@ -207,7 +208,6 @@ function MenuDropdown({
   canManageTasks?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-
   return (
     <div style={{ position: "relative" }}>
       <button
@@ -216,19 +216,20 @@ function MenuDropdown({
           display: "inline-flex",
           alignItems: "center",
           gap: "8px",
-          padding: "10px 14px",
+          padding: "9px 14px",
           borderRadius: "10px",
           border: "1px solid rgba(107,26,42,0.16)",
           background: "#fff",
           color: "#6B1A2A",
           fontWeight: 600,
           cursor: "pointer",
+          fontSize: "0.82rem",
+          whiteSpace: "nowrap",
         }}
       >
-        <Settings2 size={16} />
+        <Settings2 size={15} />
         Setting
       </button>
-
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 80 }} />
@@ -236,13 +237,13 @@ function MenuDropdown({
             style={{
               position: "absolute",
               right: 0,
-              top: "calc(100% + 8px)",
-              width: "190px",
+              top: "calc(100% + 6px)",
+              width: "180px",
               background: "#fff",
               border: "1px solid rgba(0,0,0,0.08)",
-              borderRadius: "14px",
-              boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
-              padding: "8px",
+              borderRadius: "10px",
+              boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
+              padding: "6px",
               zIndex: 90,
             }}
           >
@@ -253,8 +254,7 @@ function MenuDropdown({
               }}
               style={menuItemStyle}
             >
-              <Pencil size={14} />
-              Modifier
+              <Pencil size={14} /> Modifier
             </button>
             {canManageTasks && (
               <button
@@ -264,8 +264,7 @@ function MenuDropdown({
                 }}
                 style={{ ...menuItemStyle, color: "#dc2626" }}
               >
-                <Trash2 size={14} />
-                Supprimer
+                <Trash2 size={14} /> Supprimer
               </button>
             )}
           </div>
@@ -274,22 +273,6 @@ function MenuDropdown({
     </div>
   );
 }
-
-const menuItemStyle: React.CSSProperties = {
-  width: "100%",
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  padding: "10px 12px",
-  borderRadius: "10px",
-  border: "none",
-  background: "transparent",
-  fontSize: "0.85rem",
-  fontWeight: 600,
-  color: "#1A1A1A",
-  cursor: "pointer",
-  textAlign: "left",
-};
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -300,7 +283,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
         textTransform: "uppercase",
         letterSpacing: "0.14em",
         color: "#8d8d8d",
-        marginBottom: "10px",
+        margin: "0 0 8px 0",
       }}
     >
       {children}
@@ -315,31 +298,44 @@ function FileCard({ name, size, icon }: { name: string; size: string; icon: Reac
         display: "flex",
         alignItems: "center",
         gap: "10px",
-        padding: "12px 14px",
-        borderRadius: "14px",
+        padding: "10px 12px",
+        borderRadius: "10px",
         background: "#fff",
         border: "1px solid rgba(0,0,0,0.06)",
         boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+        overflow: "hidden",
       }}
     >
       <div
         style={{
-          width: "34px",
-          height: "34px",
-          borderRadius: "10px",
+          width: "32px",
+          height: "32px",
+          flexShrink: 0,
+          borderRadius: "8px",
           background: "rgba(107,26,42,0.08)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           color: "#6B1A2A",
-          flexShrink: 0,
         }}
       >
         {icon}
       </div>
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1A1A1A", margin: 0 }}>{name}</p>
-        <span style={{ fontSize: "0.72rem", color: "#888" }}>{size}</span>
+        <p
+          style={{
+            fontSize: "0.78rem",
+            fontWeight: 600,
+            color: "#1A1A1A",
+            margin: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {name}
+        </p>
+        <span style={{ fontSize: "0.68rem", color: "#888" }}>{size}</span>
       </div>
     </div>
   );
@@ -359,40 +355,47 @@ function CommentCard({
   onDelete: () => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-      <Avatar name={comment.author_name} size={34} />
-      <div style={{ flex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+    <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+      <Avatar name={comment.author_name} size={32} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "6px",
+            flexWrap: "wrap",
+          }}
+        >
           <span
-            style={{ fontSize: "0.84rem", fontWeight: 700, color: isMe ? "#6B1A2A" : "#1A1A1A" }}
+            style={{ fontSize: "0.82rem", fontWeight: 700, color: isMe ? "#6B1A2A" : "#1A1A1A" }}
           >
             {isMe ? "Moi" : comment.author_name}
           </span>
-          <span style={{ fontSize: "0.72rem", color: "#8d8d8d" }}>
+          <span style={{ fontSize: "0.7rem", color: "#8d8d8d" }}>
             {formatDateTime(comment.created_at)}
           </span>
         </div>
-
         <div
           style={{
             background: isMe ? "#6B1A2A" : "#f5f2ed",
             color: isMe ? "#fff" : "#1A1A1A",
-            borderRadius: isMe ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
-            padding: "12px 14px",
-            fontSize: "0.85rem",
+            borderRadius: isMe ? "10px 3px 10px 10px" : "3px 10px 10px 10px",
+            padding: "10px 13px",
+            fontSize: "0.84rem",
             lineHeight: 1.55,
+            wordBreak: "break-word",
           }}
           dangerouslySetInnerHTML={{ __html: comment.content }}
         />
-
         {canEdit && (
-          <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
+          <div style={{ display: "flex", gap: "10px", marginTop: "5px" }}>
             <button onClick={onEdit} style={linkBtnStyle}>
-              <Pencil size={12} />
+              <Pencil size={11} />
               Modifier
             </button>
             <button onClick={onDelete} style={{ ...linkBtnStyle, color: "#dc2626" }}>
-              <Trash2 size={12} />
+              <Trash2 size={11} />
               Supprimer
             </button>
           </div>
@@ -401,6 +404,24 @@ function CommentCard({
     </div>
   );
 }
+
+// ── Shared style constants ────────────────────────────────────────────────────
+
+const menuItemStyle: React.CSSProperties = {
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  padding: "9px 12px",
+  borderRadius: "8px",
+  border: "none",
+  background: "transparent",
+  fontSize: "0.83rem",
+  fontWeight: 600,
+  color: "#1A1A1A",
+  cursor: "pointer",
+  textAlign: "left",
+};
 
 const linkBtnStyle: React.CSSProperties = {
   background: "none",
@@ -411,9 +432,68 @@ const linkBtnStyle: React.CSSProperties = {
   alignItems: "center",
   gap: "4px",
   color: "#6B1A2A",
-  fontSize: "0.72rem",
+  fontSize: "0.7rem",
   fontWeight: 600,
 };
+
+const infoCardStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.55)",
+  borderRadius: "10px",
+  padding: "12px 14px",
+  border: "1px solid rgba(0,0,0,0.05)",
+  display: "flex",
+  flexDirection: "column",
+  gap: "5px",
+};
+
+const infoLabelStyle: React.CSSProperties = {
+  fontSize: "0.63rem",
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: "0.12em",
+  color: "#8d8d8d",
+};
+
+const infoValueStyle: React.CSSProperties = {
+  fontSize: "0.88rem",
+  fontWeight: 700,
+  color: "#1A1A1A",
+};
+
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: "8px",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#F5F2ED",
+  color: "#666",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: "0.82rem",
+};
+
+const primaryBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: "8px",
+  border: "none",
+  background: "#6B1A2A",
+  color: "#fff",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: "0.82rem",
+};
+
+const dangerBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: "8px",
+  border: "none",
+  background: "#dc2626",
+  color: "#fff",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: "0.82rem",
+};
+
+// ── Main component ─────────────────────────────────────────────────────────────
 
 export default function TaskDetailPage({
   task,
@@ -461,9 +541,7 @@ export default function TaskDetailPage({
   }, [comments]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 0);
+    const timer = setTimeout(() => window.scrollTo(0, 0), 0);
     return () => clearTimeout(timer);
   }, []);
 
@@ -480,9 +558,9 @@ export default function TaskDetailPage({
   const dueDate = task.due_date ? formatDate(task.due_date) : "—";
 
   async function handleAssign() {
-    const teamMemberId = parseInt((session?.user as { id?: string })?.id ?? "0");
-    if (!teamMemberId) return;
-    const res = await assignTaskToSelf(task.id, teamMemberId);
+    const memberId = parseInt((session?.user as { id?: string })?.id ?? "0");
+    if (!memberId) return;
+    const res = await assignTaskToSelf(task.id, memberId);
     if (res.success && res.task) {
       onUpdated?.(res.task);
       addToast("success", "Tâche assignée avec succès");
@@ -511,7 +589,6 @@ export default function TaskDetailPage({
     setUpdatingId(commentId);
     const res = await updateTaskComment(commentId, editContent);
     setUpdatingId(null);
-
     if (res.success && res.comment) {
       setComments((prev) => prev.map((c) => (c.id === commentId ? res.comment! : c)));
       setEditingId(null);
@@ -527,7 +604,6 @@ export default function TaskDetailPage({
     const res = await deleteTaskComment(commentId);
     setDeletingId(null);
     setConfirmDeleteId(null);
-
     if (res.success) {
       setComments((prev) => prev.filter((c) => c.id !== commentId));
       addToast("success", "Commentaire supprimé");
@@ -538,140 +614,221 @@ export default function TaskDetailPage({
 
   return (
     <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "#f7f3ed",
-        padding: "22px 24px 24px",
-        boxSizing: "border-box",
-      }}
+      style={{ width: "100%", minHeight: "100%", background: "#f7f3ed", boxSizing: "border-box" }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "18px",
-        }}
-      >
+      {/* ── Responsive styles ── */}
+      <style>{`
+        .tdp-outer {
+          padding: 20px 24px 32px;
+        }
+        .tdp-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+          gap: 16px;
+          align-items: start;
+        }
+        .tdp-panel {
+          background: #F3EDE4;
+          border-radius: 10px;
+          padding: 22px 24px;
+          border: 1px solid rgba(0,0,0,0.04);
+        }
+        .tdp-comments-panel {
+          background: #F3EDE4;
+          border-radius: 10px;
+          padding: 22px 24px;
+          border: 1px solid rgba(0,0,0,0.04);
+          display: flex;
+          flex-direction: column;
+          /* Fixed height on desktop so comments scroll internally */
+          height: calc(100vh - 130px);
+          min-height: 500px;
+          position: sticky;
+          top: 20px;
+        }
+        .tdp-task-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .tdp-task-title {
+          font-size: clamp(1.4rem, 2.5vw, 2.6rem);
+          line-height: 1.05;
+          margin: 0;
+          color: #1A1A1A;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          word-break: break-word;
+        }
+        .tdp-meta-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 20px;
+        }
+        .tdp-info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-bottom: 22px;
+        }
+        .tdp-files-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        .tdp-actions-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+
+        /* ── Tablet (< 1024px): reduce sidebar width ── */
+        @media (max-width: 1024px) {
+          .tdp-grid {
+            grid-template-columns: 1fr 340px;
+          }
+          .tdp-comments-panel {
+            height: calc(100vh - 130px);
+          }
+        }
+
+        /* ── Mobile (< 768px): single column ── */
+        @media (max-width: 768px) {
+          .tdp-outer {
+            padding: 14px 14px 32px;
+          }
+          .tdp-grid {
+            grid-template-columns: 1fr;
+          }
+          .tdp-panel {
+            padding: 16px;
+          }
+          .tdp-comments-panel {
+            height: auto;
+            min-height: 400px;
+            position: static;
+            padding: 16px;
+          }
+          .tdp-task-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+          }
+          .tdp-task-title {
+            font-size: clamp(1.3rem, 6vw, 1.8rem);
+          }
+          .tdp-actions-row {
+            justify-content: flex-start;
+          }
+          .tdp-info-grid {
+            grid-template-columns: 1fr;
+          }
+          .tdp-files-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        /* ── Very small (< 480px) ── */
+        @media (max-width: 480px) {
+          .tdp-meta-row {
+            gap: 6px;
+          }
+          .tdp-panel, .tdp-comments-panel {
+            padding: 14px 12px;
+          }
+        }
+
+        .rich-editor-comment .ProseMirror {
+          min-height: 72px !important;
+          padding: 10px 12px !important;
+          font-size: 0.88rem !important;
+        }
+      `}</style>
+
+      <div className="tdp-outer">
+        {/* ── Back button ── */}
         <button
           onClick={onBack}
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "8px",
+            gap: "7px",
             border: "none",
             background: "transparent",
             color: "#6B1A2A",
             fontWeight: 700,
             cursor: "pointer",
             padding: 0,
+            marginBottom: "16px",
+            fontSize: "0.78rem",
+            letterSpacing: "0.04em",
           }}
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} />
           RETOUR
         </button>
-      </div>
 
-      <div
-        style={{
-          flex: 1,
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1.15fr) minmax(360px, 0.85fr)",
-          gap: "18px",
-          minHeight: 0,
-        }}
-      >
-        <div
-          style={{
-            background: "#F3EDE4",
-            borderRadius: "18px",
-            padding: "26px 28px",
-            minHeight: 0,
-            overflow: "auto",
-            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.03)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: "20px",
-              marginBottom: "18px",
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <h1
-                style={{
-                  fontSize: "clamp(2rem, 3vw, 3.2rem)",
-                  lineHeight: 1.02,
-                  margin: 0,
-                  color: "#1A1A1A",
-                  fontWeight: 800,
-                  letterSpacing: "-0.04em",
-                }}
-              >
-                {task.title}
-              </h1>
+        {/* ── Main grid ── */}
+        <div className="tdp-grid">
+          {/* ══ Left panel — Task details ══ */}
+          <div className="tdp-panel">
+            {/* Title + actions */}
+            <div className="tdp-task-header">
+              <h1 className="tdp-task-title">{task.title}</h1>
+              <div className="tdp-actions-row">
+                {!hasAssignees && (
+                  <button
+                    onClick={handleAssign}
+                    style={{
+                      padding: "9px 14px",
+                      borderRadius: "10px",
+                      border: "1px solid rgba(107,26,42,0.18)",
+                      background: "#6B1A2A",
+                      color: "#fff",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontSize: "0.82rem",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    S&apos;assigner
+                  </button>
+                )}
+                <MenuDropdown
+                  canManageTasks={canManageTasks}
+                  onEdit={() => setEditTaskOpen(true)}
+                  onDelete={() => setDeleteTaskOpen(true)}
+                />
+              </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", flexShrink: 0 }}>
-              {!hasAssignees && (
-                <button
-                  onClick={handleAssign}
-                  style={{
-                    padding: "10px 16px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(107,26,42,0.18)",
-                    background: "#6B1A2A",
-                    color: "#fff",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  S&apos;assigner
-                </button>
-              )}
-              <MenuDropdown
-                canManageTasks={canManageTasks}
-                onEdit={() => setEditTaskOpen(true)}
-                onDelete={() => setDeleteTaskOpen(true)}
-              />
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              marginBottom: "22px",
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Meta row — assignees, date, status, priority */}
+            <div className="tdp-meta-row">
               {hasAssignees ? (
-                <>
+                <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
                   <div style={{ display: "flex", alignItems: "center" }}>
                     {assignedNames.slice(0, 3).map((name, i) => (
-                      <div key={name + i} style={{ marginLeft: i === 0 ? 0 : -10 }}>
-                        <Avatar name={name} size={30} />
+                      <div key={name + i} style={{ marginLeft: i === 0 ? 0 : -9 }}>
+                        <Avatar name={name} size={28} />
                       </div>
                     ))}
                     {assignedNames.length > 3 && (
                       <div
                         style={{
-                          marginLeft: -10,
-                          width: "30px",
-                          height: "30px",
+                          marginLeft: -9,
+                          width: "28px",
+                          height: "28px",
                           borderRadius: "50%",
                           background: "#e5e7eb",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: "0.72rem",
+                          fontSize: "0.68rem",
                           fontWeight: 700,
                           color: "#6b7280",
                           border: "2px solid #f3ede4",
@@ -681,252 +838,238 @@ export default function TaskDetailPage({
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: "0.82rem", color: "#1A1A1A", fontWeight: 600 }}>
-                    {assignedNames.join(", ")}
+                  <span style={{ fontSize: "0.8rem", color: "#1A1A1A", fontWeight: 600 }}>
+                    {assignedNames.slice(0, 2).join(", ")}
+                    {assignedNames.length > 2 ? ` +${assignedNames.length - 2}` : ""}
                   </span>
-                </>
+                </div>
               ) : (
-                <span style={{ fontSize: "0.85rem", color: "#7a7a7a" }}>Aucun assigné</span>
+                <span style={{ fontSize: "0.82rem", color: "#7a7a7a" }}>Aucun assigné</span>
               )}
-            </div>
 
-            <span style={{ color: "#c8b9a8" }}>•</span>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Clock3 size={15} color="#6B1A2A" />
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1A1A1A" }}>
-                {dueDate}
-              </span>
-            </div>
-            <span style={{ color: "#c8b9a8" }}>•</span>
-            <StatusBadge status={task.status} />
-            <PriorityBadge priority={task.priority} />
-          </div>
+              <span style={{ color: "#c8b9a8", fontSize: "0.75rem" }}>•</span>
 
-          <div style={{ marginBottom: "26px" }}>
-            <SectionLabel>Description</SectionLabel>
-            <div
-              style={{
-                background: "rgba(255,255,255,0.55)",
-                borderRadius: "16px",
-                padding: "18px 18px",
-                color: "#3d3d3d",
-                lineHeight: 1.65,
-                fontSize: "0.95rem",
-                border: "1px solid rgba(0,0,0,0.05)",
-              }}
-            >
-              {task.description || "Aucune description"}
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-              marginBottom: "26px",
-            }}
-          >
-            <div>
-              <SectionLabel>Deadline</SectionLabel>
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.55)",
-                  borderRadius: "16px",
-                  padding: "14px 16px",
-                  border: "1px solid rgba(0,0,0,0.05)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                }}
-              >
-                <CalendarDays size={16} color="#6B1A2A" />
-                <span style={{ fontSize: "0.9rem", fontWeight: 600 }}>
-                  {task.due_date ? formatDate(task.due_date) : "—"}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Clock3 size={14} color="#6B1A2A" />
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1A1A1A" }}>
+                  {dueDate}
                 </span>
               </div>
+
+              <span style={{ color: "#c8b9a8", fontSize: "0.75rem" }}>•</span>
+              <StatusBadge status={task.status} />
+              <PriorityBadge priority={task.priority} />
             </div>
-            <div>
-              <SectionLabel>Créé par</SectionLabel>
+
+            {/* Description */}
+            <div style={{ marginBottom: "22px" }}>
+              <SectionLabel>Description</SectionLabel>
               <div
                 style={{
                   background: "rgba(255,255,255,0.55)",
-                  borderRadius: "16px",
+                  borderRadius: "10px",
                   padding: "14px 16px",
+                  color: "#3d3d3d",
+                  lineHeight: 1.65,
+                  fontSize: "0.92rem",
                   border: "1px solid rgba(0,0,0,0.05)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
                 }}
               >
-                <Users size={16} color="#6B1A2A" />
-                {/* <span style={{ fontSize: "0.9rem", fontWeight: 600 }}>{task.created_by_name || "—"}</span> */}
+                {task.description || (
+                  <span style={{ color: "#aaa", fontStyle: "italic" }}>Aucune description</span>
+                )}
+              </div>
+            </div>
+
+            {/* Deadline + Créé par */}
+            <div className="tdp-info-grid">
+              <div>
+                <SectionLabel>Deadline</SectionLabel>
+                <div style={{ ...infoCardStyle }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <CalendarDays size={15} color="#6B1A2A" />
+                    <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
+                      {task.due_date ? formatDate(task.due_date) : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <SectionLabel>Créé par</SectionLabel>
+                <div style={{ ...infoCardStyle }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Users size={15} color="#6B1A2A" />
+                    <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
+                      {/* {task.created_by_name || "—"} */}—
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Fichiers */}
+            <div style={{ marginBottom: "22px" }}>
+              <SectionLabel>Fichiers</SectionLabel>
+              <div className="tdp-files-grid">
+                <FileCard
+                  name="brand_guidelines_v2.pdf"
+                  size="2.4 MB"
+                  icon={<Paperclip size={15} />}
+                />
+                <FileCard name="dashboard_mockup.png" size="15 MB" icon={<Paperclip size={15} />} />
+              </div>
+            </div>
+
+            {/* Détails */}
+            <div>
+              <SectionLabel>Détails</SectionLabel>
+              <div className="tdp-info-grid" style={{ marginBottom: 0 }}>
+                <div style={infoCardStyle}>
+                  <span style={infoLabelStyle}>Projet</span>
+                  <span style={infoValueStyle}>{projectName}</span>
+                </div>
+                <div style={infoCardStyle}>
+                  <span style={infoLabelStyle}>Statut</span>
+                  <span style={infoValueStyle}>{task.status}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div style={{ marginBottom: "22px" }}>
-            <SectionLabel>Fichiers</SectionLabel>
-            <div
+          {/* ══ Right panel — Comments ══ */}
+          <div className="tdp-comments-panel">
+            <h2
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: "12px",
+                fontSize: "0.88rem",
+                fontWeight: 800,
+                color: "#1A1A1A",
+                margin: "0 0 16px 0",
+                letterSpacing: "0.06em",
               }}
             >
-              <FileCard
-                name="brand_guidelines_v2.pdf"
-                size="2.4 MB"
-                icon={<Paperclip size={16} />}
-              />
-              <FileCard name="dashboard_mockup.png" size="15 MB" icon={<Paperclip size={16} />} />
-            </div>
-          </div>
-
-          <div>
-            <SectionLabel>Détails</SectionLabel>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: "12px",
-              }}
-            >
-              <div style={infoCardStyle}>
-                <span style={infoLabelStyle}>Projet</span>
-                <span style={infoValueStyle}>{projectName}</span>
-              </div>
-              <div style={infoCardStyle}>
-                <span style={infoLabelStyle}>Statut</span>
-                <span style={infoValueStyle}>{task.status}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          style={{
-            background: "#F3EDE4",
-            borderRadius: "18px",
-            padding: "24px",
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.03)",
-          }}
-        >
-          <div style={{ marginBottom: "18px" }}>
-            <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1A1A1A", margin: 0 }}>
               COMMENTAIRES
             </h2>
-          </div>
 
-          <div
-            style={{
-              flex: 1,
-              overflow: "auto",
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-              paddingRight: "4px",
-            }}
-          >
-            {loadingComments ? (
-              <div style={{ color: "#888", fontSize: "0.9rem" }}>Chargement...</div>
-            ) : comments.length === 0 ? (
-              <div
-                style={{
-                  padding: "18px",
-                  background: "rgba(255,255,255,0.6)",
-                  border: "1px dashed rgba(0,0,0,0.08)",
-                  borderRadius: "14px",
-                  color: "#8d8d8d",
-                  fontSize: "0.9rem",
-                }}
-              >
-                Aucun commentaire pour l’instant.
-              </div>
-            ) : (
-              comments.map((c) => {
-                const isMe = c.team_id === teamId;
-                const canEdit = isMe || canManageTasks;
-                return (
-                  <CommentCard
-                    key={c.id}
-                    comment={c}
-                    isMe={isMe}
-                    canEdit={canEdit}
-                    onEdit={() => {
-                      setEditingId(c.id);
-                      setEditContent(c.content);
-                    }}
-                    onDelete={() => setConfirmDeleteId(c.id)}
-                  />
-                );
-              })
-            )}
-            <div ref={commentsEndRef} />
-          </div>
-
-          <div
-            style={{
-              marginTop: "16px",
-              background: "#fff",
-              borderRadius: "18px",
-              border: "1px solid rgba(0,0,0,0.06)",
-              overflow: "hidden",
-            }}
-          >
+            {/* Scrollable list */}
             <div
               style={{
-                padding: "10px 12px",
-                borderBottom: "1px solid rgba(0,0,0,0.06)",
+                flex: 1,
+                overflowY: "auto",
                 display: "flex",
-                gap: "10px",
-                alignItems: "center",
-                color: "#777",
+                flexDirection: "column",
+                gap: "14px",
+                paddingRight: "2px",
+                marginBottom: "14px",
               }}
             >
-              <Bold size={15} />
-              <Italic size={15} />
-              <List size={15} />
-              <Paperclip size={15} />
-              <Smile size={15} />
+              {loadingComments ? (
+                <div style={{ color: "#888", fontSize: "0.88rem" }}>Chargement...</div>
+              ) : comments.length === 0 ? (
+                <div
+                  style={{
+                    padding: "16px",
+                    background: "rgba(255,255,255,0.6)",
+                    border: "1px dashed rgba(0,0,0,0.08)",
+                    borderRadius: "10px",
+                    color: "#8d8d8d",
+                    fontSize: "0.88rem",
+                  }}
+                >
+                  Aucun commentaire pour l&apos;instant.
+                </div>
+              ) : (
+                comments.map((c) => {
+                  const isMe = c.team_id === teamId;
+                  const canEdit = isMe || canManageTasks;
+                  return (
+                    <CommentCard
+                      key={c.id}
+                      comment={c}
+                      isMe={isMe}
+                      canEdit={canEdit}
+                      onEdit={() => {
+                        setEditingId(c.id);
+                        setEditContent(c.content);
+                      }}
+                      onDelete={() => setConfirmDeleteId(c.id)}
+                    />
+                  );
+                })
+              )}
+              <div ref={commentsEndRef} />
             </div>
 
-            <div style={{ padding: "12px" }}>
-              <div style={{ fontSize: "0.85rem" }}>
+            {/* Comment input */}
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "10px",
+                border: "1px solid rgba(0,0,0,0.06)",
+                overflow: "hidden",
+                flexShrink: 0,
+              }}
+            >
+              {/* Toolbar */}
+              <div
+                style={{
+                  padding: "8px 12px",
+                  borderBottom: "1px solid rgba(0,0,0,0.06)",
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                  color: "#888",
+                }}
+              >
+                {[Bold, Italic, List, Paperclip, Smile].map((Icon, i) => (
+                  <button
+                    key={i}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#888",
+                      display: "flex",
+                      padding: "2px",
+                    }}
+                  >
+                    <Icon size={14} />
+                  </button>
+                ))}
+              </div>
+              {/* Editor */}
+              <div style={{ padding: "10px 12px", fontSize: "0.85rem" }}>
                 <RichTextArea key={resetKey} value={newComment} onChange={setNewComment} />
               </div>
-
+              {/* Footer */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  marginTop: "10px",
+                  padding: "8px 12px",
+                  borderTop: "1px solid rgba(0,0,0,0.05)",
                 }}
               >
-                <span style={{ fontSize: "0.72rem", color: "#8d8d8d" }}>Auto-saving draft…</span>
+                <span style={{ fontSize: "0.68rem", color: "#8d8d8d" }}>Auto-saving draft…</span>
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !newComment.trim()}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "8px",
-                    padding: "10px 16px",
-                    borderRadius: "12px",
+                    gap: "7px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
                     border: "none",
                     background:
                       submitting || !newComment.trim() ? "rgba(107,26,42,0.35)" : "#6B1A2A",
                     color: "#fff",
                     fontWeight: 700,
                     cursor: submitting || !newComment.trim() ? "not-allowed" : "pointer",
+                    fontSize: "0.8rem",
                   }}
                 >
-                  <Send size={15} />
+                  <Send size={13} />
                   Commenter
                 </button>
               </div>
@@ -935,6 +1078,7 @@ export default function TaskDetailPage({
         </div>
       </div>
 
+      {/* ── Edit comment modal ── */}
       {editingId !== null && (
         <div
           onClick={() => {
@@ -949,30 +1093,25 @@ export default function TaskDetailPage({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "20px",
+            padding: "16px",
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
               background: "#fff",
-              borderRadius: "18px",
+              borderRadius: "10px",
               width: "100%",
-              maxWidth: "620px",
+              maxWidth: "580px",
               padding: "20px",
             }}
           >
-            <h3 style={{ marginTop: 0 }}>Modifier le commentaire</h3>
+            <h3 style={{ margin: "0 0 14px 0", fontSize: "1rem" }}>Modifier le commentaire</h3>
             <div style={{ fontSize: "0.85rem" }}>
               <RichTextArea value={editContent} onChange={setEditContent} />
             </div>
             <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "10px",
-                marginTop: "14px",
-              }}
+              style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "14px" }}
             >
               <button
                 onClick={() => {
@@ -995,6 +1134,7 @@ export default function TaskDetailPage({
         </div>
       )}
 
+      {/* ── Delete comment modal ── */}
       {confirmDeleteId !== null && (
         <div
           onClick={() => setConfirmDeleteId(null)}
@@ -1006,29 +1146,24 @@ export default function TaskDetailPage({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "20px",
+            padding: "16px",
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
               background: "#fff",
-              borderRadius: "18px",
+              borderRadius: "10px",
               width: "100%",
-              maxWidth: "420px",
+              maxWidth: "400px",
               padding: "22px",
             }}
           >
-            <h3 style={{ marginTop: 0 }}>Supprimer le commentaire ?</h3>
-            <p style={{ color: "#666" }}>Cette action est irréversible.</p>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "10px",
-                marginTop: "14px",
-              }}
-            >
+            <h3 style={{ margin: "0 0 8px 0", fontSize: "1rem" }}>Supprimer le commentaire ?</h3>
+            <p style={{ color: "#666", margin: "0 0 18px 0", fontSize: "0.88rem" }}>
+              Cette action est irréversible.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
               <button onClick={() => setConfirmDeleteId(null)} style={secondaryBtnStyle}>
                 Annuler
               </button>
@@ -1040,6 +1175,7 @@ export default function TaskDetailPage({
         </div>
       )}
 
+      {/* ── Task modals ── */}
       {editTaskOpen && (
         <EditModal
           mode="update"
@@ -1073,6 +1209,7 @@ export default function TaskDetailPage({
         />
       )}
 
+      {/* ── Toasts ── */}
       {toasts.map((t) => (
         <ToastNotification
           key={t.id}
@@ -1080,68 +1217,6 @@ export default function TaskDetailPage({
           onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
         />
       ))}
-
-      <style>{`
-        .rich-editor-comment .ProseMirror {
-          min-height: 80px !important;
-          padding: 10px 12px !important;
-          font-size: 0.9rem !important;
-        }
-      `}</style>
     </div>
   );
 }
-
-const infoCardStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.55)",
-  borderRadius: "14px",
-  padding: "14px 16px",
-  border: "1px solid rgba(0,0,0,0.05)",
-  display: "flex",
-  flexDirection: "column",
-  gap: "6px",
-};
-
-const infoLabelStyle: React.CSSProperties = {
-  fontSize: "0.66rem",
-  fontWeight: 800,
-  textTransform: "uppercase",
-  letterSpacing: "0.12em",
-  color: "#8d8d8d",
-};
-
-const infoValueStyle: React.CSSProperties = {
-  fontSize: "0.9rem",
-  fontWeight: 700,
-  color: "#1A1A1A",
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: "10px",
-  border: "1px solid rgba(0,0,0,0.08)",
-  background: "#F5F2ED",
-  color: "#666",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: "10px",
-  border: "none",
-  background: "#6B1A2A",
-  color: "#fff",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const dangerBtnStyle: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: "10px",
-  border: "none",
-  background: "#dc2626",
-  color: "#fff",
-  fontWeight: 700,
-  cursor: "pointer",
-};
