@@ -51,7 +51,7 @@ model project {
   description String?
   icon        String?
   team_ids    Int[]
-
+  created_at  DateTime  @default(now())
   // Relations
   tasks       tasks[]
   rapports    rapports[]
