@@ -246,8 +246,8 @@ export async function sendToSlack(data: {
 
       return prisma.rapports.create({
         data: {
-          team_id,
-          project_id: p.id,
+          team: { connect: { id: team_id } },
+          project: { connect: { id: p.id } },
           working_built: projectTaskTitles,
           validated_learning: "",
           broken_features: challenges ?? "",
@@ -261,8 +261,8 @@ export async function sendToSlack(data: {
     if (inserts.length === 0) {
       await prisma.rapports.create({
         data: {
-          team_id,
-          project_id: null,
+          team: { connect: { id: team_id } },
+          project: undefined,
           working_built: "",
           validated_learning: "",
           broken_features: challenges ?? "",

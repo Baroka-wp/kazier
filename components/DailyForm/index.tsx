@@ -276,7 +276,9 @@ export default function DailyForm() {
   // ── Soumission ─────────────────────────────────────────────────────────────
 
   async function handleSubmit() {
-    if (!teamId) return;
+    if (!teamId) {
+      return setBlockReason("not_found");
+    }
 
     const result = await sendToSlack({
       team_id: teamId,
@@ -289,7 +291,9 @@ export default function DailyForm() {
       extra_message: answers["extra_message"] || "",
     });
 
-    if (!result.success) return;
+    if (!result.success) {
+      return result;
+    }
 
     const evalList = Object.values(evaluations).filter(
       (e) => e.communication > 0 && e.collaboration > 0 && e.punctuality > 0
