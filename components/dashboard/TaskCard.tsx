@@ -271,7 +271,6 @@ function AvatarStack({
 
 export default function TaskCard({
   task,
-  isAssignedToMe,
   isFree,
   teamMemberId,
   onTaskUpdated,
