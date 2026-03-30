@@ -31,6 +31,7 @@ export type Project = {
   name: string | null;
   description: string | null;
   icon: string | null;
+  created_at?: Date;
   team_ids: number[];
   team_members?: TeamMember[];
 };
@@ -217,6 +218,7 @@ export async function getProject(id: number): Promise<ProjectResult> {
         name: project.name,
         description: project.description,
         icon: project.icon,
+        created_at: project.created_at,
         team_ids: project.team_ids,
         team_members: members,
       },

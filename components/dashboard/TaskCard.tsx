@@ -2,18 +2,12 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Calendar, MessageSquare, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
-import { updateTaskStatus, assignTaskToSelf } from "@/lib/team-actions";
+import { assignTaskToSelf } from "@/lib/team-actions";
 import { type Task } from "@/lib/task-actions";
-import ReviewConfirmModal from "@/components/dashboard/ReviewConfirmModal";
 
-const TaskDetailModal = dynamic(() => import("@/components/dashboard/TaskDetailModal"), {
-  ssr: false,
-});
-
-// ── Types & helpers ───────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type Props = {
   task: Task;
@@ -22,29 +16,61 @@ type Props = {
   isFree: boolean;
   teamMemberId: number;
   onTaskUpdated: (updated: Task) => void;
+  onCardClick?: (task: Task) => void;
   isDragging?: boolean;
   readOnly?: boolean;
   isTM?: boolean;
 };
 
-function PriorityDot({ priority }: { priority: string }) {
-  const colors: Record<string, string> = {
-    low: "#22c55e",
-    medium: "#fbbf24",
-    high: "#ef4444",
-  };
+// ── Priority badge ────────────────────────────────────────────────────────────
+
+const PRIORITY_CONFIG: Record<
+  string,
+  { label: string; color: string; bg: string; border: string }
+> = {
+  low: {
+    label: "BASSE PRIORITÉ",
+    color: "#16a34a",
+    bg: "rgba(22,163,74,0.09)",
+    border: "rgba(22,163,74,0.20)",
+  },
+  medium: {
+    label: "PRIORITÉ MOYENNE",
+    color: "#92400e",
+    bg: "rgba(180,83,9,0.09)",
+    border: "rgba(180,83,9,0.22)",
+  },
+  high: {
+    label: "HAUTE PRIORITÉ",
+    color: "#6B1A2A",
+    bg: "rgba(107,26,42,0.09)",
+    border: "rgba(107,26,42,0.22)",
+  },
+};
+
+function PriorityBadge({ priority }: { priority: string }) {
+  const cfg = PRIORITY_CONFIG[priority] ?? PRIORITY_CONFIG.medium;
   return (
-    <div
+    <span
       style={{
-        width: "8px",
-        height: "8px",
-        borderRadius: "50%",
-        background: colors[priority] || "#fbbf24",
-        flexShrink: 0,
+        display: "inline-block",
+        padding: "3px 9px",
+        borderRadius: "6px",
+        fontSize: "0.58rem",
+        fontWeight: 700,
+        letterSpacing: "0.05em",
+        background: cfg.bg,
+        color: cfg.color,
+        border: `1px solid ${cfg.border}`,
+        textTransform: "uppercase",
       }}
-    />
+    >
+      {cfg.label}
+    </span>
   );
 }
+
+// ── Date formatter ────────────────────────────────────────────────────────────
 
 function formatDate(dateString: string | null): string | null {
   if (!dateString) return null;
@@ -57,60 +83,19 @@ function formatDate(dateString: string | null): string | null {
   }
 }
 
-function StatusSelect({
-  status,
-  onStatusChange,
-  disabled,
-  isTM,
-}: {
-  status: string;
-  onStatusChange: (s: string) => void;
-  disabled: boolean;
-  isTM?: boolean;
-}) {
-  const isLocked = !isTM && status === "review";
-  return (
-    <select
-      value={status}
-      onChange={(e) => onStatusChange(e.target.value)}
-      disabled={disabled || isLocked}
-      style={{
-        padding: "4px 6px",
-        borderRadius: "6px",
-        border: "1px solid rgba(0,0,0,0.1)",
-        background: disabled || isLocked ? "rgba(0,0,0,0.05)" : "rgba(107,26,42,0.1)",
-        color: disabled || isLocked ? "#999" : "#6B1A2A",
-        fontSize: "0.7rem",
-        fontFamily: "inherit",
-        cursor: disabled || isLocked ? "not-allowed" : "pointer",
-        opacity: disabled || isLocked ? 0.6 : 1,
-      }}
-    >
-      <option value="à faire">À faire</option>
-      <option value="en cours">En cours</option>
-      <option value="review">Review</option>
-      {isTM && <option value="terminée">Terminée</option>}
-    </select>
-  );
-}
-
-// ── Timer ─────────────────────────────────────────────────────────────────────
+// ── Timer badge ───────────────────────────────────────────────────────────────
 
 function useCountdown(dueDate: string | null) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-
   useEffect(() => {
     if (!dueDate) return;
-
     const target = new Date(dueDate).getTime();
     if (isNaN(target)) return;
-
     const tick = () => setTimeLeft(target - Date.now());
     tick();
-    const interval = setInterval(tick, 60_000); // mise à jour toutes les minutes
+    const interval = setInterval(tick, 60_000);
     return () => clearInterval(interval);
   }, [dueDate]);
-
   return timeLeft;
 }
 
@@ -120,11 +105,10 @@ function TimerBadge({ dueDate, status }: { dueDate: string | null; status: strin
   if (!dueDate || ms === null || status === "terminée") return null;
 
   const isExpired = ms <= 0;
-  const isCritical = ms <= 24 * 60 * 60 * 1000; // ≤ 24h
-  const isWarning = ms <= 3 * 24 * 60 * 60 * 1000; // ≤ 3j
-  const isNear = ms <= 7 * 24 * 60 * 60 * 1000; // ≤ 7j
+  const isCritical = ms <= 24 * 60 * 60 * 1000;
+  const isWarning = ms <= 3 * 24 * 60 * 60 * 1000;
+  const isNear = ms <= 7 * 24 * 60 * 60 * 1000;
 
-  // Couleurs
   const color = isExpired
     ? "#dc2626"
     : isCritical
@@ -132,41 +116,38 @@ function TimerBadge({ dueDate, status }: { dueDate: string | null; status: strin
       : isWarning
         ? "#f97316"
         : isNear
-          ? "#eab308"
+          ? "#b45309"
           : "#6b7280";
-
   const bg = isExpired
-    ? "rgba(220,38,38,0.10)"
+    ? "rgba(220,38,38,0.09)"
     : isCritical
-      ? "rgba(239,68,68,0.08)"
+      ? "rgba(239,68,68,0.07)"
       : isWarning
-        ? "rgba(249,115,22,0.08)"
+        ? "rgba(249,115,22,0.07)"
         : isNear
-          ? "rgba(234,179,8,0.08)"
-          : "rgba(107,114,128,0.07)";
-
+          ? "rgba(180,83,9,0.07)"
+          : "rgba(107,114,128,0.06)";
   const border = isExpired
-    ? "rgba(220,38,38,0.25)"
+    ? "rgba(220,38,38,0.22)"
     : isCritical
-      ? "rgba(239,68,68,0.20)"
+      ? "rgba(239,68,68,0.18)"
       : isWarning
-        ? "rgba(249,115,22,0.20)"
+        ? "rgba(249,115,22,0.18)"
         : isNear
-          ? "rgba(234,179,8,0.20)"
-          : "rgba(107,114,128,0.15)";
+          ? "rgba(180,83,9,0.18)"
+          : "rgba(107,114,128,0.14)";
 
-  // Formatage du label
   let label: string;
   if (isExpired) {
-    const overMs = Math.abs(ms);
-    const overDays = Math.floor(overMs / (24 * 60 * 60 * 1000));
-    const overHrs = Math.floor((overMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-    label = overDays > 0 ? `Expiré · ${overDays}j ${overHrs}h` : `Expiré · ${overHrs}h`;
+    const over = Math.abs(ms);
+    const d = Math.floor(over / (24 * 60 * 60 * 1000));
+    const h = Math.floor((over % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    label = d > 0 ? `Expiré · ${d}j ${h}h` : `Expiré · ${h}h`;
   } else {
-    const days = Math.floor(ms / (24 * 60 * 60 * 1000));
-    const hrs = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-    const mins = Math.floor((ms % (60 * 60 * 1000)) / 60_000);
-    label = days > 0 ? `${days}j ${hrs}h` : hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+    const d = Math.floor(ms / (24 * 60 * 60 * 1000));
+    const h = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    const m = Math.floor((ms % (60 * 60 * 1000)) / 60_000);
+    label = d > 0 ? `${d}j ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
   const icon = isExpired ? "⚠️" : isCritical ? "🔴" : isWarning ? "🟠" : isNear ? "🟡" : "🟢";
@@ -178,7 +159,7 @@ function TimerBadge({ dueDate, status }: { dueDate: string | null; status: strin
         display: "inline-flex",
         alignItems: "center",
         gap: "4px",
-        padding: "3px 7px",
+        padding: "3px 8px",
         borderRadius: "8px",
         fontSize: "0.62rem",
         fontWeight: 600,
@@ -195,22 +176,110 @@ function TimerBadge({ dueDate, status }: { dueDate: string | null; status: strin
   );
 }
 
+// ── Avatar stack ──────────────────────────────────────────────────────────────
+
+function AvatarStack({
+  names,
+  assignedTo,
+  teamMemberId,
+  isTM,
+}: {
+  names: string[];
+  assignedTo: number[];
+  teamMemberId: number;
+  isTM: boolean;
+}) {
+  const MAX_VISIBLE = 2;
+  const visible = names.slice(0, MAX_VISIBLE);
+  const overflow = names.length - MAX_VISIBLE;
+
+  function initials(name: string) {
+    return name
+      .split(" ")
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+
+  function avatarColor(name: string) {
+    // Brand palette — warm tones cohérents avec #6B1A2A
+    const palette = ["#6B1A2A", "#8B2438", "#3D1A24", "#A0522D", "#7B3F00", "#4A1020"];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return palette[Math.abs(hash) % palette.length];
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center" }}>
+      {visible.map((name, i) => {
+        const isMe = !isTM && assignedTo[i] === teamMemberId;
+        const bg = avatarColor(name);
+        return (
+          <div
+            key={i}
+            title={name}
+            style={{
+              width: "26px",
+              height: "26px",
+              borderRadius: "50%",
+              background: bg,
+              color: "#fff",
+              fontSize: "0.58rem",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: isMe ? "2px solid #6B1A2A" : "2px solid #fff",
+              marginLeft: i > 0 ? "-8px" : 0,
+              zIndex: visible.length - i,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+              outline: isMe ? "2px solid rgba(107,26,42,0.25)" : "none",
+            }}
+          >
+            {initials(name)}
+          </div>
+        );
+      })}
+      {overflow > 0 && (
+        <div
+          style={{
+            width: "26px",
+            height: "26px",
+            borderRadius: "50%",
+            background: "#e5e7eb",
+            color: "#6b7280",
+            fontSize: "0.58rem",
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "2px solid #fff",
+            marginLeft: "-8px",
+            zIndex: 0,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.10)",
+          }}
+        >
+          +{overflow}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── TaskCard ──────────────────────────────────────────────────────────────────
 
 export default function TaskCard({
   task,
-  isAssignedToMe,
   isFree,
   teamMemberId,
   onTaskUpdated,
+  onCardClick = () => {},
   isDragging = false,
   readOnly = false,
   isTM = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
-  const [showReviewConfirm, setShowReviewConfirm] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [shaking, setShaking] = useState(false);
 
   const {
@@ -222,7 +291,7 @@ export default function TaskCard({
     isDragging: isSortableDragging,
   } = useSortable({
     id: `task-${task.id}`,
-    disabled: readOnly || task.status === "review", // bloquer drag si review
+    disabled: readOnly || task.status === "review",
   });
 
   const style = {
@@ -230,28 +299,17 @@ export default function TaskCard({
     transition,
   };
 
-  async function handleAssign() {
+  async function handleAssign(e: React.MouseEvent) {
+    e.stopPropagation();
     setLoading(true);
     const res = await assignTaskToSelf(task.id, teamMemberId);
     setLoading(false);
     if (res.success && res.task) onTaskUpdated(res.task);
   }
 
-  async function handleStatusChange(newStatus: string) {
-    // Intercepter le passage en review pour afficher la confirmation
-    if (newStatus === "review" && !isTM) {
-      setPendingStatus(newStatus);
-      setShowReviewConfirm(true);
-      return;
-    }
-    await applyStatusChange(newStatus);
-  }
-
-  async function applyStatusChange(newStatus: string) {
-    setLoading(true);
-    const res = await updateTaskStatus(task.id, newStatus as Task["status"]);
-    setLoading(false);
-    if (res.success && res.task) onTaskUpdated(res.task);
+  function handleCardClick() {
+    if (loading) return;
+    onCardClick(task);
   }
 
   const formattedDate = formatDate(task.due_date);
@@ -264,77 +322,90 @@ export default function TaskCard({
         ref={setNodeRef}
         style={{
           ...style,
-          background: readOnly ? "#f9f9f9" : "#fff",
-          borderRadius: "10px",
+          background: "#fff",
+          borderRadius: "12px",
           border:
             isReview && !isTM
-              ? "1.5px solid rgba(139,92,246,0.25)" // bordure violette si review
+              ? "1.5px solid rgba(139,92,246,0.25)"
               : "1.5px solid rgba(0,0,0,0.06)",
-          padding: "12px",
+          padding: "14px 16px",
           marginBottom: "10px",
-          boxShadow: isBeingDragged ? "0 12px 32px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.04)",
+          boxShadow: isBeingDragged ? "0 16px 40px rgba(0,0,0,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
           opacity: isSortableDragging ? 0.4 : 1,
-          cursor:
-            readOnly || (isReview && !isTM) ? "default" : isBeingDragged ? "grabbing" : "grab",
-          transition: "box-shadow 0.15s, opacity 0.15s",
+          cursor: readOnly
+            ? "default"
+            : isReview && !isTM
+              ? "default"
+              : isBeingDragged
+                ? "grabbing"
+                : "pointer",
+          transition: "box-shadow 0.15s, opacity 0.15s, transform 0.1s",
           animation: shaking ? "shake 0.4s ease" : undefined,
+          userSelect: "none",
         }}
         {...attributes}
         {...(readOnly || (isReview && !isTM) ? {} : listeners)}
+        onClick={handleCardClick}
         onPointerDown={(e) => {
-          if (task.status === "review" && !isTM) {
+          if (isReview && !isTM) {
             setShaking(true);
             setTimeout(() => setShaking(false), 500);
           }
-          // Laisser les listeners DnD gérer le reste
           listeners?.onPointerDown?.(e);
         }}
+        onMouseEnter={(e) => {
+          if (!isBeingDragged && !readOnly) {
+            (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.10)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.05)";
+        }}
       >
-        {/* Titre + Priority */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-          <PriorityDot priority={task.priority} />
-          <h4
-            style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1A1A1A", flex: 1, margin: 0 }}
-          >
-            {task.title}
-          </h4>
-          {/* Icône cadenas si review et pas TM */}
-          {isReview && !isTM && (
-            <div title="En attente de validation — déplacement bloqué">
-              <Lock size={12} color="#8b5cf6" />
-            </div>
+        {/* Row 1 — Priority badge + Date */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "10px",
+          }}
+        >
+          <PriorityBadge priority={task.priority} />
+          {formattedDate && (
+            <span style={{ fontSize: "0.65rem", color: "#aaa", fontWeight: 500 }}>
+              {formattedDate}
+            </span>
           )}
         </div>
 
-        {/* Badge review bloqué — seulement pour T */}
-        {isReview && !isTM && (
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "5px",
-              padding: "3px 8px",
-              borderRadius: "8px",
-              fontSize: "0.62rem",
-              fontWeight: 500,
-              background: "rgba(139,92,246,0.08)",
-              color: "#8b5cf6",
-              marginBottom: "6px",
-              border: "1px solid rgba(139,92,246,0.15)",
-            }}
-          >
-            <Lock size={10} color="#8b5cf6" /> En attente de validation
-          </div>
-        )}
+        {/* Title */}
+        <h4
+          style={{
+            fontSize: "0.88rem",
+            fontWeight: 600,
+            color: "#111",
+            margin: "0 0 4px 0",
+            lineHeight: 1.4,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "6px",
+          }}
+        >
+          <span style={{ flex: 1 }}>{task.title}</span>
+          {isReview && !isTM && (
+            <Lock size={13} color="#8b5cf6" style={{ flexShrink: 0, marginTop: "2px" }} />
+          )}
+        </h4>
 
-        {/* Description */}
+        {/* Description — optional, 2 lines max */}
         {task.description && (
           <p
             style={{
-              fontSize: "0.75rem",
-              color: "#666",
-              margin: "6px 0",
-              lineHeight: 1.4,
+              fontSize: "0.73rem",
+              color: "#888",
+              margin: "4px 0 10px 0",
+              lineHeight: 1.45,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -345,56 +416,83 @@ export default function TaskCard({
           </p>
         )}
 
-        {/* Tâche libre — indication pour T */}
-        {isFree && !isTM && (
-          <div
-            style={{
-              fontSize: "0.62rem",
-              color: "#aaa",
-              fontStyle: "italic",
-              marginTop: "4px",
-            }}
-          >
-            💡 Cliquez &quot;S&apos;assigner&quot; pour prendre en charge
-          </div>
-        )}
-
-        {/* Assignés */}
-        {task.assigned_to_names && task.assigned_to_names.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
-            {task.assigned_to_names.map((name, i) => {
-              const isMe = !isTM && task.assigned_to?.[i] === teamMemberId;
-              return (
-                <span
-                  key={i}
-                  style={{
-                    padding: "2px 7px",
-                    borderRadius: "20px",
-                    fontSize: "0.62rem",
-                    fontWeight: isMe ? 600 : 400,
-                    background: isMe ? "rgba(107,26,42,0.1)" : "rgba(0,0,0,0.05)",
-                    color: isMe ? "#6B1A2A" : "#aaa",
-                  }}
-                >
-                  {isMe ? `✓ ${name}` : name}
-                </span>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Actions */}
+        {/* Row — Timer + Avatars */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "6px",
-            marginTop: "8px",
-            flexWrap: "wrap",
+            justifyContent: "space-between",
+            marginTop: "10px",
           }}
-          onPointerDown={(e) => e.stopPropagation()}
         >
-          {readOnly ? (
+          {/* Timer */}
+          <TimerBadge dueDate={task.due_date} status={task.status} />
+
+          {/* Avatars + assign button */}
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "8px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isFree && !isTM ? (
+              <button
+                onClick={handleAssign}
+                disabled={loading}
+                style={{
+                  padding: "3px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid rgba(107,26,42,0.25)",
+                  background: "rgba(107,26,42,0.05)",
+                  color: "#6B1A2A",
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.6 : 1,
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.background = "rgba(107,26,42,0.12)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(107,26,42,0.05)";
+                }}
+              >
+                {loading ? "..." : "S'assigner"}
+              </button>
+            ) : task.assigned_to_names && task.assigned_to_names.length > 0 ? (
+              <AvatarStack
+                names={task.assigned_to_names}
+                assignedTo={task.assigned_to ?? []}
+                teamMemberId={teamMemberId}
+                isTM={isTM}
+              />
+            ) : null}
+          </div>
+        </div>
+
+        {/* Review locked badge */}
+        {isReview && !isTM && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              marginTop: "8px",
+              padding: "3px 8px",
+              borderRadius: "8px",
+              fontSize: "0.62rem",
+              fontWeight: 500,
+              background: "rgba(139,92,246,0.08)",
+              color: "#8b5cf6",
+              border: "1px solid rgba(139,92,246,0.15)",
+            }}
+          >
+            <Lock size={10} color="#8b5cf6" /> En attente de validation
+          </div>
+        )}
+
+        {/* Completed badge (readOnly) */}
+        {readOnly && (
+          <div style={{ marginTop: "8px" }}>
             <span
               style={{
                 display: "inline-flex",
@@ -402,135 +500,15 @@ export default function TaskCard({
                 borderRadius: "8px",
                 fontSize: "0.65rem",
                 fontWeight: 500,
-                background: "rgba(16,185,129,0.1)",
+                background: "rgba(16,185,129,0.10)",
                 color: "#10b981",
               }}
             >
               ✓ Terminée par l&apos;équipe
             </span>
-          ) : (
-            <>
-              {(isAssignedToMe || isTM) && (
-                <StatusSelect
-                  status={task.status}
-                  onStatusChange={handleStatusChange}
-                  disabled={loading}
-                  isTM={isTM}
-                />
-              )}
-
-              {/* Bouton détails */}
-              <button
-                onClick={() => setShowDetail(true)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "3px",
-                  padding: "3px 8px",
-                  borderRadius: "6px",
-                  border: "1px solid rgba(0,0,0,0.08)",
-                  background: "#F5F2ED",
-                  color: "#888",
-                  fontSize: "0.65rem",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(107,26,42,0.07)";
-                  e.currentTarget.style.color = "#6B1A2A";
-                  e.currentTarget.style.borderColor = "rgba(107,26,42,0.2)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#F5F2ED";
-                  e.currentTarget.style.color = "#888";
-                  e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
-                }}
-              >
-                <MessageSquare size={11} />
-                Détails
-              </button>
-
-              {/* Bouton S'assigner */}
-              {isFree && !isTM && (
-                <button
-                  onClick={handleAssign}
-                  disabled={loading}
-                  style={{
-                    padding: "3px 8px",
-                    borderRadius: "6px",
-                    border: "1px solid rgba(107,26,42,0.2)",
-                    background: "rgba(107,26,42,0.05)",
-                    color: "#6B1A2A",
-                    fontSize: "0.65rem",
-                    fontWeight: 500,
-                    cursor: loading ? "not-allowed" : "pointer",
-                    opacity: loading ? 0.6 : 1,
-                    transition: "all 0.15s",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!loading) e.currentTarget.style.background = "rgba(107,26,42,0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(107,26,42,0.05)";
-                  }}
-                >
-                  {loading ? "..." : "S'assigner"}
-                </button>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Due Date + Timer */}
-        {formattedDate && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "6px",
-              marginTop: "8px",
-              flexWrap: "wrap",
-            }}
-          >
-            {/* Date fixe à gauche */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                fontSize: "0.65rem",
-                color: "#999",
-              }}
-            >
-              <Calendar size={12} color="#999" />
-              {formattedDate}
-            </div>
-
-            {/* Timer dynamique à droite */}
-            <TimerBadge dueDate={task.due_date} status={task.status} />
           </div>
         )}
       </div>
-
-      {/* Modal détails */}
-      {showDetail && <TaskDetailModal task={task} onClose={() => setShowDetail(false)} />}
-
-      {/* Modal confirmation review */}
-      {showReviewConfirm && (
-        <ReviewConfirmModal
-          onConfirm={async () => {
-            setShowReviewConfirm(false);
-            if (pendingStatus) await applyStatusChange(pendingStatus);
-            setPendingStatus(null);
-          }}
-          onCancel={() => {
-            setShowReviewConfirm(false);
-            setPendingStatus(null);
-          }}
-        />
-      )}
 
       <style>{`
         @keyframes shake {
@@ -539,10 +517,6 @@ export default function TaskCard({
           40%       { transform: translateX(6px); }
           60%       { transform: translateX(-4px); }
           80%       { transform: translateX(4px); }
-        }
-        @keyframes popIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to   { opacity: 1; transform: scale(1); }
         }
         @keyframes pulse {
           0%, 100% { opacity: 1; }

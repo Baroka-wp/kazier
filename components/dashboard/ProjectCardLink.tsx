@@ -50,7 +50,7 @@ export default function ProjectCardLink({ project }: Props) {
   console.log("🎨 ProjectCardLink - Icon ID:", project.icon); // Debug
 
   return (
-    <Link href={`/dashboard/teams/${project.id}`} style={{ textDecoration: "none" }}>
+    <Link href={`/dashboard/teams/team-projects/${project.id}`} style={{ textDecoration: "none" }}>
       <div
         style={{
           background: "#fff",
