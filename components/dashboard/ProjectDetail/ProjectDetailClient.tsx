@@ -622,7 +622,7 @@ export default function ProjectDetailClient({ project }: Props) {
                       height: "100%",
                       width: `${progressPercent}%`,
                       background: "#6B1A2A",
-                      borderRadius: "999px",
+                      borderRadius: "10px",
                       transition: "width 0.6s ease",
                     }}
                   />
