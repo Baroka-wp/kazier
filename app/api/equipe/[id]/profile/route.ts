@@ -32,10 +32,17 @@ export type EvaluationComment = {
   comment: string;
 };
 
+export type ProjectInfo = {
+  id: number;
+  name: string;
+  icon: string | null;
+};
+
 export type TeamMemberProfileData = {
   member: TeamMember;
   stats: EvaluationStats;
   comments: EvaluationComment[];
+  projects: ProjectInfo[];
 };
 
 export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
@@ -140,10 +147,30 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
         };
       });
 
+    // 4) Projets du membre
+    const projects = await prisma.project.findMany({
+      where: {
+        team_ids: { has: memberId },
+      },
+      select: {
+        id: true,
+        name: true,
+        icon: true,
+      },
+      orderBy: { name: "asc" },
+    });
+
+    const projectsInfo = projects.map((p) => ({
+      id: p.id,
+      name: p.name ?? "Sans nom",
+      icon: p.icon,
+    }));
+
     return NextResponse.json({
       member,
       stats,
       comments,
+      projects: projectsInfo,
     });
   } catch (error) {
     console.error("[API /equipe/[id]/profile]", error);

@@ -1,41 +1,1044 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, Plus, Users, CheckSquare, FileText, Calendar } from "lucide-react";
+import { ChevronLeft, Users, CheckSquare, FileText, Plus, Settings, X, Layers, Database } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Project } from "@/lib/project-actions";
-import { getTasks, Task } from "@/lib/task-actions";
-import { getReportsWithProjects } from "@/lib/rapports-actions";
+import { Project, TeamMember, getTeams } from "@/lib/project-actions";
+import { getTasks, Task, createTask, getTeamMembersByProject } from "@/lib/task-actions";
+import { getReportsWithProjects } from "@/lib/report-actions";
+import { updateProject } from "@/lib/project-actions";
+import TMKanbanWrapper from "@/components/dashboard/TMKanbanWrapper";
 
 type ProjectExtended = Project & {
   description: string | null;
   created_at?: string | Date;
 };
 
-type TaskWithStatus = Task & {
-  status?: string;
-  completed?: boolean;
-};
-
-type TeamMember = {
-  id: number;
-  first_name: string | null;
-  last_name: string | null;
-  role: string | null;
-};
-
 type Report = {
   id: number;
   full_name: string;
-  work_built: string;
+  role?: string;
+  work_built?: string;
+  working_built?: string;
+  broken_features?: string;
+  validated_learning?: string;
+  needed_learning?: string;
+  tomorrow_build?: string;
+  extra_message?: string;
   created_at: string;
+  submitted_at?: string;
+  project_name?: string;
 };
 
+// ── Create Task Modal ─────────────────────────────────────────────────────────
+function CreateTaskModal({
+  projectId,
+  onClose,
+  onSaved,
+}: {
+  projectId: number;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [values, setValues] = useState({
+    title: "",
+    description: "",
+    priority: "medium" as const,
+    due_date: "",
+    assigned_to: [] as number[],
+  });
+
+  const [projectMembers, setProjectMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
+
+  useEffect(() => {
+    async function loadMembers() {
+      const res = await getTeamMembersByProject(projectId);
+      if (res.success && res.members) {
+        setProjectMembers(res.members);
+      }
+    }
+    loadMembers();
+  }, [projectId]);
+
+  function toggleMember(id: number) {
+    setValues((v) => ({
+      ...v,
+      assigned_to: v.assigned_to.includes(id)
+        ? v.assigned_to.filter((x) => x !== id)
+        : [...v.assigned_to, id],
+    }));
+  }
+
+  async function handleSubmit() {
+    if (!values.title.trim()) {
+      setServerError("Le titre est obligatoire.");
+      return;
+    }
+    setLoading(true);
+
+    const data = {
+      title: values.title,
+      description: values.description,
+      status: "à faire" as const,
+      priority: values.priority,
+      project_id: projectId,
+      assigned_to: values.assigned_to.length ? values.assigned_to : null,
+      due_date: values.due_date || null,
+    };
+
+    const result = await createTask(data);
+    setLoading(false);
+
+    if (result.success) {
+      onSaved();
+      onClose();
+    } else {
+      setServerError(result.error || "Erreur lors de la création.");
+    }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.35)",
+        zIndex: 150,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: "0",
+          width: "100%",
+          maxWidth: 520,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          border: "1px solid rgba(0,0,0,0.08)",
+          animation: "popIn 0.2s ease",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: "18px 20px",
+            borderBottom: "1px solid rgba(0,0,0,0.06)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            position: "sticky",
+            top: 0,
+            background: "#fff",
+            zIndex: 1,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 600,
+                textTransform: "uppercase" as const,
+                letterSpacing: "0.1em",
+                color: "#aaa",
+                marginBottom: 2,
+              }}
+            >
+              Nouvelle tâche
+            </div>
+            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A" }}>
+              Ajouter une tâche
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "8px",
+              border: "1px solid rgba(0,0,0,0.08)",
+              background: "#e8eaed",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#888",
+              transition: "all 0.15s",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px" }}>
+          {serverError && (
+            <div
+              style={{
+                marginBottom: 12,
+                padding: "10px 12px",
+                borderRadius: "0",
+                background: "rgba(229,62,62,0.07)",
+                border: "1px solid rgba(229,62,62,0.2)",
+                fontSize: "0.8rem",
+                color: "#e53e3e",
+              }}
+            >
+              {serverError}
+            </div>
+          )}
+
+          {/* Title */}
+          <div style={{ marginBottom: 12 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "#666",
+                marginBottom: 6,
+              }}
+            >
+              Titre *
+            </label>
+            <input
+              type="text"
+              value={values.title}
+              onChange={(e) => setValues((v) => ({ ...v, title: e.target.value }))}
+              placeholder="Ex: Implémenter l'authentification"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: "0",
+                border: "1.5px solid rgba(0,0,0,0.08)",
+                background: "#e8eaed",
+                fontSize: "0.9rem",
+                fontFamily: "'DM Sans', sans-serif",
+                color: "#1A1A1A",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {/* Description */}
+          <div style={{ marginBottom: 12 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "#666",
+                marginBottom: 6,
+              }}
+            >
+              Description
+            </label>
+            <textarea
+              value={values.description}
+              onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
+              placeholder="Décrivez la tâche..."
+              rows={3}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: "0",
+                border: "1.5px solid rgba(0,0,0,0.08)",
+                background: "#e8eaed",
+                fontSize: "0.9rem",
+                fontFamily: "'DM Sans', sans-serif",
+                color: "#1A1A1A",
+                outline: "none",
+                resize: "vertical" as const,
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {/* Priority */}
+          <div style={{ marginBottom: 12 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "#666",
+                marginBottom: 6,
+              }}
+            >
+              Priorité
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {(["low", "medium", "high"] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setValues((v) => ({ ...v, priority: p }))}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "0",
+                    border: values.priority === p ? "2px solid #6B1A2A" : "1.5px solid rgba(0,0,0,0.08)",
+                    background: values.priority === p ? "rgba(107,26,42,0.08)" : "#fff",
+                    color: values.priority === p ? "#6B1A2A" : "#666",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {p === "low" ? "Basse" : p === "medium" ? "Moyenne" : "Haute"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Due Date */}
+          <div style={{ marginBottom: 12 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "#666",
+                marginBottom: 6,
+              }}
+            >
+              Date d'échéance
+            </label>
+            <input
+              type="date"
+              value={values.due_date}
+              onChange={(e) => setValues((v) => ({ ...v, due_date: e.target.value }))}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: "0",
+                border: "1.5px solid rgba(0,0,0,0.08)",
+                background: "#e8eaed",
+                fontSize: "0.9rem",
+                fontFamily: "'DM Sans', sans-serif",
+                color: "#1A1A1A",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {/* Assign To */}
+          <div style={{ marginBottom: 16 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "#666",
+                marginBottom: 6,
+              }}
+            >
+              Assigner à
+            </label>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 8,
+                padding: 10,
+                background: "#e8eaed",
+                borderRadius: "0",
+                border: "1.5px solid rgba(0,0,0,0.08)",
+                maxHeight: 160,
+                overflowY: "auto",
+              }}
+            >
+              {projectMembers.length === 0 ? (
+                <p style={{ fontSize: "0.8rem", color: "#999", gridColumn: "1 / -1" }}>
+                  Aucun membre dans ce projet
+                </p>
+              ) : (
+                projectMembers.map((member) => (
+                  <label
+                    key={member.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 10px",
+                      cursor: "pointer",
+                      borderRadius: "0",
+                      background: values.assigned_to.includes(member.id)
+                        ? "rgba(107,26,42,0.1)"
+                        : "transparent",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={values.assigned_to.includes(member.id)}
+                      onChange={() => toggleMember(member.id)}
+                      style={{ cursor: "pointer" }}
+                    />
+                    <span style={{ fontSize: "0.85rem", color: "#666" }}>
+                      {member.full_name}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={onClose}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: "11px",
+                borderRadius: "0",
+                border: "1.5px solid rgba(0,0,0,0.08)",
+                background: "#e8eaed",
+                color: "#666",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: "11px",
+                borderRadius: "0",
+                border: "none",
+                background: loading ? "rgba(107,26,42,0.5)" : "#6B1A2A",
+                color: "white",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? "Ajout..." : "Ajouter"}
+            </button>
+          </div>
+        </div>
+      </div>
+      <style>{`@keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}`}</style>
+    </div>
+  );
+}
+
+// ── Add Member Modal ──────────────────────────────────────────────────────────
+function AddMemberModal({
+  project,
+  onClose,
+  onSaved,
+}: {
+  project: ProjectExtended;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>(
+    project.team_ids || []
+  );
+  const [teams, setTeams] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
+
+  useEffect(() => {
+    async function loadTeams() {
+      const result = await getTeams();
+      if (result.success && result.teams) {
+        setTeams(result.teams);
+      }
+    }
+    loadTeams();
+  }, []);
+
+  function toggleTeam(id: number) {
+    setSelectedTeamIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  async function handleSubmit() {
+    setLoading(true);
+    const result = await updateProject(project.id, { team_ids: selectedTeamIds });
+    setLoading(false);
+
+    if (result.success) {
+      onSaved();
+      onClose();
+    } else {
+      setServerError(result.error || "Erreur lors de la modification.");
+    }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.35)",
+        zIndex: 150,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: "0",
+          width: "100%",
+          maxWidth: 520,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          border: "1px solid rgba(0,0,0,0.08)",
+          animation: "popIn 0.2s ease",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: "18px 20px",
+            borderBottom: "1px solid rgba(0,0,0,0.06)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            position: "sticky",
+            top: 0,
+            background: "#fff",
+            zIndex: 1,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 600,
+                textTransform: "uppercase" as const,
+                letterSpacing: "0.1em",
+                color: "#aaa",
+                marginBottom: 2,
+              }}
+            >
+              Gestion équipe
+            </div>
+            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A" }}>
+              {project.name}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "8px",
+              border: "1px solid rgba(0,0,0,0.08)",
+              background: "#e8eaed",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#888",
+              transition: "all 0.15s",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px" }}>
+          {serverError && (
+            <div
+              style={{
+                marginBottom: 12,
+                padding: "10px 12px",
+                borderRadius: "0",
+                background: "rgba(229,62,62,0.07)",
+                border: "1px solid rgba(229,62,62,0.2)",
+                fontSize: "0.8rem",
+                color: "#e53e3e",
+              }}
+            >
+              {serverError}
+            </div>
+          )}
+
+          <p
+            style={{
+              fontSize: "0.85rem",
+              color: "#666",
+              marginBottom: 12,
+            }}
+          >
+            Sélectionnez les membres de l'équipe pour ce projet
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 8,
+              padding: 10,
+              background: "#e8eaed",
+              borderRadius: "8px",
+              border: "1.5px solid rgba(0,0,0,0.08)",
+              maxHeight: 300,
+              overflowY: "auto",
+            }}
+          >
+            {teams.map((team) => (
+              <label
+                key={team.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  cursor: "pointer",
+                  borderRadius: "0",
+                  background: selectedTeamIds.includes(team.id)
+                    ? "rgba(107,26,42,0.1)"
+                    : "transparent",
+                  transition: "all 0.15s",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedTeamIds.includes(team.id)}
+                  onChange={() => toggleTeam(team.id)}
+                  style={{ cursor: "pointer" }}
+                />
+                <span style={{ fontSize: "0.85rem", color: "#666" }}>
+                  {team.full_name}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <button
+              onClick={onClose}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: "11px",
+                borderRadius: "0",
+                border: "1.5px solid rgba(0,0,0,0.08)",
+                background: "#e8eaed",
+                color: "#666",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: "11px",
+                borderRadius: "0",
+                border: "none",
+                background: loading ? "rgba(107,26,42,0.5)" : "#6B1A2A",
+                color: "white",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? "Enregistrement..." : "Enregistrer"}
+            </button>
+          </div>
+        </div>
+      </div>
+      <style>{`@keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}`}</style>
+    </div>
+  );
+}
+
+// ── Reports Modal (Voir plus) ────────────────────────────────────────────────
+function ReportsModal({
+  reports,
+  onClose,
+  onReportClick,
+}: {
+  reports: Report[];
+  onClose: () => void;
+  onReportClick: (report: Report) => void;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.35)",
+        zIndex: 150,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: "0",
+          width: "100%",
+          maxWidth: 600,
+          maxHeight: "80vh",
+          overflowY: "auto",
+          border: "1px solid rgba(0,0,0,0.08)",
+          animation: "popIn 0.2s ease",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: "18px 20px",
+            borderBottom: "1px solid rgba(0,0,0,0.06)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            position: "sticky",
+            top: 0,
+            background: "#fff",
+            zIndex: 1,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "0",
+                background: "rgba(107,26,42,0.08)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <FileText size={18} color="#6B1A2A" />
+            </div>
+            <div>
+              <div style={{ fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa" }}>
+                Historique
+              </div>
+              <div style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A" }}>
+                Tous les rapports
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "8px",
+              border: "1px solid rgba(0,0,0,0.08)",
+              background: "#e8eaed",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#888",
+              transition: "all 0.15s",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px" }}>
+          {reports.length === 0 ? (
+            <div style={{ padding: "40px", textAlign: "center", color: "#999" }}>
+              Aucun rapport pour ce projet
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {reports.map((report) => (
+                <div
+                  key={report.id}
+                  onClick={() => onReportClick(report)}
+                  style={{
+                    padding: "14px 16px",
+                    background: "#f8f9fa",
+                    borderRadius: "0",
+                    border: "1px solid rgba(0,0,0,0.04)",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#e8eaed";
+                    e.currentTarget.style.borderColor = "rgba(107,26,42,0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#f8f9fa";
+                    e.currentTarget.style.borderColor = "rgba(0,0,0,0.04)";
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1A1A1A" }}>
+                      {report.full_name}
+                    </span>
+                    <span style={{ fontSize: "0.75rem", color: "#888" }}>
+                      {new Date(report.created_at).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <style>{`@keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}`}</style>
+    </div>
+  );
+}
+
+// ── Report Detail Modal ──────────────────────────────────────────────────────
+function ReportDetailModal({
+  report,
+  onClose,
+}: {
+  report: Report;
+  onClose: () => void;
+}) {
+  const fields = [
+    { key: "working_built", label: "En cours de construction" },
+    { key: "extra_message", label: "Message supplémentaire" },
+    { key: "broken_features", label: "Ce qui est cassé / bloqué" },
+    { key: "validated_learning", label: "Apprentissages validés" },
+    { key: "needed_learning", label: "Apprentissages nécessaires" },
+    { key: "tomorrow_build", label: "Construction de demain" },
+  ];
+
+  function ReportField({ value }: { value: string | null | undefined }) {
+    if (!value) return <div style={{ fontSize: "0.83rem", color: "#ccc" }}>Non renseigné</div>;
+    return (
+      <div
+        style={{
+          fontSize: "0.83rem",
+          color: "#1A1A1A",
+          background: "#e8eaed",
+          borderRadius: "0",
+          padding: "10px 14px",
+          lineHeight: 1.6,
+        }}
+      >
+        {value}
+      </div>
+    );
+  }
+
+  function Avatar({ name }: { name: string }) {
+    const initials = name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join("");
+    return (
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          background: "#6B1A2A",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "0.9rem",
+          fontWeight: 700,
+          color: "#fff",
+        }}
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.35)",
+        zIndex: 160,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: "0",
+          width: "100%",
+          maxWidth: "700px",
+          maxHeight: "85vh",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.15)",
+          animation: "popIn 0.2s ease",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: "20px 24px",
+            borderBottom: "1px solid rgba(0,0,0,0.07)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <Avatar name={report.full_name} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1A1A1A" }}>
+                {report.full_name}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: "2px" }}>
+                {new Date(report.created_at).toLocaleDateString("fr-FR", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "8px",
+              border: "1px solid rgba(0,0,0,0.08)",
+              background: "#e8eaed",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#888",
+              transition: "all 0.15s",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ overflowY: "auto", padding: "24px", flex: 1 }}>
+          {fields.map(({ key, label }) => {
+            const value = report[key as keyof Report] as string | null | undefined;
+            return (
+              <div key={key} style={{ marginBottom: "20px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.65rem",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    color: "#aaa",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {label}
+                </label>
+                <ReportField value={value} />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            padding: "16px 24px",
+            borderTop: "1px solid rgba(0,0,0,0.06)",
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              padding: "8px 20px",
+              borderRadius: "0",
+              border: "1.5px solid rgba(0,0,0,0.08)",
+              background: "#e8eaed",
+              color: "#666",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#e8e4df";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#e8eaed";
+            }}
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}`}</style>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function ProjectDashboard({ project }: { project: ProjectExtended }) {
   const router = useRouter();
-  const [tasks, setTasks] = useState<TaskWithStatus[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"overview" | "kanban">("overview");
+
+  // Modals state
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [showReportsModal, setShowReportsModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -60,350 +1063,702 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
 
   const teamMembers = project.team_members || [];
   const inProgressTasks = tasks.filter((t) => t.status !== "terminée" && !t.completed);
+  const completedTasks = tasks.filter((t) => t.status === "terminée" || t.completed);
   const recentReports = reports.slice(0, 5);
+  const totalTasks = tasks.length;
+  const completionRate = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
+
+  // Calculate remaining time
+  function getRemainingTime() {
+    if (!project.start_date || !project.end_date) return null;
+
+    const now = new Date();
+    const endDate = new Date(project.end_date);
+    const startDate = new Date(project.start_date);
+
+    // If project hasn't started yet
+    if (now < startDate) {
+      const daysUntilStart = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return `Début dans ${daysUntilStart}j`;
+    }
+
+    // If project has ended
+    if (now > endDate) {
+      const daysOverdue = Math.ceil((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24));
+      return `Terminé il y a ${daysOverdue}j`;
+    }
+
+    // Project is ongoing - calculate remaining days
+    const remainingDays = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (remainingDays > 30) {
+      const remainingMonths = Math.floor(remainingDays / 30);
+      const remainingDaysInMonth = remainingDays % 30;
+      return remainingDaysInMonth > 0
+        ? `${remainingMonths} mois ${remainingDaysInMonth}j restants`
+        : `${remainingMonths} mois restants`;
+    }
+
+    return `${remainingDays}j restants`;
+  }
+
+  const remainingTime = getRemainingTime();
+
+  // Calculate time progress percentage
+  function getTimeProgress() {
+    if (!project.start_date || !project.end_date) return 0;
+
+    const now = new Date();
+    const startDate = new Date(project.start_date);
+    const endDate = new Date(project.end_date);
+
+    // If project hasn't started yet
+    if (now < startDate) return 0;
+
+    // If project has ended
+    if (now > endDate) return 100;
+
+    // Calculate progress
+    const totalDuration = endDate.getTime() - startDate.getTime();
+    const elapsed = now.getTime() - startDate.getTime();
+    return Math.round((elapsed / totalDuration) * 100);
+  }
+
+  const timeProgress = getTimeProgress();
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const AVATAR_COLORS = ["#6B1A2A", "#8B2A3A", "#4A1020", "#9B3A4A", "#5A0A1A", "#7C2233", "#3A0D18"];
+  
+  function getInitials(name = "") {
+    return name
+      .trim()
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join("");
+  }
+  
+  function getAvatarColor(name = "") {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  }
+
+  function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          background: getAvatarColor(name),
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: size * 0.35,
+          fontWeight: 700,
+          color: "#fff",
+          flexShrink: 0,
+          border: "2px solid #fff",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        }}
+      >
+        {getInitials(name)}
+      </div>
+    );
+  }
+
+  function AvatarStack({ members = [], size = 40 }: { members: typeof teamMembers; size?: number }) {
+    const visible = members.slice(0, 5);
+    const extra = members.length - 5;
+    return (
+      <div style={{ display: "flex", alignItems: "center" }}>
+        {visible.map((m, i) => (
+          <div key={i} style={{ marginLeft: i === 0 ? 0 : -10 }}>
+            <Avatar 
+              name={`${m.first_name || ""} ${m.last_name || ""}`} 
+              size={size} 
+            />
+          </div>
+        ))}
+        {extra > 0 && (
+          <div
+            style={{
+              width: size,
+              height: size,
+              borderRadius: "50%",
+              background: "#E8E2DA",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: size * 0.32,
+              fontWeight: 700,
+              color: "#6B1A2A",
+              marginLeft: -10,
+              flexShrink: 0,
+              border: "2px solid #fff",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            }}
+          >
+            +{extra}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function StatCard({
+    label,
+    value,
+    icon: Icon,
+    color = "#6B1A2A",
+    subtext
+  }: {
+    label: string;
+    value: string | number;
+    icon: React.ComponentType<{ size?: number; color?: string }>;
+    color?: string;
+    subtext?: string;
+  }) {
+    return (
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: "0",
+          padding: "16px",
+          border: "1px solid rgba(0,0,0,0.1)",
+          display: "flex",
+          alignItems: "center",
+          gap: "14px",
+        }}
+      >
+        <div
+          style={{
+            width: "44px",
+            height: "44px",
+            borderRadius: "0",
+            background: `${color}15`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            border: "1px solid rgba(0,0,0,0.05)",
+          }}
+        >
+          <Icon size={20} color={color} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            {label}
+          </div>
+          <div style={{ fontSize: "1.7rem", fontWeight: 700, color: "#1A1A1A", lineHeight: 1.1 }}>
+            {value}
+          </div>
+          {subtext && (
+            <div style={{ fontSize: "0.7rem", color: "#888", marginTop: "2px" }}>
+              {subtext}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function handleTaskSaved() {
+    // Refresh tasks
+    setLoading(true);
+    getTasks().then((result) => {
+      const allTasks =
+        "data" in result ? result.data : result.success ? result.tasks : [];
+      setTasks(allTasks.filter((t: Task) => t.project_id === project.id));
+      setLoading(false);
+    });
+  }
+
+  function handleMemberSaved() {
+    // Refresh would be handled by parent component or SWR
+    router.refresh();
+  }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    <div style={{ minHeight: "100vh", background: "#F5F2ED" }}>
       {/* Header */}
       <div
         style={{
           background: "#fff",
           borderBottom: "1px solid rgba(0,0,0,0.08)",
-          padding: "16px 24px",
+          padding: "12px 24px",
           position: "sticky",
           top: 0,
           zIndex: 10,
         }}
       >
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          <button
-            onClick={() => router.back()}
-            style={{
-              background: "none",
-              border: "none",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              cursor: "pointer",
-              fontSize: "0.9rem",
-              color: "#666",
-              marginBottom: "12px",
-            }}
-          >
-            <ChevronLeft size={18} />
-            Retour
-          </button>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <h1 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
-                {project.name}
-              </h1>
-              <p style={{ fontSize: "0.9rem", color: "#666", margin: "4px 0 0" }}>
-                {project.description || "Aucune description"}
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button
+              onClick={() => router.back()}
+              style={{
+                background: "none",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "32px",
+                height: "32px",
+                cursor: "pointer",
+                color: "#666",
+                borderRadius: "0",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#e8eaed";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "none";
+              }}
+            >
+              <ChevronLeft size={18} />
+            </button>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div
                 style={{
-                  padding: "10px 16px",
-                  background: "#6B1A2A",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "0px",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "0",
+                  background: "rgba(107,26,42,0.08)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "6px",
+                  justifyContent: "center",
                 }}
               >
-                <Plus size={16} />
-                Nouvelle tâche
+                {project.icon === "database" && <Database size={28} color="#6B1A2A" />}
+                {project.icon === "settings" && <Settings size={28} color="#6B1A2A" />}
+                {project.icon === "users" && <Users size={28} color="#6B1A2A" />}
+                {project.icon === "layers" && <Layers size={28} color="#6B1A2A" />}
+                {project.icon === "file-text" && <FileText size={28} color="#6B1A2A" />}
+                {project.icon === "check-square" && <CheckSquare size={28} color="#6B1A2A" />}
+                {(!project.icon || !["database", "settings", "users", "layers", "file-text", "check-square"].includes(project.icon)) && <FileText size={28} color="#6B1A2A" />}
+              </div>
+              <div>
+                <h1 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
+                  {project.name}
+                </h1>
+                <p style={{ fontSize: "0.9rem", color: "#666", margin: "4px 0 0" }}>
+                  {project.description || "Aucune description"}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <button
+                onClick={() => router.push(`/dashboard/projects/${project.id}/edit`)}
+                style={{
+                  padding: "10px 14px",
+                  background: "#e8eaed",
+                  color: "#666",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  borderRadius: "0",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#dadbdc";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#e8eaed";
+                }}
+                title="Modifier le projet"
+              >
+                <Settings size={18} />
+                <span>Modifier</span>
               </button>
               <button
+                onClick={() => setActiveTab("overview")}
                 style={{
-                  padding: "10px 16px",
-                  background: "#fff",
-                  color: "#6B1A2A",
-                  border: "1px solid #6B1A2A",
-                  borderRadius: "0px",
-                  fontSize: "0.85rem",
+                  padding: "10px 20px",
+                  background: activeTab === "overview" ? "#6B1A2A" : "#fff",
+                  color: activeTab === "overview" ? "#fff" : "#666",
+                  border: activeTab === "overview" ? "none" : "1px solid rgba(0,0,0,0.15)",
+                  borderRadius: "0",
+                  fontSize: "0.9rem",
                   fontWeight: 600,
                   cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
+                  transition: "all 0.15s",
                 }}
               >
-                <Users size={16} />
-                Ajouter membre
+                Vue d'ensemble
+              </button>
+              <button
+                onClick={() => setActiveTab("kanban")}
+                style={{
+                  padding: "10px 20px",
+                  background: activeTab === "kanban" ? "#6B1A2A" : "#fff",
+                  color: activeTab === "kanban" ? "#fff" : "#666",
+                  border: activeTab === "kanban" ? "none" : "1px solid rgba(0,0,0,0.15)",
+                  borderRadius: "0",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+              >
+                Kanban
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Dashboard Content */}
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "24px" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-            gap: "16px",
-            marginBottom: "24px",
-          }}
-        >
-          {/* Card: Membres de l'équipe */}
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid rgba(0,0,0,0.08)",
-              padding: "16px",
-            }}
-          >
+      {/* Content */}
+      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "16px" }}>
+        {activeTab === "overview" ? (
+          <>
+            {/* Stats Row - Asymmetric Layout */}
             <div
-              style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1.5fr 1fr 1fr",
+                gap: "10px",
+                marginBottom: "10px",
+              }}
             >
-              <Users size={18} color="#6B1A2A" />
-              <h3 style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1A1A1A", margin: 0 }}>
-                Membres de l'équipe
-              </h3>
-              <span
+              {/* Team Card - Large */}
+              <div
                 style={{
-                  marginLeft: "auto",
-                  fontSize: "1.2rem",
-                  fontWeight: 700,
-                  color: "#6B1A2A",
+                  background: "#fff",
+                  borderRadius: "0",
+                  padding: "16px",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
                 }}
               >
-                {teamMembers.length}
-              </span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "0",
+                        background: "rgba(107,26,42,0.08)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: "1px solid rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <Users size={18} color="#6B1A2A" />
+                    </div>
+                    <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#888", textTransform: "uppercase" }}>
+                      Équipe
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "1.4rem", fontWeight: 700, color: "#6B1A2A" }}>
+                    {teamMembers.length}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", minHeight: "44px" }}>
+                  {teamMembers.length > 0 ? (
+                    <AvatarStack members={teamMembers} size={40} />
+                  ) : (
+                    <span style={{ color: "#999", fontSize: "0.8rem" }}>Aucun membre</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Tasks Stats */}
+              <StatCard
+                label="Tâches"
+                value={totalTasks}
+                icon={CheckSquare}
+                color="#6B1A2A"
+                subtext={`${completionRate}% terminées • ${inProgressTasks.length} en cours`}
+              />
+
+              {/* Time Progress */}
+              <StatCard
+                label="Progression"
+                value={`${timeProgress}%`}
+                icon={FileText}
+                color="#2D7A4F"
+                subtext={remainingTime || "Aucune échéance"}
+              />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {teamMembers.slice(0, 3).map((member: TeamMember) => (
-                <div
-                  key={member.id}
+
+            {/* Two Column Layout */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 360px",
+                gap: "10px",
+              }}
+            >
+              {/* Reports */}
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: "0",
+                  padding: "16px",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "0",
+                        background: "rgba(107,26,42,0.08)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: "1px solid rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <FileText size={16} color="#6B1A2A" />
+                    </div>
+                    <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1A1A1A", margin: 0 }}>
+                      Rapports
+                    </h3>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#888" }}>
+                      {reports.length} au total
+                    </span>
+                    {reports.length > 5 && (
+                      <button
+                        onClick={() => setShowReportsModal(true)}
+                        style={{
+                          padding: "5px 10px",
+                          background: "#e8eaed",
+                          color: "#666",
+                          border: "1px solid rgba(0,0,0,0.1)",
+                          borderRadius: "0",
+                          fontSize: "0.7rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#dadbdc";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "#e8eaed";
+                        }}
+                      >
+                        Voir plus
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {loading ? (
+                  <div style={{ padding: "30px", textAlign: "center", color: "#999" }}>
+                    Chargement...
+                  </div>
+                ) : recentReports.length === 0 ? (
+                  <div style={{ padding: "30px", textAlign: "center", color: "#999" }}>
+                    Aucun rapport pour ce projet
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {recentReports.map((report) => (
+                      <div
+                        key={report.id}
+                        onClick={() => setSelectedReport(report)}
+                        style={{
+                          padding: "12px 14px",
+                          background: "#f8f9fa",
+                          borderRadius: "0",
+                          border: "1px solid rgba(0,0,0,0.08)",
+                          transition: "all 0.15s",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#e8eaed";
+                          e.currentTarget.style.borderColor = "rgba(107,26,42,0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "#f8f9fa";
+                          e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}>
+                            {report.full_name}
+                          </span>
+                          <span style={{ fontSize: "0.7rem", color: "#888" }}>
+                            {new Date(report.created_at).toLocaleDateString("fr-FR", {
+                              day: "numeric",
+                              month: "short",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Actions / Info */}
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: "0",
+                  padding: "16px",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <h3 style={{ fontSize: "0.75rem", fontWeight: 600, color: "#888", textTransform: "uppercase" }}>
+                  Actions rapides
+                </h3>
+
+                <button
+                  onClick={() => setShowCreateTask(true)}
                   style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "#6B1A2A",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "0",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: "8px",
-                    padding: "8px",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#8B2A3A";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#6B1A2A";
+                  }}
+                >
+                  <Plus size={16} />
+                  Nouvelle tâche
+                </button>
+
+                <button
+                  onClick={() => setShowAddMember(true)}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
                     background: "#e8eaed",
+                    color: "#666",
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    borderRadius: "0",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#dadbdc";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#e8eaed";
                   }}
                 >
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "50%",
-                      background: "#6B1A2A",
-                      color: "#fff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {(member.first_name?.[0] || "") + (member.last_name?.[0] || "")}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}>
-                      {member.first_name} {member.last_name}
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: "#666" }}>{member.role}</div>
-                  </div>
-                </div>
-              ))}
-              {teamMembers.length > 3 && (
+                  <Users size={16} />
+                  Ajouter un membre
+                </button>
+
                 <div
                   style={{
-                    fontSize: "0.8rem",
-                    color: "#666",
-                    textAlign: "center",
-                    marginTop: "4px",
+                    marginTop: "auto",
+                    padding: "12px",
+                    background: "#f8f9fa",
+                    borderRadius: "0",
+                    border: "1px solid rgba(0,0,0,0.05)",
                   }}
                 >
-                  +{teamMembers.length - 3} autres
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Card: Tâches en cours */}
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid rgba(0,0,0,0.08)",
-              padding: "16px",
-            }}
-          >
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}
-            >
-              <CheckSquare size={18} color="#6B1A2A" />
-              <h3 style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1A1A1A", margin: 0 }}>
-                Tâches en cours
-              </h3>
-              <span
-                style={{
-                  marginLeft: "auto",
-                  fontSize: "1.2rem",
-                  fontWeight: 700,
-                  color: "#6B1A2A",
-                }}
-              >
-                {inProgressTasks.length}
-              </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {loading ? (
-                <div style={{ padding: "20px", textAlign: "center", color: "#999" }}>
-                  Chargement...
-                </div>
-              ) : inProgressTasks.length === 0 ? (
-                <div style={{ padding: "20px", textAlign: "center", color: "#999" }}>
-                  Aucune tâche en cours
-                </div>
-              ) : (
-                inProgressTasks.slice(0, 3).map((task) => (
-                  <div
-                    key={task.id}
-                    style={{
-                      padding: "10px",
-                      background: "#e8eaed",
-                      borderLeft: `3px solid ${task.priority === "haute" ? "#ef4444" : task.priority === "moyenne" ? "#f59e0b" : "#22c55e"}`,
-                    }}
-                  >
-                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}>
-                      {task.title}
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "2px" }}>
-                      {task.status || "en cours"}
-                    </div>
+                  <div style={{ fontSize: "0.7rem", color: "#888", marginBottom: "8px", fontWeight: 600 }}>
+                    STATISTIQUES
                   </div>
-                ))
-              )}
-              {inProgressTasks.length > 3 && (
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "#666",
-                    textAlign: "center",
-                    marginTop: "4px",
-                  }}
-                >
-                  +{inProgressTasks.length - 3} autres
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Card: Rapports récents */}
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid rgba(0,0,0,0.08)",
-              padding: "16px",
-            }}
-          >
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}
-            >
-              <FileText size={18} color="#6B1A2A" />
-              <h3 style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1A1A1A", margin: 0 }}>
-                Rapports récents
-              </h3>
-              <span
-                style={{
-                  marginLeft: "auto",
-                  fontSize: "1.2rem",
-                  fontWeight: 700,
-                  color: "#6B1A2A",
-                }}
-              >
-                {reports.length}
-              </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {loading ? (
-                <div style={{ padding: "20px", textAlign: "center", color: "#999" }}>
-                  Chargement...
-                </div>
-              ) : recentReports.length === 0 ? (
-                <div style={{ padding: "20px", textAlign: "center", color: "#999" }}>
-                  Aucun rapport
-                </div>
-              ) : (
-                recentReports.map((report) => (
-                  <div
-                    key={report.id}
-                    style={{
-                      padding: "10px",
-                      background: "#e8eaed",
-                    }}
-                  >
-                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}>
-                      {report.full_name}
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "2px" }}>
-                      {new Date(report.created_at).toLocaleDateString("fr-FR")}
-                    </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+                    <span style={{ fontSize: "0.8rem", color: "#666" }}>Tâches en cours</span>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1A1A1A" }}>{inProgressTasks.length}</span>
                   </div>
-                ))
-              )}
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+                    <span style={{ fontSize: "0.8rem", color: "#666" }}>Tâches terminées</span>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1A1A1A" }}>{completedTasks.length}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "0.8rem", color: "#666" }}>Rapports totaux</span>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1A1A1A" }}>{reports.length}</span>
+                  </div>
+                </div>
+              </div>
             </div>
+          </>
+        ) : (
+          /* Kanban Tab */
+          <div style={{ height: "calc(100vh - 200px)" }}>
+            <TMKanbanWrapper
+              tasks={tasks}
+              isLoading={loading}
+              projectName={project.name || ""}
+            />
           </div>
-        </div>
-
-        {/* Sections détaillées */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
-          {/* All Tasks */}
-          <div
-            style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", padding: "20px" }}
-          >
-            <h3
-              style={{
-                fontSize: "1.1rem",
-                fontWeight: 600,
-                color: "#1A1A1A",
-                marginBottom: "16px",
-              }}
-            >
-              Toutes les tâches
-            </h3>
-            <div>
-              {/* Liste complète des tâches ici */}
-              <p style={{ color: "#666", fontSize: "0.9rem" }}>
-                {tasks.length} tâche{tasks.length !== 1 ? "s" : ""} au total
-              </p>
-            </div>
-          </div>
-
-          {/* All Reports */}
-          <div
-            style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)", padding: "20px" }}
-          >
-            <h3
-              style={{
-                fontSize: "1.1rem",
-                fontWeight: 600,
-                color: "#1A1A1A",
-                marginBottom: "16px",
-              }}
-            >
-              Tous les rapports
-            </h3>
-            <div>
-              {/* Liste complète des rapports ici */}
-              <p style={{ color: "#666", fontSize: "0.9rem" }}>
-                {reports.length} rapport{reports.length !== 1 ? "s" : ""} au total
-              </p>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* Modals */}
+      {showCreateTask && (
+        <CreateTaskModal
+          projectId={project.id}
+          onClose={() => setShowCreateTask(false)}
+          onSaved={handleTaskSaved}
+        />
+      )}
+      
+      {showAddMember && (
+        <AddMemberModal
+          project={project}
+          onClose={() => setShowAddMember(false)}
+          onSaved={handleMemberSaved}
+        />
+      )}
+
+      {showReportsModal && (
+        <ReportsModal
+          reports={reports}
+          onClose={() => setShowReportsModal(false)}
+          onReportClick={(report) => {
+            setShowReportsModal(false);
+            setSelectedReport(report);
+          }}
+        />
+      )}
+
+      {selectedReport && (
+        <ReportDetailModal
+          report={selectedReport}
+          onClose={() => setSelectedReport(null)}
+        />
+      )}
     </div>
   );
 }

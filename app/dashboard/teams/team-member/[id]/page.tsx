@@ -2,8 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Crown } from "lucide-react";
+import { ArrowLeft, Crown, Mail, Phone, User, Calendar, TrendingUp, Hash, Briefcase, Database, Settings, Users as UsersIcon, Layers } from "lucide-react";
 import type { TeamMemberProfileData } from "@/app/api/equipe/[id]/profile/route";
+import Link from "next/link";
+
+const AVATAR_COLORS = ["#6B1A2A", "#8B2A3A", "#4A1020", "#9B3A4A", "#5A0A1A", "#7C2233", "#3A0D18"];
+
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 
 function Avatar({ name, size = 80 }: { name: string; size?: number }) {
   const initials = name
@@ -19,7 +28,7 @@ function Avatar({ name, size = 80 }: { name: string; size?: number }) {
         width: size,
         height: size,
         borderRadius: "50%",
-        background: "#6B1A2A",
+        background: getAvatarColor(name),
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -27,6 +36,7 @@ function Avatar({ name, size = 80 }: { name: string; size?: number }) {
         fontWeight: 800,
         fontSize: size * 0.36,
         flexShrink: 0,
+        border: "3px solid #fff",
       }}
     >
       {initials || "?"}
@@ -34,30 +44,56 @@ function Avatar({ name, size = 80 }: { name: string; size?: number }) {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function InfoField({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  label: string;
+  value: string;
+}) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <span
+    <div>
+      <label
         style={{
-          fontSize: "0.6rem",
+          fontSize: "0.7rem",
+          fontWeight: 600,
+          color: "#888",
           textTransform: "uppercase",
-          letterSpacing: "0.12em",
-          color: "#A09A92",
-          fontWeight: 700,
+          display: "block",
+          marginBottom: "8px",
         }}
       >
         {label}
-      </span>
-      <span
-        style={{
-          fontSize: "0.9rem",
-          fontWeight: 600,
-          color: "#1E1A19",
-          wordBreak: "break-word",
-        }}
-      >
-        {value}
-      </span>
+      </label>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div
+          style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "0",
+            background: "rgba(107,26,42,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1px solid rgba(0,0,0,0.05)",
+            flexShrink: 0,
+          }}
+        >
+          <Icon size={16} color="#6B1A2A" />
+        </div>
+        <span
+          style={{
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            color: "#1A1A1A",
+            wordBreak: "break-word",
+          }}
+        >
+          {value}
+        </span>
+      </div>
     </div>
   );
 }
@@ -110,18 +146,19 @@ export default function TeamProfilePage() {
     };
   }, [memberId]);
 
-  // Écran chargement simple
+  // Loading state
   if (loading) {
     return (
       <div
         style={{
           minHeight: "100vh",
           padding: "24px 16px",
-          background: "#F7F2EB",
+          background: "#F5F2ED",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontSize: "0.9rem",
+          color: "#666",
         }}
       >
         Chargement du profil...
@@ -129,14 +166,14 @@ export default function TeamProfilePage() {
     );
   }
 
-  // Écran erreur
+  // Error state
   if (error || !data) {
     return (
       <div
         style={{
           minHeight: "100vh",
           padding: "24px 16px",
-          background: "#F7F2EB",
+          background: "#F5F2ED",
           display: "flex",
           flexDirection: "column",
           gap: 16,
@@ -148,335 +185,386 @@ export default function TeamProfilePage() {
             display: "inline-flex",
             alignItems: "center",
             gap: 8,
-            borderRadius: 8,
-            border: "1px solid rgba(107,26,42,0.2)",
-            background: "rgba(107,26,42,0.05)",
-            color: "#6B1A2A",
-            fontSize: "0.8rem",
+            borderRadius: 0,
+            border: "1px solid rgba(0,0,0,0.1)",
+            background: "#fff",
+            color: "#666",
+            fontSize: "0.85rem",
             fontWeight: 600,
-            padding: "8px 12px",
+            padding: "10px 14px",
             cursor: "pointer",
+            width: "fit-content",
           }}
         >
-          <ArrowLeft size={16} /> Retour à l&apos;équipe
+          <ArrowLeft size={16} /> Retour
         </button>
         <p style={{ color: "#b91c1c", fontSize: "0.9rem" }}>{error ?? "Profil introuvable"}</p>
       </div>
     );
   }
 
-  const { member, stats } = data;
+  const { member, stats, projects } = data;
   const total = stats.totalEvaluations || 0;
   const avgGlobal =
     total > 0
       ? (stats.communication.average + stats.collaboration.average + stats.punctuality.average) / 3
       : 0;
 
+  // Icon mapping for projects
+  function getProjectIcon(iconName: string | null) {
+    switch (iconName) {
+      case "database":
+        return Database;
+      case "settings":
+        return Settings;
+      case "users":
+        return UsersIcon;
+      case "layers":
+        return Layers;
+      case "briefcase":
+        return Briefcase;
+      default:
+        return Briefcase;
+    }
+  }
+
   return (
     <div
       style={{
         minHeight: "100vh",
-        padding: "16px 16px 32px",
-        background: "#F7F2EB",
-        display: "flex",
-        flexDirection: "column",
-        gap: "16px",
-        boxSizing: "border-box",
+        background: "#F5F2ED",
       }}
     >
-      {/* Bouton retour */}
-      <button
-        onClick={() => router.back()}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          border: "none",
-          background: "none",
-          cursor: "pointer",
-          fontSize: "0.8rem",
-          color: "#6B1A2A",
-          width: "fit-content",
-        }}
-      >
-        <ArrowLeft size={16} /> Retour à l&apos;équipe
-      </button>
-
-      {/* Carte informations compte */}
+      {/* Header */}
       <div
-        className="info-card"
         style={{
-          background: "#FFFDF9",
-          borderRadius: "24px",
-          padding: "24px",
-          display: "flex",
-          flexDirection: "row", // Horizontal par défaut (desktop)
-          gap: "32px",
-          alignItems: "flex-start",
-          boxShadow: "0 18px 40px rgba(0,0,0,0.08)",
-          flexWrap: "wrap",
+          background: "#fff",
+          borderBottom: "1px solid rgba(0,0,0,0.08)",
+          padding: "16px 24px",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
         }}
       >
-        {/* Avatar + nom */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 12,
-            flexShrink: 0,
-          }}
-        >
-          <Avatar name={member.full_name} size={100} />
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "1.25rem",
-                fontWeight: 800,
-                color: "#1E1A19",
-              }}
-            >
-              {member.full_name}
-            </div>
-            <div style={{ fontSize: "0.85rem", color: "#7A6A64", marginTop: 4 }}>
-              {member.role === "SA"
-                ? "Super Admin"
-                : member.role === "TM"
-                  ? "Team Manager"
-                  : "Team"}
-              {member.is_boss && (
-                <span style={{ marginLeft: 6, verticalAlign: "middle" }}>
-                  <Crown size={14} color="#f59e0b" />
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Infos texte en grille */}
-        <div
-          style={{
-            flex: 1,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: "20px 32px",
-          }}
-        >
-          <Field label="Email" value={member.email ?? "—"} />
-          <Field label="Téléphone" value={member.phone ?? "—"} />
-          <Field label="Slack identifiant" value={member.slack_id ? `@${member.slack_id}` : "—"} />
-          <Field
-            label="Date d'inscription"
-            value={new Date(member.created_at).toLocaleDateString("fr-FR", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}
-          />
-          <Field label="Âge" value={member.age ? String(member.age) : "—"} />
-          <Field label="Statut du compte" value={member.user_id ? "● Actif" : "○ Aucun compte"} />
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <button
+            onClick={() => router.back()}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              color: "#666",
+              fontWeight: 600,
+              padding: 0,
+            }}
+          >
+            <ArrowLeft size={16} /> Retour à l'équipe
+          </button>
         </div>
       </div>
 
-      {/* Carte performances */}
-      <div
-        className="performance-card"
-        style={{
-          background: "#FFFDF9",
-          borderRadius: "24px",
-          padding: "32px 28px",
-          boxShadow: "0 18px 40px rgba(0,0,0,0.08)",
-          display: "flex",
-          flexDirection: "row", // Horizontal par défaut (desktop)
-          gap: "48px",
-          alignItems: "center",
-        }}
-      >
-        {/* Colonne gauche : score global */}
+      {/* Content */}
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "16px" }}>
+        {/* Profile Header Card */}
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 16,
-            flexShrink: 0,
+            background: "#fff",
+            borderRadius: "0",
+            padding: "24px",
+            border: "1px solid rgba(0,0,0,0.1)",
+            marginBottom: "10px",
           }}
         >
-          <div style={{ width: 170, height: 170, position: "relative" }}>
-            <svg
-              viewBox="0 0 170 170"
-              style={{
-                width: "100%",
-                height: "100%",
-                display: "block",
-              }}
-            >
-              <circle
-                cx="85"
-                cy="85"
-                r="70"
-                fill="none"
-                stroke="#F1E7E1"
-                strokeWidth="12"
-                strokeLinecap="round"
-              />
-              <circle
-                cx="85"
-                cy="85"
-                r="70"
-                fill="none"
-                stroke="#6B1A2A"
-                strokeWidth="12"
-                strokeLinecap="round"
-                pathLength={1}
-                strokeDasharray="1 1"
-                strokeDashoffset={1 - avgGlobal / 5}
-                transform="rotate(-90 85 85)"
-                style={{ transition: "stroke-dashoffset 0.4s ease" }}
-              />
-            </svg>
-
-            <div
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-                pointerEvents: "none",
-              }}
-            >
-              <span style={{ fontSize: "2.4rem", fontWeight: 800, color: "#1A1A1A" }}>
-                {avgGlobal.toFixed(1)}
-              </span>
-              <span
+          <div style={{ display: "flex", alignItems: "center", gap: "24px", flexWrap: "wrap" }}>
+            <Avatar name={member.full_name} size={100} />
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                <h1 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
+                  {member.full_name}
+                </h1>
+                {member.is_boss && <Crown size={20} color="#6B1A2A" />}
+              </div>
+              <div
                 style={{
-                  fontSize: "0.7rem",
-                  letterSpacing: "0.08em",
-                  color: "#888",
-                  textTransform: "uppercase",
-                  marginTop: 4,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "5px 12px",
+                  borderRadius: "0",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  background:
+                    member.role === "SA"
+                      ? "rgba(107,26,42,0.1)"
+                      : member.role === "TM"
+                        ? "rgba(59,130,246,0.1)"
+                        : "rgba(16,185,129,0.1)",
+                  color:
+                    member.role === "SA" ? "#6B1A2A" : member.role === "TM" ? "#3b82f6" : "#10b981",
+                  border: "1px solid rgba(0,0,0,0.05)",
                 }}
               >
-                Sur 5.0
-              </span>
+                {member.role === "SA"
+                  ? "Super Admin"
+                  : member.role === "TM"
+                    ? "Team Manager"
+                    : "Team"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(12, 1fr)",
+            gap: "10px",
+          }}
+        >
+          {/* Info Card - Spans 7 columns */}
+          <div
+            style={{
+              gridColumn: "span 7",
+              background: "#fff",
+              borderRadius: "0",
+              padding: "20px",
+              border: "1px solid rgba(0,0,0,0.1)",
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "#888",
+                textTransform: "uppercase",
+                marginBottom: "20px",
+              }}
+            >
+              Informations
+            </h2>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: "20px",
+              }}
+            >
+              <InfoField icon={Mail} label="Email" value={member.email ?? "—"} />
+              <InfoField icon={Phone} label="Téléphone" value={member.phone ?? "—"} />
+              <InfoField icon={User} label="Âge" value={member.age ? `${member.age} ans` : "—"} />
+              <InfoField icon={Hash} label="Slack ID" value={member.slack_id ?? "—"} />
+              <InfoField
+                icon={Calendar}
+                label="Membre depuis"
+                value={new Date(member.created_at).toLocaleDateString("fr-FR", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              />
             </div>
           </div>
 
-          <div style={{ textAlign: "center" }}>
-            <p
+          {/* Performance Card - Spans 5 columns */}
+          <div
+            style={{
+              gridColumn: "span 5",
+              background: "#fff",
+              borderRadius: "0",
+              padding: "20px",
+              border: "1px solid rgba(0,0,0,0.1)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "0",
+                  background: "rgba(107,26,42,0.08)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid rgba(0,0,0,0.05)",
+                }}
+              >
+                <TrendingUp size={16} color="#6B1A2A" />
+              </div>
+              <h2
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "#888",
+                  textTransform: "uppercase",
+                  margin: 0,
+                }}
+              >
+                Performance
+              </h2>
+            </div>
+
+            {/* Score Global */}
+            <div style={{ textAlign: "center", marginBottom: "24px" }}>
+              <div style={{ fontSize: "3rem", fontWeight: 800, color: "#6B1A2A", lineHeight: 1 }}>
+                {avgGlobal.toFixed(1)}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: "4px" }}>
+                sur 5.0
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: "8px" }}>
+                {total} évaluation{total > 1 ? "s" : ""}
+              </div>
+            </div>
+
+            {/* Stats Bars */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {(
+                [
+                  { key: "communication", label: "Communication" },
+                  { key: "collaboration", label: "Collaboration" },
+                  { key: "punctuality", label: "Ponctualité" },
+                ] as const
+              ).map(({ key, label }) => {
+                const stat = stats[key as StatField];
+                if (!stat) return null;
+                return (
+                  <div key={key}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: 6,
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      <span style={{ color: "#666" }}>{label}</span>
+                      <span style={{ color: "#1A1A1A" }}>{stat.percentage}%</span>
+                    </div>
+                    <div
+                      style={{
+                        height: 6,
+                        borderRadius: 0,
+                        background: "#f3f4f6",
+                        overflow: "hidden",
+                        border: "1px solid rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${stat.percentage}%`,
+                          height: "100%",
+                          background: "#6B1A2A",
+                          transition: "width 0.3s ease",
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Projects Card - Spans 12 columns (full width) */}
+          <div
+            style={{
+              gridColumn: "span 12",
+              background: "#fff",
+              borderRadius: "0",
+              padding: "20px",
+              border: "1px solid rgba(0,0,0,0.1)",
+            }}
+          >
+            <h2
               style={{
-                fontSize: "0.65rem",
-                fontWeight: 700,
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "#888",
                 textTransform: "uppercase",
-                letterSpacing: "0.12em",
-                color: "#AAA39D",
-                marginBottom: 4,
+                marginBottom: "20px",
               }}
             >
-              Performance
-            </p>
-            <p
-              style={{
-                fontSize: "1.1rem",
-                fontWeight: 800,
-                color: "#3A121B",
-                marginBottom: 4,
-              }}
-            >
-              Moyennes
-            </p>
-            <p style={{ fontSize: "0.8rem", color: "#8C7A73" }}>
-              Basé sur {total} évaluation{total > 1 ? "s" : ""}.
-            </p>
+              Projets ({projects.length})
+            </h2>
+            {projects.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "20px 0", color: "#999", fontSize: "0.85rem" }}>
+                Aucun projet assigné
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: "10px",
+                }}
+              >
+                {projects.map((project) => {
+                  const Icon = getProjectIcon(project.icon);
+                  return (
+                    <Link
+                      key={project.id}
+                      href={`/dashboard/projects/${project.id}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        padding: "12px",
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        background: "#fff",
+                        textDecoration: "none",
+                        color: "inherit",
+                        transition: "all 0.15s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(107,26,42,0.3)";
+                        e.currentTarget.style.background = "#fafafa";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(0,0,0,0.1)";
+                        e.currentTarget.style.background = "#fff";
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "0",
+                          background: "rgba(107,26,42,0.08)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          border: "1px solid rgba(0,0,0,0.05)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Icon size={18} color="#6B1A2A" />
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.9rem",
+                          fontWeight: 600,
+                          color: "#1A1A1A",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {project.name}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Colonne droite : barres */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            gap: 20,
-          }}
-        >
-          {(
-            [
-              { key: "communication", label: "Communication" },
-              { key: "collaboration", label: "Collaboration" },
-              { key: "punctuality", label: "Ponctualité" },
-            ] as const
-          ).map(({ key, label }) => {
-            const stat = stats[key as StatField];
-            if (!stat) return null;
-            return (
-              <div key={key}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 8,
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  <span
-                    style={{
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      color: "#7C6A65",
-                    }}
-                  >
-                    {label}
-                  </span>
-                  <span style={{ color: "#3A121B" }}>{stat.percentage}%</span>
-                </div>
-                <div
-                  style={{
-                    height: 8,
-                    borderRadius: 999,
-                    background: "#EEE4DD",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${stat.percentage}%`,
-                      height: "100%",
-                      background: "#6B1A2A",
-                      borderRadius: 999,
-                      transition: "width 0.3s ease",
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
-
-      {/* Styles responsifs */}
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .info-card {
-            flex-direction: column !important;
-            align-items: center !important;
-            gap: 24px !important;
-          }
-
-          .performance-card {
-            flex-direction: column !important;
-            gap: 32px !important;
-            align-items: stretch !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

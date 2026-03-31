@@ -37,15 +37,19 @@ model users {
 }
 
 model project {
-  id          Int        @id @default(autoincrement())
-  name        String?
-  description String?
-  icon        String?
-  team_ids    Int[]
-  created_at  DateTime   @default(now())
+  id                 Int        @id @default(autoincrement())
+  name               String?
+  description        String?
+  icon               String?
+  team_ids           Int[]
+  objectives         String?    @db.Text
+  stakeholders       String?    @db.Text
+  start_date         DateTime?  @db.Date
+  end_date           DateTime?  @db.Date
+  created_at         DateTime   @default(now())
   // Relations
-  tasks       tasks[]
-  rapports    rapports[]
+  tasks              tasks[]
+  rapports           rapports[]
 }
 
 model tasks {

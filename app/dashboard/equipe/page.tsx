@@ -4,7 +4,7 @@ import useSWR from "swr";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { isTeamManager } from "@/lib/permissions";
-import TeamsTable from "@/components/dashboard/TeamsTable";
+import EquipeGrid from "@/components/dashboard/EquipeGrid";
 
 type TeamMember = {
   id: number;
@@ -42,7 +42,7 @@ export default function EquipePage() {
 
   const params = new URLSearchParams({
     page: String(page),
-    limit: "10",
+    limit: "12",
   });
 
   if (search) params.set("search", search);
@@ -56,7 +56,7 @@ export default function EquipePage() {
   const isLoading = !data && !error;
 
   return (
-    <TeamsTable
+    <EquipeGrid
       members={data?.data ?? []}
       roles={data?.roles ?? []}
       loading={isLoading}

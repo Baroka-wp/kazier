@@ -40,7 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             style={{
               flex: 1,
               overflowY: "auto",
-              padding: "28px 32px",
+              padding: "16px 20px",
             }}
           >
             {children}

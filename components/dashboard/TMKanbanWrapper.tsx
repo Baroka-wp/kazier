@@ -11,7 +11,7 @@ import {
   useSensors,
   closestCorners,
 } from "@dnd-kit/core";
-import { ArrowLeft, ChevronDown, FolderOpen, Plus } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { Task } from "@/lib/task-actions";
 import { updateTaskStatus } from "@/lib/team-actions";
 import TaskColumn from "./TaskColumn";
@@ -23,13 +23,10 @@ type Project = { id: number; name: string };
 type Props = {
   tasks: Task[];
   isLoading?: boolean;
-  // Props injectées depuis TasksPage
   projects?: Project[];
   selectedProjectId?: number | null;
   onProjectChange?: (id: number | null) => void;
   onAddTask?: () => void;
-  // Props standalone (usage hors TasksPage)
-  projectName?: string;
   onBack?: () => void;
   isTM?: boolean;
   teamMemberId?: number;
@@ -42,7 +39,6 @@ export default function TMKanbanWrapper({
   selectedProjectId,
   onProjectChange,
   onAddTask,
-  projectName,
   onBack,
   isTM = true,
   teamMemberId = 0,
@@ -51,19 +47,16 @@ export default function TMKanbanWrapper({
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  // Sync local tasks quand tasks prop change (refresh SWR)
   useEffect(() => {
     setLocalTasks(tasks);
   }, [tasks]);
 
-  // Si la tâche sélectionnée est mise à jour dans localTasks, synchro
   useEffect(() => {
     if (selectedTask) {
       const updated = localTasks.find((t) => t.id === selectedTask.id);
       if (updated) setSelectedTask(updated);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localTasks]);
+  }, [localTasks, selectedTask]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -105,9 +98,6 @@ export default function TMKanbanWrapper({
     if (!res.success) setLocalTasks(tasks);
   }
 
-  const resolvedProjectName =
-    projectName ?? projects.find((p) => p.id === selectedProjectId)?.name ?? "Projet";
-
   // ── Vue détail tâche ──────────────────────────────────────────────────────
   if (selectedTask) {
     return (
@@ -117,7 +107,6 @@ export default function TMKanbanWrapper({
         teamMemberId={teamMemberId}
         isTM={isTM}
         onUpdated={(updatedTask: Task) => {
-          // ✅ Nom correct
           setLocalTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
           setSelectedTask(updatedTask);
         }}
@@ -131,182 +120,127 @@ export default function TMKanbanWrapper({
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100%",
+        height: "100vh",
         background: "#F2EFE9",
-        borderRadius: "16px",
-        padding: "28px 28px 0 28px",
-        overflow: "hidden",
       }}
     >
-      {/* ── Page header ── */}
+      {/* ── Top navigation bar with project tabs ── */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "28px",
+          gap: "16px",
+          padding: "16px 24px",
+          background: "#fff",
+          borderBottom: "1px solid rgba(0,0,0,0.08)",
           flexShrink: 0,
         }}
       >
-        {/* Left — back + title */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {onBack && (
-            <button
-              onClick={onBack}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "#888",
-                fontSize: "0.75rem",
-                fontWeight: 500,
-                padding: "4px 0",
-              }}
-            >
-              <ArrowLeft size={15} />
-              <span style={{ letterSpacing: "0.03em" }}>RETOUR</span>
-            </button>
-          )}
-          <h1
-            style={{
-              fontSize: "1.75rem",
-              fontWeight: 800,
-              color: "#111",
-              margin: 0,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Tasks
-          </h1>
-        </div>
-
-        {/* Right — project selector + add button */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {onProjectChange && projects.length > 0 ? (
-            <div style={{ position: "relative" }}>
-              <FolderOpen
-                size={14}
-                color="#6B1A2A"
-                style={{
-                  position: "absolute",
-                  left: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                  zIndex: 1,
-                }}
-              />
-              <select
-                value={selectedProjectId ?? ""}
-                onChange={(e) => onProjectChange(e.target.value ? parseInt(e.target.value) : null)}
-                style={{
-                  appearance: "none",
-                  WebkitAppearance: "none",
-                  paddingLeft: "34px",
-                  paddingRight: "32px",
-                  paddingTop: "8px",
-                  paddingBottom: "8px",
-                  borderRadius: "10px",
-                  border: "1.5px solid rgba(0,0,0,0.10)",
-                  background: "#fff",
-                  cursor: "pointer",
-                  fontSize: "0.78rem",
-                  fontWeight: 500,
-                  color: selectedProjectId ? "#333" : "#aaa",
-                  fontFamily: "'DM Sans', sans-serif",
-                  outline: "none",
-                  transition: "border-color 0.15s",
-                  minWidth: "160px",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(107,26,42,0.4)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(0,0,0,0.10)")}
-              >
-                <option value="">Sélectionner un projet</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={13}
-                color="#aaa"
-                style={{
-                  position: "absolute",
-                  right: "10px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                }}
-              />
-            </div>
-          ) : (
-            <button
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "7px",
-                padding: "8px 14px",
-                borderRadius: "10px",
-                border: "1.5px solid rgba(0,0,0,0.10)",
-                background: "#fff",
-                cursor: "pointer",
-                fontSize: "0.78rem",
-                fontWeight: 500,
-                color: "#333",
-                transition: "border-color 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(107,26,42,0.3)")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(0,0,0,0.10)")}
-            >
-              <FolderOpen size={14} color="#6B1A2A" />
-              <span>{resolvedProjectName}</span>
-              <ChevronDown size={13} color="#aaa" />
-            </button>
-          )}
-
+        {onBack && (
           <button
-            onClick={onAddTask}
-            disabled={!selectedProjectId && onProjectChange !== undefined}
+            onClick={onBack}
             style={{
               display: "flex",
               alignItems: "center",
               gap: "6px",
-              padding: "8px 16px",
-              borderRadius: "10px",
+              background: "none",
               border: "none",
-              background: !selectedProjectId && onProjectChange !== undefined ? "#ccc" : "#6B1A2A",
-              color: "#fff",
-              fontSize: "0.78rem",
-              fontWeight: 700,
-              cursor:
-                !selectedProjectId && onProjectChange !== undefined ? "not-allowed" : "pointer",
-              letterSpacing: "0.02em",
-              transition: "background 0.15s",
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-            onMouseEnter={(e) => {
-              if (selectedProjectId || onProjectChange === undefined)
-                e.currentTarget.style.background = "#8B2438";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background =
-                !selectedProjectId && onProjectChange !== undefined ? "#ccc" : "#6B1A2A";
+              cursor: "pointer",
+              color: "#888",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              padding: "4px 0",
             }}
           >
-            <Plus size={15} strokeWidth={2.5} />
-            AJOUTER
+            <ArrowLeft size={15} />
+            <span style={{ letterSpacing: "0.03em" }}>RETOUR</span>
           </button>
+        )}
+
+        {/* Project tabs */}
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            overflowX: "auto",
+            flex: 1,
+            paddingBottom: "4px",
+          }}
+        >
+          {projects.map((project) => {
+            const isActive = project.id === selectedProjectId;
+            return (
+              <button
+                key={project.id}
+                onClick={() => onProjectChange?.(project.id)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "0px",
+                  border: isActive ? "1.5px solid #6B1A2A" : "1px solid rgba(0,0,0,0.08)",
+                  background: isActive ? "rgba(107,26,42,0.08)" : "#fff",
+                  color: isActive ? "#6B1A2A" : "#666",
+                  fontSize: "0.82rem",
+                  fontWeight: isActive ? 700 : 500,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.15s",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = "rgba(107,26,42,0.05)";
+                    e.currentTarget.style.borderColor = "rgba(107,26,42,0.15)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = "#fff";
+                    e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
+                  }
+                }}
+              >
+                {project.name}
+              </button>
+            );
+          })}
         </div>
+
+        {/* Add task button */}
+        <button
+          onClick={onAddTask}
+          disabled={!selectedProjectId}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "8px 16px",
+            borderRadius: "0px",
+            border: "none",
+            background: !selectedProjectId ? "#ccc" : "#6B1A2A",
+            color: "#fff",
+            fontSize: "0.78rem",
+            fontWeight: 700,
+            cursor: !selectedProjectId ? "not-allowed" : "pointer",
+            letterSpacing: "0.02em",
+            transition: "background 0.15s",
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+          onMouseEnter={(e) => {
+            if (selectedProjectId) e.currentTarget.style.background = "#8B2438";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = !selectedProjectId ? "#ccc" : "#6B1A2A";
+          }}
+        >
+          <Plus size={15} strokeWidth={2.5} />
+          AJOUTER
+        </button>
       </div>
 
       {/* ── Kanban columns ── */}
       {isLoading ? (
         <div style={{ textAlign: "center", padding: "60px", color: "#999" }}>Chargement...</div>
-      ) : !selectedProjectId && onProjectChange !== undefined ? (
+      ) : !selectedProjectId ? (
         <div
           style={{
             textAlign: "center",
@@ -329,7 +263,7 @@ export default function TMKanbanWrapper({
               display: "flex",
               gap: "20px",
               overflowX: "auto",
-              paddingBottom: "28px",
+              padding: "20px 24px",
               flex: 1,
               scrollbarWidth: "thin",
               scrollbarColor: "rgba(107,26,42,0.25) transparent",

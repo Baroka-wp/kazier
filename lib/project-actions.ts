@@ -34,6 +34,10 @@ export type Project = {
   created_at?: Date;
   team_ids: number[];
   team_members?: TeamMember[];
+  objectives?: string | null;
+  stakeholders?: string | null;
+  start_date?: Date | null;
+  end_date?: Date | null;
 };
 
 export type CreateProjectData = {
@@ -41,6 +45,10 @@ export type CreateProjectData = {
   description: string;
   icon?: string | null;
   team_ids?: number[];
+  objectives?: string | null;
+  stakeholders?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 };
 
 export type UpdateProjectData = Partial<CreateProjectData>;
@@ -162,9 +170,13 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
     const description = data.description.trim();
     const icon = data.icon || null;
     const team_ids = data.team_ids || [];
+    const objectives = data.objectives?.trim() || null;
+    const stakeholders = data.stakeholders?.trim() || null;
+    const start_date = data.start_date ? new Date(data.start_date) : null;
+    const end_date = data.end_date ? new Date(data.end_date) : null;
 
     const project = await prisma.project.create({
-      data: { name, description, icon, team_ids },
+      data: { name, description, icon, team_ids, objectives, stakeholders, start_date, end_date },
     });
 
     const members = await populateTeamMembers(team_ids);
@@ -198,6 +210,10 @@ export async function createProject(data: CreateProjectData): Promise<ProjectRes
         icon: project.icon,
         team_ids: project.team_ids,
         team_members: members,
+        objectives: project.objectives,
+        stakeholders: project.stakeholders,
+        start_date: project.start_date,
+        end_date: project.end_date,
       },
     };
   } catch (err: unknown) {
@@ -221,6 +237,10 @@ export async function getProject(id: number): Promise<ProjectResult> {
         created_at: project.created_at,
         team_ids: project.team_ids,
         team_members: members,
+        objectives: project.objectives,
+        stakeholders: project.stakeholders,
+        start_date: project.start_date,
+        end_date: project.end_date,
       },
     };
   } catch (err: unknown) {
@@ -295,6 +315,10 @@ export async function getProjects(
         icon: p.icon,
         team_ids: p.team_ids,
         team_members: members,
+        objectives: p.objectives,
+        stakeholders: p.stakeholders,
+        start_date: p.start_date,
+        end_date: p.end_date,
       };
     })
   );
@@ -320,6 +344,10 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
       description: data.description ?? existing.description ?? "",
       icon: data.icon !== undefined ? data.icon : existing.icon,
       team_ids: data.team_ids ?? oldTeamIds,
+      objectives: data.objectives !== undefined ? data.objectives : existing.objectives,
+      stakeholders: data.stakeholders !== undefined ? data.stakeholders : existing.stakeholders,
+      start_date: data.start_date !== undefined ? data.start_date : existing.start_date,
+      end_date: data.end_date !== undefined ? data.end_date : existing.end_date,
     };
 
     const validation = validateProject(mergedData);
@@ -334,6 +362,10 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
         description: mergedData.description.trim(),
         icon: mergedData.icon,
         team_ids: newTeamIds,
+        objectives: mergedData.objectives,
+        stakeholders: mergedData.stakeholders,
+        start_date: mergedData.start_date ? new Date(mergedData.start_date) : null,
+        end_date: mergedData.end_date ? new Date(mergedData.end_date) : null,
       },
     });
 
@@ -369,6 +401,10 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
         icon: updated.icon,
         team_ids: updated.team_ids,
         team_members: members,
+        objectives: updated.objectives,
+        stakeholders: updated.stakeholders,
+        start_date: updated.start_date,
+        end_date: updated.end_date,
       },
     };
   } catch (err: unknown) {

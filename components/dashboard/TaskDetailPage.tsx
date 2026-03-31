@@ -20,6 +20,9 @@ import {
   Users,
   CalendarDays,
   Clock3,
+  MessageSquare,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 
 import { type Task } from "@/lib/task-actions";
@@ -274,72 +277,71 @@ function MenuDropdown({
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p
-      style={{
-        fontSize: "0.68rem",
-        fontWeight: 800,
-        textTransform: "uppercase",
-        letterSpacing: "0.14em",
-        color: "#8d8d8d",
-        margin: "0 0 8px 0",
-      }}
-    >
-      {children}
-    </p>
-  );
-}
+// ── Shared style constants ────────────────────────────────────────────────────
 
-function FileCard({ name, size, icon }: { name: string; size: string; icon: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        padding: "10px 12px",
-        borderRadius: "10px",
-        background: "#fff",
-        border: "1px solid rgba(0,0,0,0.06)",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          width: "32px",
-          height: "32px",
-          flexShrink: 0,
-          borderRadius: "8px",
-          background: "rgba(107,26,42,0.08)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#6B1A2A",
-        }}
-      >
-        {icon}
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <p
-          style={{
-            fontSize: "0.78rem",
-            fontWeight: 600,
-            color: "#1A1A1A",
-            margin: 0,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {name}
-        </p>
-        <span style={{ fontSize: "0.68rem", color: "#888" }}>{size}</span>
-      </div>
-    </div>
-  );
-}
+const menuItemStyle: React.CSSProperties = {
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  padding: "9px 12px",
+  borderRadius: "8px",
+  border: "none",
+  background: "transparent",
+  fontSize: "0.83rem",
+  fontWeight: 600,
+  color: "#1A1A1A",
+  cursor: "pointer",
+  textAlign: "left",
+};
+
+const linkBtnStyle: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+  color: "#6B1A2A",
+  fontSize: "0.7rem",
+  fontWeight: 600,
+};
+
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: "8px",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#e8eaed",
+  color: "#666",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: "0.82rem",
+};
+
+const primaryBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: "8px",
+  border: "none",
+  background: "#6B1A2A",
+  color: "#fff",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: "0.82rem",
+};
+
+const dangerBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: "8px",
+  border: "none",
+  background: "#dc2626",
+  color: "#fff",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: "0.82rem",
+};
+
+// ── Comment Card Component ────────────────────────────────────────────────────
 
 function CommentCard({
   comment,
@@ -405,100 +407,14 @@ function CommentCard({
   );
 }
 
-// ── Shared style constants ────────────────────────────────────────────────────
-
-const menuItemStyle: React.CSSProperties = {
-  width: "100%",
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  padding: "9px 12px",
-  borderRadius: "8px",
-  border: "none",
-  background: "transparent",
-  fontSize: "0.83rem",
-  fontWeight: 600,
-  color: "#1A1A1A",
-  cursor: "pointer",
-  textAlign: "left",
-};
-
-const linkBtnStyle: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: 0,
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "4px",
-  color: "#6B1A2A",
-  fontSize: "0.7rem",
-  fontWeight: 600,
-};
-
-const infoCardStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.55)",
-  borderRadius: "10px",
-  padding: "12px 14px",
-  border: "1px solid rgba(0,0,0,0.05)",
-  display: "flex",
-  flexDirection: "column",
-  gap: "5px",
-};
-
-const infoLabelStyle: React.CSSProperties = {
-  fontSize: "0.63rem",
-  fontWeight: 800,
-  textTransform: "uppercase",
-  letterSpacing: "0.12em",
-  color: "#8d8d8d",
-};
-
-const infoValueStyle: React.CSSProperties = {
-  fontSize: "0.88rem",
-  fontWeight: 700,
-  color: "#1A1A1A",
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: "9px 14px",
-  borderRadius: "8px",
-  border: "1px solid rgba(0,0,0,0.08)",
-  background: "#e8eaed",
-  color: "#666",
-  fontWeight: 700,
-  cursor: "pointer",
-  fontSize: "0.82rem",
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: "9px 14px",
-  borderRadius: "8px",
-  border: "none",
-  background: "#6B1A2A",
-  color: "#fff",
-  fontWeight: 700,
-  cursor: "pointer",
-  fontSize: "0.82rem",
-};
-
-const dangerBtnStyle: React.CSSProperties = {
-  padding: "9px 14px",
-  borderRadius: "8px",
-  border: "none",
-  background: "#dc2626",
-  color: "#fff",
-  fontWeight: 700,
-  cursor: "pointer",
-  fontSize: "0.82rem",
-};
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function TaskDetailPage({
   task,
   onBack,
   onUpdated,
+  teamMemberId = 0,
+  isTM = false,
   projects = [],
   teams = [],
   canManageTasks = false,
@@ -510,6 +426,7 @@ export default function TaskDetailPage({
   const [loadingComments, setLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -537,8 +454,10 @@ export default function TaskDetailPage({
   }, [task.id]);
 
   useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [comments]);
+    if (commentsExpanded) {
+      commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [comments, commentsExpanded]);
 
   useEffect(() => {
     const timer = setTimeout(() => window.scrollTo(0, 0), 0);
@@ -612,51 +531,59 @@ export default function TaskDetailPage({
     }
   }
 
+  const latestComment = comments.length > 0 ? comments[comments.length - 1] : null;
+
   return (
     <div
-      style={{ width: "100%", minHeight: "100%", background: "#f7f3ed", boxSizing: "border-box" }}
+      style={{
+        width: "100%",
+        minHeight: "100vh",
+        background: "#F7F3ED",
+        boxSizing: "border-box",
+      }}
     >
-      {/* ── Responsive styles ── */}
       <style>{`
-        .tdp-outer {
-          padding: 20px 24px 32px;
+        .tdp-wrapper {
+          padding: 24px 32px 40px;
+          max-width: 1200px;
+          margin: 0 auto;
         }
-        .tdp-grid {
-          display: grid;
-          grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-          gap: 16px;
-          align-items: start;
-        }
-        .tdp-panel {
-          background: #F3EDE4;
-          border-radius: 10px;
-          padding: 22px 24px;
-          border: 1px solid rgba(0,0,0,0.04);
-        }
-        .tdp-comments-panel {
-          background: #F3EDE4;
-          border-radius: 10px;
-          padding: 22px 24px;
-          border: 1px solid rgba(0,0,0,0.04);
+        .tdp-header {
           display: flex;
-          flex-direction: column;
-          /* Fixed height on desktop so comments scroll internally */
-          height: calc(100vh - 130px);
-          min-height: 500px;
-          position: sticky;
-          top: 20px;
-        }
-        .tdp-task-header {
-          display: flex;
-          justify-content: space-between;
           align-items: flex-start;
-          gap: 16px;
-          margin-bottom: 16px;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 28px;
+        }
+        .tdp-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          border: none;
+          background: transparent;
+          color: #6B1A2A;
+          font-weight: 700;
+          cursor: pointer;
+          padding: 8px 12px;
+          fontSize: 0.78rem;
+          letterSpacing: 0.04em;
+          border-radius: 0;
+          transition: background 0.15s;
+        }
+        .tdp-back-btn:hover {
+          background: rgba(107,26,42,0.05);
+        }
+        .tdp-main-card {
+          background: #fff;
+          border-radius: 0;
+          padding: 32px 40px;
+          border: 1px solid rgba(0,0,0,0.08);
+          margin-bottom: 20px;
         }
         .tdp-task-title {
-          font-size: clamp(1.4rem, 2.5vw, 2.6rem);
-          line-height: 1.05;
-          margin: 0;
+          font-size: clamp(1.5rem, 3vw, 2.2rem);
+          line-height: 1.15;
+          margin: 0 0 20px 0;
           color: #1A1A1A;
           font-weight: 800;
           letter-spacing: -0.03em;
@@ -665,416 +592,442 @@ export default function TaskDetailPage({
         .tdp-meta-row {
           display: flex;
           align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-          margin-bottom: 20px;
-        }
-        .tdp-info-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
           gap: 12px;
-          margin-bottom: 22px;
+          flex-wrap: wrap;
+          margin-bottom: 24px;
         }
-        .tdp-files-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
-        .tdp-actions-row {
+        .tdp-assignee-group {
+          border: 1px solid rgba(107,26,42,0.12);
           display: flex;
+          alignItems: center;
+          gap: 8px;
+          padding: 6px 12px;
+          background: rgba(107,26,42,0.05);
+          border-radius: 0;
+        }
+        .tdp-description-box {
+          border: 1px solid rgba(0,0,0,0.08);
+          background: #fff;
+          borderRadius: 0;
+          padding: 20px 24px;
+          color: #3d3d3d;
+          lineHeight: 1.7;
+          fontSize: 0.95rem;
+          border: 1px solid rgba(0,0,0,0.08);
+        }
+        .tdp-info-row {
+          display: flex;
+          gap: 16px;
+          flex-wrap: wrap;
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 1px solid rgba(0,0,0,0.08);
+        }
+        .tdp-info-pill {
+          border: 1px solid rgba(0,0,0,0.08);
+          display: inline-flex;
           align-items: center;
           gap: 8px;
-          flex-shrink: 0;
+          padding: 8px 14px;
+          background: #fff;
+          border-radius: 0;
+          font-size: 0.82rem;
+          font-weight: 600;
+          color: #1A1A1A;
+        }
+        .tdp-comments-section {
+          border: 1px solid rgba(0,0,0,0.08);
+          background: #fff;
+          border-radius: 0;
+          padding: 24px 32px;
+          
+        }
+        .tdp-comments-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 16px;
+          cursor: pointer;
+          padding: 8px 0;
+        }
+        .tdp-comments-title {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 0.85rem;
+          font-weight: 800;
+          color: #1A1A1A;
+          letter-spacing: 0.06em;
+        }
+        .tdp-comments-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 22px;
+          height: 22px;
+          padding: 0 6px;
+          background: #6B1A2A;
+          color: #fff;
+          borderRadius: 0;
+          fontSize: 0.7rem;
+          fontWeight: 700;
+        }
+        .tdp-comments-preview {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 14px 16px;
+          background: #fff;
+          border-radius: 0;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .tdp-comments-preview:hover {
+          background: rgba(247,243,237,0.9);
+        }
+        .tdp-comments-list {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid rgba(0,0,0,0.08);
+        }
+        .tdp-comment-input-wrapper {
+          margin-top: 20px;
+          background: #fff;
+          border-radius: 0;
+          border: 1px solid rgba(0,0,0,0.08);
+          overflow: hidden;
+        }
+        .tdp-comment-toolbar {
+          padding: 8px 14px;
+          borderBottom: 1px solid rgba(0,0,0,0.05);
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          color: #888;
+        }
+        .tdp-comment-toolbar button {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #888;
+          display: flex;
+          padding: 4px;
+          border-radius: 4px;
+          transition: background 0.1s;
+        }
+        .tdp-comment-toolbar button:hover {
+          background: rgba(0,0,0,0.05);
+        }
+        .tdp-comment-editor {
+          padding: 12px 14px;
+        }
+        .tdp-comment-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 14px;
+          borderTop: 1px solid rgba(0,0,0,0.05);
+        }
+        .tdp-comment-draft {
+          font-size: 0.65rem;
+          color: #8d8d8d;
+        }
+        .tdp-submit-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 16px;
+          border-radius: 0;
+          border: none;
+          background: #6B1A2A;
+          color: #fff;
+          font-weight: 700;
+          cursor: pointer;
+          font-size: 0.8rem;
+          transition: background 0.15s;
+        }
+        .tdp-submit-btn:disabled {
+          background: rgba(107,26,42,0.35);
+          cursor: not-allowed;
+        }
+        .tdp-submit-btn:hover:not(:disabled) {
+          background: #8B2438;
+        }
+        .tdp-empty-state {
+          padding: 24px;
+          background: #fff;
+          border: 1px solid rgba(0,0,0,0.08);
+          border-radius: 0;
+          text-align: center;
+          color: #8d8d8d;
+          font-size: 0.88rem;
+        }
+        .tdp-section-label {
+          font-size: 0.7rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          color: #8d8d8d;
+          margin-bottom: 10px;
         }
 
-        /* ── Tablet (< 1024px): reduce sidebar width ── */
-        @media (max-width: 1024px) {
-          .tdp-grid {
-            grid-template-columns: 1fr 340px;
-          }
-          .tdp-comments-panel {
-            height: calc(100vh - 130px);
-          }
-        }
-
-        /* ── Mobile (< 768px): single column ── */
         @media (max-width: 768px) {
-          .tdp-outer {
-            padding: 14px 14px 32px;
+          .tdp-wrapper {
+            padding: 16px 16px 24px;
           }
-          .tdp-grid {
-            grid-template-columns: 1fr;
+          .tdp-main-card {
+            padding: 20px 16px;
           }
-          .tdp-panel {
+          .tdp-comments-section {
+          border: 1px solid rgba(0,0,0,0.08);
             padding: 16px;
-          }
-          .tdp-comments-panel {
-            height: auto;
-            min-height: 400px;
-            position: static;
-            padding: 16px;
-          }
-          .tdp-task-header {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 12px;
           }
           .tdp-task-title {
-            font-size: clamp(1.3rem, 6vw, 1.8rem);
-          }
-          .tdp-actions-row {
-            justify-content: flex-start;
-          }
-          .tdp-info-grid {
-            grid-template-columns: 1fr;
-          }
-          .tdp-files-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        /* ── Very small (< 480px) ── */
-        @media (max-width: 480px) {
-          .tdp-meta-row {
-            gap: 6px;
-          }
-          .tdp-panel, .tdp-comments-panel {
-            padding: 14px 12px;
+            font-size: 1.4rem;
           }
         }
 
         .rich-editor-comment .ProseMirror {
-          min-height: 72px !important;
-          padding: 10px 12px !important;
-          font-size: 0.88rem !important;
+          min-height: 60px !important;
+          padding: 8px 10px !important;
+          font-size: 0.85rem !important;
         }
       `}</style>
 
-      <div className="tdp-outer">
+      <div className="tdp-wrapper">
         {/* ── Back button ── */}
-        <button
-          onClick={onBack}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "7px",
-            border: "none",
-            background: "transparent",
-            color: "#6B1A2A",
-            fontWeight: 700,
-            cursor: "pointer",
-            padding: 0,
-            marginBottom: "16px",
-            fontSize: "0.78rem",
-            letterSpacing: "0.04em",
-          }}
-        >
+        <button onClick={onBack} className="tdp-back-btn">
           <ArrowLeft size={16} />
           RETOUR
         </button>
 
-        {/* ── Main grid ── */}
-        <div className="tdp-grid">
-          {/* ══ Left panel — Task details ══ */}
-          <div className="tdp-panel">
-            {/* Title + actions */}
-            <div className="tdp-task-header">
-              <h1 className="tdp-task-title">{task.title}</h1>
-              <div className="tdp-actions-row">
-                {!hasAssignees && (
-                  <button
-                    onClick={handleAssign}
-                    style={{
-                      padding: "9px 14px",
-                      borderRadius: "10px",
-                      border: "1px solid rgba(107,26,42,0.18)",
-                      background: "#6B1A2A",
-                      color: "#fff",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontSize: "0.82rem",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    S&apos;assigner
-                  </button>
-                )}
-                <MenuDropdown
-                  canManageTasks={canManageTasks}
-                  onEdit={() => setEditTaskOpen(true)}
-                  onDelete={() => setDeleteTaskOpen(true)}
-                />
-              </div>
-            </div>
-
-            {/* Meta row — assignees, date, status, priority */}
-            <div className="tdp-meta-row">
-              {hasAssignees ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    {assignedNames.slice(0, 3).map((name, i) => (
-                      <div key={name + i} style={{ marginLeft: i === 0 ? 0 : -9 }}>
-                        <Avatar name={name} size={28} />
-                      </div>
-                    ))}
-                    {assignedNames.length > 3 && (
-                      <div
-                        style={{
-                          marginLeft: -9,
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "50%",
-                          background: "#e5e7eb",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.68rem",
-                          fontWeight: 700,
-                          color: "#6b7280",
-                          border: "2px solid #f3ede4",
-                        }}
-                      >
-                        +{assignedNames.length - 3}
-                      </div>
-                    )}
-                  </div>
-                  <span style={{ fontSize: "0.8rem", color: "#1A1A1A", fontWeight: 600 }}>
-                    {assignedNames.slice(0, 2).join(", ")}
-                    {assignedNames.length > 2 ? ` +${assignedNames.length - 2}` : ""}
-                  </span>
-                </div>
-              ) : (
-                <span style={{ fontSize: "0.82rem", color: "#7a7a7a" }}>Aucun assigné</span>
-              )}
-
-              <span style={{ color: "#c8b9a8", fontSize: "0.75rem" }}>•</span>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Clock3 size={14} color="#6B1A2A" />
-                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1A1A1A" }}>
-                  {dueDate}
-                </span>
-              </div>
-
-              <span style={{ color: "#c8b9a8", fontSize: "0.75rem" }}>•</span>
-              <StatusBadge status={task.status} />
-              <PriorityBadge priority={task.priority} />
-            </div>
-
-            {/* Description */}
-            <div style={{ marginBottom: "22px" }}>
-              <SectionLabel>Description</SectionLabel>
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.55)",
-                  borderRadius: "10px",
-                  padding: "14px 16px",
-                  color: "#3d3d3d",
-                  lineHeight: 1.65,
-                  fontSize: "0.92rem",
-                  border: "1px solid rgba(0,0,0,0.05)",
-                }}
-              >
-                {task.description || (
-                  <span style={{ color: "#aaa", fontStyle: "italic" }}>Aucune description</span>
-                )}
-              </div>
-            </div>
-
-            {/* Deadline + Créé par */}
-            <div className="tdp-info-grid">
-              <div>
-                <SectionLabel>Deadline</SectionLabel>
-                <div style={{ ...infoCardStyle }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <CalendarDays size={15} color="#6B1A2A" />
-                    <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
-                      {task.due_date ? formatDate(task.due_date) : "—"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <SectionLabel>Créé par</SectionLabel>
-                <div style={{ ...infoCardStyle }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Users size={15} color="#6B1A2A" />
-                    <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
-                      {/* {task.created_by_name || "—"} */}—
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Fichiers */}
-            <div style={{ marginBottom: "22px" }}>
-              <SectionLabel>Fichiers</SectionLabel>
-              <div className="tdp-files-grid">
-                <FileCard
-                  name="brand_guidelines_v2.pdf"
-                  size="2.4 MB"
-                  icon={<Paperclip size={15} />}
-                />
-                <FileCard name="dashboard_mockup.png" size="15 MB" icon={<Paperclip size={15} />} />
-              </div>
-            </div>
-
-            {/* Détails */}
-            <div>
-              <SectionLabel>Détails</SectionLabel>
-              <div className="tdp-info-grid" style={{ marginBottom: 0 }}>
-                <div style={infoCardStyle}>
-                  <span style={infoLabelStyle}>Projet</span>
-                  <span style={infoValueStyle}>{projectName}</span>
-                </div>
-                <div style={infoCardStyle}>
-                  <span style={infoLabelStyle}>Statut</span>
-                  <span style={infoValueStyle}>{task.status}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ══ Right panel — Comments ══ */}
-          <div className="tdp-comments-panel">
-            <h2
-              style={{
-                fontSize: "0.88rem",
-                fontWeight: 800,
-                color: "#1A1A1A",
-                margin: "0 0 16px 0",
-                letterSpacing: "0.06em",
-              }}
-            >
-              COMMENTAIRES
-            </h2>
-
-            {/* Scrollable list */}
-            <div
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                display: "flex",
-                flexDirection: "column",
-                gap: "14px",
-                paddingRight: "2px",
-                marginBottom: "14px",
-              }}
-            >
-              {loadingComments ? (
-                <div style={{ color: "#888", fontSize: "0.88rem" }}>Chargement...</div>
-              ) : comments.length === 0 ? (
-                <div
-                  style={{
-                    padding: "16px",
-                    background: "rgba(255,255,255,0.6)",
-                    border: "1px dashed rgba(0,0,0,0.08)",
-                    borderRadius: "10px",
-                    color: "#8d8d8d",
-                    fontSize: "0.88rem",
-                  }}
-                >
-                  Aucun commentaire pour l&apos;instant.
-                </div>
-              ) : (
-                comments.map((c) => {
-                  const isMe = c.team_id === teamId;
-                  const canEdit = isMe || canManageTasks;
-                  return (
-                    <CommentCard
-                      key={c.id}
-                      comment={c}
-                      isMe={isMe}
-                      canEdit={canEdit}
-                      onEdit={() => {
-                        setEditingId(c.id);
-                        setEditContent(c.content);
-                      }}
-                      onDelete={() => setConfirmDeleteId(c.id)}
-                    />
-                  );
-                })
-              )}
-              <div ref={commentsEndRef} />
-            </div>
-
-            {/* Comment input */}
-            <div
-              style={{
-                background: "#fff",
-                borderRadius: "10px",
-                border: "1px solid rgba(0,0,0,0.06)",
-                overflow: "hidden",
-                flexShrink: 0,
-              }}
-            >
-              {/* Toolbar */}
-              <div
-                style={{
-                  padding: "8px 12px",
-                  borderBottom: "1px solid rgba(0,0,0,0.06)",
-                  display: "flex",
-                  gap: "10px",
-                  alignItems: "center",
-                  color: "#888",
-                }}
-              >
-                {[Bold, Italic, List, Paperclip, Smile].map((Icon, i) => (
-                  <button
-                    key={i}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "#888",
-                      display: "flex",
-                      padding: "2px",
-                    }}
-                  >
-                    <Icon size={14} />
-                  </button>
-                ))}
-              </div>
-              {/* Editor */}
-              <div style={{ padding: "10px 12px", fontSize: "0.85rem" }}>
-                <RichTextArea key={resetKey} value={newComment} onChange={setNewComment} />
-              </div>
-              {/* Footer */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "8px 12px",
-                  borderTop: "1px solid rgba(0,0,0,0.05)",
-                }}
-              >
-                <span style={{ fontSize: "0.68rem", color: "#8d8d8d" }}>Auto-saving draft…</span>
+        {/* ── Main task card ── */}
+        <div className="tdp-main-card">
+          {/* Title + actions */}
+          <div className="tdp-header">
+            <h1 className="tdp-task-title">{task.title}</h1>
+            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+              {!hasAssignees && (
                 <button
-                  onClick={handleSubmit}
-                  disabled={submitting || !newComment.trim()}
+                  onClick={handleAssign}
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    padding: "8px 14px",
-                    borderRadius: "8px",
-                    border: "none",
-                    background:
-                      submitting || !newComment.trim() ? "rgba(107,26,42,0.35)" : "#6B1A2A",
+                    padding: "9px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(107,26,42,0.18)",
+                    background: "#6B1A2A",
                     color: "#fff",
                     fontWeight: 700,
-                    cursor: submitting || !newComment.trim() ? "not-allowed" : "pointer",
-                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    fontSize: "0.82rem",
+                    whiteSpace: "nowrap",
+                    transition: "background 0.15s",
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#8B2438")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#6B1A2A")}
                 >
-                  <Send size={13} />
-                  Commenter
+                  S&apos;assigner
                 </button>
-              </div>
+              )}
+              <MenuDropdown
+                canManageTasks={canManageTasks}
+                onEdit={() => setEditTaskOpen(true)}
+                onDelete={() => setDeleteTaskOpen(true)}
+              />
             </div>
           </div>
+
+          {/* Meta row */}
+          <div className="tdp-meta-row">
+            {hasAssignees ? (
+              <div className="tdp-assignee-group">
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  {assignedNames.slice(0, 3).map((name, i) => (
+                    <div key={name + i} style={{ marginLeft: i === 0 ? 0 : -8 }}>
+                      <Avatar name={name} size={26} />
+                    </div>
+                  ))}
+                  {assignedNames.length > 3 && (
+                    <div
+                      style={{
+                        marginLeft: -8,
+                        width: "26px",
+                        height: "26px",
+                        borderRadius: "50%",
+                        background: "#e5e7eb",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        color: "#6b7280",
+                        border: "2px solid #fff",
+                      }}
+                    >
+                      +{assignedNames.length - 3}
+                    </div>
+                  )}
+                </div>
+                <span style={{ fontSize: "0.8rem", color: "#1A1A1A", fontWeight: 600 }}>
+                  {assignedNames.slice(0, 2).join(", ")}
+                  {assignedNames.length > 2 ? ` +${assignedNames.length - 2}` : ""}
+                </span>
+              </div>
+            ) : (
+              <span style={{ fontSize: "0.82rem", color: "#7a7a7a" }}>Aucun assigné</span>
+            )}
+
+            <StatusBadge status={task.status} />
+            <PriorityBadge priority={task.priority} />
+          </div>
+
+          {/* Description */}
+          <div>
+            <p className="tdp-section-label">Description</p>
+            <div className="tdp-description-box">
+              {task.description || (
+                <span style={{ color: "#aaa", fontStyle: "italic" }}>Aucune description</span>
+              )}
+            </div>
+          </div>
+
+          {/* Info pills */}
+          <div className="tdp-info-row">
+            <div className="tdp-info-pill">
+              <CalendarDays size={15} color="#6B1A2A" />
+              {task.due_date ? formatDate(task.due_date) : "—"}
+            </div>
+            <div className="tdp-info-pill">
+              <Users size={15} color="#6B1A2A" />
+              {projectName}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Comments section ── */}
+        <div className="tdp-comments-section">
+          <div
+            className="tdp-comments-header"
+            onClick={() => setCommentsExpanded((v) => !v)}
+            style={{ cursor: "pointer" }}
+          >
+            <div className="tdp-comments-title">
+              <MessageSquare size={16} color="#6B1A2A" />
+              COMMENTAIRES
+              {comments.length > 0 && (
+                <span className="tdp-comments-badge">{comments.length}</span>
+              )}
+            </div>
+            <button
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#6B1A2A",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {commentsExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+          </div>
+
+          {commentsExpanded ? (
+            <>
+              <div className="tdp-comments-list">
+                {loadingComments ? (
+                  <div style={{ color: "#888", fontSize: "0.88rem" }}>Chargement...</div>
+                ) : comments.length === 0 ? (
+                  <div className="tdp-empty-state">Aucun commentaire pour l&apos;instant.</div>
+                ) : (
+                  comments.map((c) => {
+                    const isMe = c.team_id === teamId;
+                    const canEdit = isMe || canManageTasks;
+                    return (
+                      <CommentCard
+                        key={c.id}
+                        comment={c}
+                        isMe={isMe}
+                        canEdit={canEdit}
+                        onEdit={() => {
+                          setEditingId(c.id);
+                          setEditContent(c.content);
+                        }}
+                        onDelete={() => setConfirmDeleteId(c.id)}
+                      />
+                    );
+                  })
+                )}
+                <div ref={commentsEndRef} />
+              </div>
+
+              {/* Comment input */}
+              <div className="tdp-comment-input-wrapper">
+                <div className="tdp-comment-toolbar">
+                  {[Bold, Italic, List, Paperclip, Smile].map((Icon, i) => (
+                    <button key={i} type="button">
+                      <Icon size={14} />
+                    </button>
+                  ))}
+                </div>
+                <div className="tdp-comment-editor">
+                  <RichTextArea key={resetKey} value={newComment} onChange={setNewComment} />
+                </div>
+                <div className="tdp-comment-footer">
+                  <span className="tdp-comment-draft">Sauvegarde automatique...</span>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting || !newComment.trim()}
+                    className="tdp-submit-btn"
+                  >
+                    <Send size={13} />
+                    Commenter
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Preview when collapsed */
+            <div
+              className="tdp-comments-preview"
+              onClick={() => setCommentsExpanded(true)}
+              style={{ cursor: "pointer" }}
+            >
+              {latestComment ? (
+                <>
+                  <Avatar name={latestComment.author_name} size={36} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1A1A1A" }}>
+                        {latestComment.author_name}
+                      </span>
+                      <span style={{ fontSize: "0.68rem", color: "#8d8d8d" }}>
+                        {formatDateTime(latestComment.created_at)}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.82rem",
+                        color: "#666",
+                        marginTop: "4px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      dangerouslySetInnerHTML={{ __html: latestComment.content }}
+                    />
+                  </div>
+                  <ChevronDown size={16} color="#6B1A2A" />
+                </>
+              ) : (
+                <div style={{ color: "#8d8d8d", fontSize: "0.85rem" }}>
+                  Cliquez pour ajouter un commentaire
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

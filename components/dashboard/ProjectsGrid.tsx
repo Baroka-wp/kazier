@@ -8,8 +8,6 @@ import {
   Plus,
   CheckCircle2,
   XCircle,
-  ArrowRight,
-  CheckSquare,
   BarChart3,
   Briefcase,
   Database,
@@ -22,9 +20,12 @@ import {
   Cpu,
   Workflow,
   Boxes,
+  ArrowRight,
+  FileText,
 } from "lucide-react";
 import { createProject, getTeams, type Project, type TeamMember } from "@/lib/project-actions";
 import { usePermissions } from "@/hooks/usePermissions";
+import type { Task } from "@/lib/task-actions";
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
@@ -41,28 +42,6 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; color?: stri
   workflow: Workflow,
   boxes: Boxes,
 };
-const AVAILABLE_ICONS = Object.entries(ICON_MAP).map(([id, component]) => ({
-  id,
-  label: id.charAt(0).toUpperCase() + id.slice(1),
-  component,
-}));
-
-const BOTTOM_BLOCKS = [
-  {
-    id: "tasks",
-    label: "Tâches en cours",
-    subtitle: "Cliquez pour voir",
-    icon: CheckSquare,
-    href: "/dashboard/tasks",
-  },
-  {
-    id: "reports",
-    label: "Reporting",
-    subtitle: "Cliquez pour voir",
-    icon: BarChart3,
-    href: "/dashboard/rapports",
-  },
-];
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -92,7 +71,7 @@ function Avatar({ name, size = 34 }: { name: string; size?: number }) {
         height: size,
         borderRadius: "50%",
         background: getAvatarColor(name),
-        border: "2px solid #fff",
+        border: "1px solid rgba(0,0,0,0.08)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -101,7 +80,6 @@ function Avatar({ name, size = 34 }: { name: string; size?: number }) {
         color: "#fff",
         flexShrink: 0,
         marginLeft: -8,
-        border: "1px solid rgba(0,0,0,0.08)",
       }}
     >
       {getInitials(name)}
@@ -144,52 +122,6 @@ function AvatarStack({ members = [], size = 34 }: { members: TeamMember[]; size?
   );
 }
 
-function CategoryBadge({ label }: { label?: string | null }) {
-  if (!label) return null;
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "3px 9px",
-        borderRadius: "0px",
-        background: "rgba(107,26,42,0.08)",
-        border: "1px solid rgba(107,26,42,0.15)",
-        fontSize: "0.62rem",
-        fontWeight: 700,
-        letterSpacing: "0.08em",
-        color: "#6B1A2A",
-        textTransform: "uppercase" as const,
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-function ProgressBar({ value, height = 8 }: { value: number; height?: number }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height,
-        borderRadius: "50%",
-        background: "rgba(107,26,42,0.1)",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          width: `${value}%`,
-          height: "100%",
-          borderRadius: "50%",
-          background: "linear-gradient(90deg,#6B1A2A,#9B3A4A)",
-          transition: "width 0.6s ease",
-        }}
-      />
-    </div>
-  );
-}
-
 function ToastNotification({
   toast,
   onClose,
@@ -212,7 +144,6 @@ function ToastNotification({
         border: `1.5px solid ${ok ? "rgba(45,122,79,0.2)" : "rgba(229,62,62,0.2)"}`,
         borderRadius: "0px",
         padding: "10px 14px",
-        border: "1px solid rgba(0,0,0,0.08)",
         minWidth: 260,
         animation: "slideIn 0.25s ease",
       }}
@@ -407,11 +338,11 @@ function CreateModal({
                 border: "1.5px solid rgba(0,0,0,0.08)",
               }}
             >
-              {AVAILABLE_ICONS.map(({ id, label, component: IC }) => (
+              {Object.entries(ICON_MAP).map(([id, IC]) => (
                 <button
                   key={id}
                   onClick={() => setField("icon", id)}
-                  title={label}
+                  title={id}
                   style={{
                     width: "100%",
                     padding: 9,
@@ -631,11 +562,12 @@ export default function ProjectsGrid() {
   const [toasts, setToasts] = useState<
     { id: number; type: "success" | "error"; message: string }[]
   >([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
 
   const { data, mutate, isLoading } = useSWR<{ data: Project[] }>("/api/projects", fetcher, {
     dedupingInterval: 500,
   });
-  // Trier les projets par date de création (plus récents en premier)
   const sortedProjects = (data?.data ?? []).sort((a, b) => {
     const dateA = new Date(a.created_at || 0).getTime();
     const dateB = new Date(b.created_at || 0).getTime();
@@ -644,12 +576,7 @@ export default function ProjectsGrid() {
 
   const projects = sortedProjects;
   const featured = projects[0] ?? null;
-  const smallProjects = projects.slice(1, 3);
-  const allProjects = projects; // Tous les projets disponibles
-  const allMembers = projects
-    .flatMap((p) => p.team_members ?? [])
-    .filter((m, i, arr) => arr.findIndex((x) => x.id === m.id) === i)
-    .slice(0, 4);
+  const otherProjects = projects.slice(1);
 
   useEffect(() => {
     (async () => {
@@ -658,13 +585,70 @@ export default function ProjectsGrid() {
     })();
   }, []);
 
+  useEffect(() => {
+    async function fetchTasks() {
+      try {
+        setTasksLoading(true);
+        const result = await fetch("/api/tasks?limit=1000");
+        const data = await result.json();
+        const tasks: Task[] = data.data || [];
+        setAllTasks(tasks);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+      } finally {
+        setTasksLoading(false);
+      }
+    }
+    fetchTasks();
+  }, []);
+
+  // Calculate time progress percentage (same as ProjectDashboard)
+  const getProjectTimeProgress = (projectId: number): number => {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project?.start_date || !project?.end_date) return 0;
+
+    const now = new Date();
+    const startDate = new Date(project.start_date);
+    const endDate = new Date(project.end_date);
+
+    if (now < startDate) return 0;
+    if (now > endDate) return 100;
+
+    const totalDuration = endDate.getTime() - startDate.getTime();
+    const elapsed = now.getTime() - startDate.getTime();
+    return Math.round((elapsed / totalDuration) * 100);
+  };
+
+  // Get remaining time info
+  const getRemainingTimeInfo = (projectId: number): { days: number; isUrgent: boolean } => {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project?.end_date) return { days: 0, isUrgent: false };
+
+    const now = Date.now();
+    const endDate = new Date(project.end_date).getTime();
+    const daysLeft = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+
+    return { days: Math.max(0, daysLeft), isUrgent: daysLeft <= 3 };
+  };
+
+  const getGlobalKPIs = () => {
+    const tasksEnCours = allTasks.filter((t) => t.status === "en cours").length;
+    const activeProjectIds = new Set<number>();
+    allTasks.forEach((task) => {
+      if ((task.status === "en cours" || task.status === "à faire") && task.project_id) {
+        activeProjectIds.add(task.project_id);
+      }
+    });
+    const activeProjects = projects.filter((p) => activeProjectIds.has(p.id));
+    return { tasksEnCours, activeProjects };
+  };
+
   function addToast(type: "success" | "error", message: string) {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }
 
-  // ── card style helpers ────────────────────────────────────────────────────
   const hoverEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     e.currentTarget.style.boxShadow = "0 8px 24px rgba(107,26,42,0.13)";
     e.currentTarget.style.borderColor = "rgba(107,26,42,0.18)";
@@ -681,18 +665,9 @@ export default function ProjectsGrid() {
       <style>{`
         @media(max-width:900px){
           .pg-row1 { grid-template-columns: 1fr !important; }
-          .pg-row2 { grid-template-columns: 1fr 1fr !important; }
-        }
-        @media(max-width:600px){
           .pg-row2 { grid-template-columns: 1fr !important; }
         }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       <div
@@ -706,8 +681,7 @@ export default function ProjectsGrid() {
           gap: 12,
         }}
       >
-        {/* Loader pendant le chargement */}
-        {isLoading && (
+        {isLoading ? (
           <div
             style={{
               display: "flex",
@@ -728,21 +702,73 @@ export default function ProjectsGrid() {
                 animation: "spin 0.8s linear infinite",
               }}
             />
-            <p
-              style={{
-                fontSize: "0.9rem",
-                color: "#666",
-                fontWeight: 500,
-              }}
-            >
+            <p style={{ fontSize: "0.9rem", color: "#666", fontWeight: 500 }}>
               Chargement des projets...
             </p>
           </div>
-        )}
-
-        {!isLoading && (
+        ) : (
           <>
-            {/* ── Row 1 : Featured + Stats ── */}
+            {/* Top Block - Reports */}
+            <div
+              style={{
+                marginBottom: 8,
+              }}
+            >
+              <div
+                onClick={() => router.push("/dashboard/rapports")}
+                style={{
+                  background: "#F8F6F3",
+                  borderRadius: "0px",
+                  padding: "20px 24px",
+                  border: "1.5px dashed rgba(107,26,42,0.25)",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(107,26,42,0.05)";
+                  e.currentTarget.style.borderColor = "#6B1A2A";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#F8F6F3";
+                  e.currentTarget.style.borderColor = "rgba(107,26,42,0.25)";
+                }}
+              >
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: "0px",
+                    background: "rgba(107,26,42,0.08)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#6B1A2A",
+                  }}
+                >
+                  <FileText size={26} strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p
+                    style={{
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      color: "#6B1A2A",
+                      margin: "0 0 4px 0",
+                    }}
+                  >
+                    Rapports
+                  </p>
+                  <p style={{ fontSize: "0.7rem", color: "#999", margin: 0 }}>
+                    Voir tous les rapports
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 1 : Featured + Stats */}
             <div
               className="pg-row1"
               style={{ display: "grid", gridTemplateColumns: "1fr 270px", gap: 16 }}
@@ -755,7 +781,6 @@ export default function ProjectsGrid() {
                     background: "#fff",
                     borderRadius: "0px",
                     padding: "24px 28px",
-                    border: "1.5px solid rgba(0,0,0,0.07)",
                     border: "1px solid rgba(0,0,0,0.08)",
                     cursor: "pointer",
                     transition: "all 0.2s ease",
@@ -774,53 +799,133 @@ export default function ProjectsGrid() {
                       gap: 14,
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <div
                         style={{
-                          width: 44,
-                          height: 44,
+                          width: 48,
+                          height: 48,
                           borderRadius: "0px",
                           background: "rgba(107,26,42,0.08)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          flexShrink: 0,
                         }}
                       >
-                        <ProjectIcon iconId={featured.icon} size={22} />
+                        <ProjectIcon iconId={featured.icon} size={24} />
                       </div>
-                      <CategoryBadge label={featured.name} />
+                      <h3
+                        style={{
+                          fontSize: "1.25rem",
+                          fontWeight: 700,
+                          color: "#1A1A1A",
+                          margin: 0,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {featured.name}
+                      </h3>
                     </div>
                     {(featured.team_members?.length ?? 0) > 0 && (
                       <AvatarStack members={featured.team_members!} size={34} />
                     )}
                   </div>
-                  <h2
+                  <p
                     style={{
-                      fontSize: "clamp(1.3rem,2.5vw,1.8rem)",
-                      fontWeight: 700,
-                      color: "#1A1A1A",
-                      lineHeight: 1.2,
-                      margin: 0,
+                      fontSize: "0.85rem",
+                      color: "#666",
+                      margin: "8px 0 0 0",
+                      lineHeight: 1.5,
                     }}
                   >
-                    {featured.description || featured.name}
-                  </h2>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "#999" }}>
-                        Progress
-                      </span>
-                      <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "#6B1A2A" }}>
-                        —
-                      </span>
+                    {featured.description || "Aucune description"}
+                  </p>
+
+                  {/* Time-based progress info */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "12px 14px",
+                      background: "rgba(247,243,237,0.6)",
+                      borderRadius: "0px",
+                      border: "1px solid rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.1em",
+                            color: "#888",
+                          }}
+                        >
+                          Progression
+                        </span>
+                        <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#6B1A2A" }}>
+                          {tasksLoading ? "..." : `${getProjectTimeProgress(featured.id)}%`}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          width: "100%",
+                          height: 6,
+                          borderRadius: "0px",
+                          background: "rgba(107,26,42,0.1)",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${getProjectTimeProgress(featured.id)}%`,
+                            height: "100%",
+                            background: "linear-gradient(90deg,#6B1A2A,#9B3A4A)",
+                            transition: "width 0.6s ease",
+                          }}
+                        />
+                      </div>
                     </div>
-                    <ProgressBar value={0} height={9} />
+                    <div style={{ width: "1px", height: "40px", background: "rgba(0,0,0,0.08)" }} />
+                    <div style={{ textAlign: "center" }}>
+                      {(() => {
+                        const { days, isUrgent } = getRemainingTimeInfo(featured.id);
+                        return (
+                          <>
+                            <div
+                              style={{
+                                fontSize: "1.4rem",
+                                fontWeight: 800,
+                                color: isUrgent ? "#dc2626" : "#6B1A2A",
+                              }}
+                            >
+                              {tasksLoading ? "..." : `${days}j`}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.6rem",
+                                fontWeight: 600,
+                                color: "#888",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                              }}
+                            >
+                              {isUrgent ? "Urgent" : "Restant"}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -839,7 +944,7 @@ export default function ProjectsGrid() {
                 </div>
               )}
 
-              {/* Stats */}
+              {/* Stats Block - Red */}
               <div
                 style={{
                   background: "#6B1A2A",
@@ -847,7 +952,6 @@ export default function ProjectsGrid() {
                   padding: "24px 20px",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between",
                   gap: 14,
                   color: "#fff",
                 }}
@@ -858,84 +962,126 @@ export default function ProjectsGrid() {
                       fontSize: "0.6rem",
                       fontWeight: 700,
                       letterSpacing: "0.12em",
-                      textTransform: "uppercase" as const,
+                      textTransform: "uppercase",
                       color: "rgba(255,255,255,0.55)",
                       marginBottom: 5,
                     }}
                   >
-                    ACTIF MAINTENANT
+                    TÂCHES EN COURS
                   </p>
                   <p style={{ fontSize: "2.8rem", fontWeight: 800, lineHeight: 1, margin: 0 }}>
-                    {projects.length}
+                    {tasksLoading ? "..." : getGlobalKPIs().tasksEnCours}
                   </p>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-                  {[
-                    { label: "In Production", value: Math.ceil(projects.length * 0.66) },
-                    { label: "Concept Phase", value: Math.floor(projects.length * 0.34) },
-                  ].map(({ label, value }) => (
-                    <div
-                      key={label}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "9px 12px",
-                        borderRadius: "0px",
-                        background: "rgba(255,255,255,0.08)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                      }}
-                    >
-                      <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.75)" }}>
-                        {label}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
-                          background: "rgba(255,255,255,0.15)",
-                          padding: "2px 9px",
-                          borderRadius: "0px",
-                        }}
-                      >
-                        {String(value).padStart(2, "0")}
-                      </span>
+
+                {/* Active projects list */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <p
+                    style={{
+                      fontSize: "0.55rem",
+                      fontWeight: 600,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "rgba(255,255,255,0.45)",
+                      marginBottom: 2,
+                    }}
+                  >
+                    PROJETS ACTIFS
+                  </p>
+                  {tasksLoading ? (
+                    <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.6)" }}>
+                      Chargement...
+                    </p>
+                  ) : getGlobalKPIs().activeProjects.length === 0 ? (
+                    <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)" }}>
+                      Aucun projet actif
+                    </p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {getGlobalKPIs()
+                        .activeProjects.slice(0, 4)
+                        .map((project) => (
+                          <div
+                            key={project.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "6px 8px",
+                              borderRadius: "0px",
+                              background: "rgba(255,255,255,0.05)",
+                              border: "1px solid rgba(255,255,255,0.08)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: "50%",
+                                background: "#4CAF50",
+                              }}
+                            />
+                            <span style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.85)" }}>
+                              {project.name}
+                            </span>
+                          </div>
+                        ))}
+                      {getGlobalKPIs().activeProjects.length > 4 && (
+                        <p style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.5)" }}>
+                          +{getGlobalKPIs().activeProjects.length - 4} autres
+                        </p>
+                      )}
                     </div>
-                  ))}
+                  )}
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push("/dashboard/projects");
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "0px",
-                    border: "none",
-                    background: "#fff",
-                    color: "#6B1A2A",
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "'DM Sans',sans-serif",
-                    transition: "all 0.15s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#F5E8EA")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
-                >
-                  Voir tout
-                </button>
+
+                {/* Open Kanban Button */}
+                {featured && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push("/dashboard/tasks");
+                    }}
+                    style={{
+                      marginTop: "auto",
+                      width: "100%",
+                      padding: "12px",
+                      borderRadius: "0px",
+                      border: "none",
+                      background: "#fff",
+                      color: "#6B1A2A",
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "'DM Sans',sans-serif",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#F5E8EA")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                  >
+                    <span>OUVRIR LE KANBAN</span>
+                    <ArrowRight size={16} />
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* ── Row 2 : Small projects + New card ── */}
+            {/* Row 2 : All other projects */}
             <div
-              className="pg-row2"
-              style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                gap: 16,
+              }}
             >
-              {smallProjects.map((project) => {
+              {otherProjects.map((project) => {
                 const IC = project.icon ? ICON_MAP[project.icon] : null;
+                const timeProgress = getProjectTimeProgress(project.id);
+
                 return (
                   <div
                     key={project.id}
@@ -944,386 +1090,170 @@ export default function ProjectsGrid() {
                       background: "#fff",
                       borderRadius: "0px",
                       padding: "20px",
-                      border: "1.5px solid rgba(0,0,0,0.07)",
                       border: "1px solid rgba(0,0,0,0.08)",
                       cursor: "pointer",
                       transition: "all 0.2s ease",
                       display: "flex",
                       flexDirection: "column",
-                      gap: 14,
+                      gap: 12,
                     }}
                     onMouseEnter={hoverEnter}
                     onMouseLeave={hoverLeave}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        justifyContent: "space-between",
-                      }}
-                    >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <div
                         style={{
-                          width: 42,
-                          height: 42,
-                          borderRadius: "9px",
+                          width: 48,
+                          height: 48,
+                          borderRadius: "0px",
                           background: "rgba(107,26,42,0.08)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          flexShrink: 0,
                         }}
                       >
-                        {IC ? (
-                          <IC size={20} color="#6B1A2A" />
-                        ) : (
-                          <Briefcase size={20} color="#6B1A2A" />
-                        )}
+                        {IC ? <IC size={24} /> : <Briefcase size={24} color="#6B1A2A" />}
                       </div>
-                      <span
-                        style={{
-                          fontSize: "0.65rem",
-                          fontWeight: 600,
-                          color: "#6B1A2A",
-                          background: "rgba(107,26,42,0.08)",
-                          padding: "3px 8px",
-                          borderRadius: "0px",
-                          border: "1px solid rgba(107,26,42,0.15)",
-                        }}
-                      >
-                        {project.team_members?.length ?? 0} équipes
-                      </span>
-                    </div>
-                    <div>
                       <h3
                         style={{
-                          fontSize: "0.95rem",
+                          fontSize: "1rem",
                           fontWeight: 700,
                           color: "#1A1A1A",
-                          marginBottom: 3,
+                          margin: 0,
+                          lineHeight: 1.2,
+                          flex: 1,
                         }}
                       >
                         {project.name}
                       </h3>
-                      {project.description && (
-                        <p
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "#999",
-                            margin: 0,
-                            lineHeight: 1.4,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical" as const,
-                            overflow: "hidden",
-                          }}
-                        >
-                          {project.description}
-                        </p>
-                      )}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "#666",
+                        margin: 0,
+                        lineHeight: 1.4,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        minHeight: "2.24rem",
+                      }}
+                    >
+                      {project.description || "Aucune description"}
+                    </p>
+
+                    {/* Progress bar */}
+                    <div style={{ marginTop: "auto" }}>
                       <div
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
+                          marginBottom: 6,
                         }}
                       >
-                        {(project.team_members?.length ?? 0) > 0 ? (
-                          <AvatarStack members={project.team_members!} size={28} />
-                        ) : (
-                          <span style={{ fontSize: "0.7rem", color: "#ccc" }}>Aucun membre</span>
-                        )}
-                        <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#aaa" }}>
-                          —%
+                        <span
+                          style={{
+                            fontSize: "0.65rem",
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                            color: "#888",
+                          }}
+                        >
+                          Progression
+                        </span>
+                        <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#6B1A2A" }}>
+                          {tasksLoading ? "..." : timeProgress}%
                         </span>
                       </div>
-                      <ProgressBar value={0} height={5} />
+                      <div
+                        style={{
+                          width: "100%",
+                          height: 6,
+                          borderRadius: "0px",
+                          background: "rgba(107,26,42,0.1)",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${timeProgress}%`,
+                            height: "100%",
+                            background: "linear-gradient(90deg,#6B1A2A,#9B3A4A)",
+                            transition: "width 0.6s ease",
+                          }}
+                        />
+                      </div>
                     </div>
+
+                    {(project.team_members?.length ?? 0) > 0 && (
+                      <AvatarStack members={project.team_members!} size={30} />
+                    )}
                   </div>
                 );
               })}
 
-              {/* Placeholders */}
-              {smallProjects.length < 2 &&
-                Array.from({ length: 2 - smallProjects.length }).map((_, i) => (
-                  <div
-                    key={`ph-${i}`}
-                    style={{
-                      background: "#e8eaed",
-                      borderRadius: "0px",
-                      padding: "20px",
-                      border: "1.5px dashed rgba(0,0,0,0.1)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <p style={{ fontSize: "0.78rem", color: "#ccc" }}>Projet à venir</p>
-                  </div>
-                ))}
-
-              {/* New project */}
-              <div
-                onClick={() => isSuperAdmin && setShowCreateModal(true)}
-                style={{
-                  background: "#e8eaed",
-                  borderRadius: "0px",
-                  padding: "20px",
-                  border: "1.5px dashed rgba(107,26,42,0.2)",
-                  cursor: isSuperAdmin ? "pointer" : "default",
-                  transition: "all 0.2s ease",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 10,
-                  textAlign: "center" as const,
-                }}
-                onMouseEnter={(e) => {
-                  if (isSuperAdmin) {
-                    e.currentTarget.style.background = "rgba(107,26,42,0.05)";
-                    e.currentTarget.style.borderColor = "rgba(107,26,42,0.35)";
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#e8eaed";
-                  e.currentTarget.style.borderColor = "rgba(107,26,42,0.2)";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
+              {/* New Project Card */}
+              {isSuperAdmin && (
                 <div
+                  onClick={() => setShowCreateModal(true)}
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: "50%",
-                    border: "2px dashed rgba(107,26,42,0.3)",
+                    background: "#F8F6F3",
+                    borderRadius: "0px",
+                    padding: "20px",
+                    border: "1.5px dashed rgba(107,26,42,0.25)",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
                     display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                  }}
-                >
-                  <Plus size={20} color="#6B1A2A" strokeWidth={2.5} />
-                </div>
-                <div>
-                  <p
-                    style={{
-                      fontWeight: 700,
-                      fontSize: "0.9rem",
-                      color: "#1A1A1A",
-                      marginBottom: 3,
-                    }}
-                  >
-                    Nouveau
-                  </p>
-                  <p style={{ fontSize: "0.72rem", color: "#999", lineHeight: 1.4 }}>
-                    {isSuperAdmin
-                      ? "Initialize a fresh project for your team"
-                      : "Droits insuffisants"}
-                  </p>
-                </div>
-                {isSuperAdmin && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowCreateModal(true);
-                    }}
-                    style={{
-                      padding: "7px 18px",
-                      borderRadius: "0px",
-                      border: "none",
-                      background: "#6B1A2A",
-                      color: "#fff",
-                      fontSize: "0.8rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: "'DM Sans',sans-serif",
-                    }}
-                  >
-                    Démarrer
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* ── Section : Tous les projets ── */}
-            {allProjects.length > 3 && (
-              <div style={{ marginTop: 24 }}>
-                <h2
-                  style={{
-                    fontSize: "1.2rem",
-                    fontWeight: 700,
-                    color: "#1A1A1A",
-                    marginBottom: 16,
-                  }}
-                >
-                  Tous les projets ({allProjects.length})
-                </h2>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
                     gap: 12,
-                  }}
-                >
-                  {allProjects.slice(3).map((project) => {
-                    const IC = project.icon ? ICON_MAP[project.icon] : null;
-                    return (
-                      <div
-                        key={project.id}
-                        onClick={() => router.push(`/dashboard/projects/${project.id}`)}
-                        style={{
-                          background: "#fff",
-                          borderRadius: "0px",
-                          padding: "16px",
-                          border: "1px solid rgba(0,0,0,0.08)",
-                          cursor: "pointer",
-                          transition: "all 0.15s",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = "rgba(107,26,42,0.3)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 12,
-                            marginBottom: 12,
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: "0px",
-                              background: "rgba(107,26,42,0.08)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            {IC ? <IC size={20} color="#6B1A2A" /> : "📦"}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <h3
-                              style={{
-                                fontSize: "0.95rem",
-                                fontWeight: 600,
-                                color: "#1A1A1A",
-                                margin: 0,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {project.name}
-                            </h3>
-                          </div>
-                        </div>
-                        <p
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "#666",
-                            margin: 0,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                            lineHeight: 1.4,
-                          }}
-                        >
-                          {project.description || "Pas de description"}
-                        </p>
-                        <div
-                          style={{
-                            marginTop: 12,
-                            paddingTop: 12,
-                            borderTop: "1px solid rgba(0,0,0,0.06)",
-                            fontSize: "0.75rem",
-                            color: "#999",
-                          }}
-                        >
-                          {project.team_members?.length || 0} membre
-                          {(project.team_members?.length || 0) > 1 ? "s" : ""}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* ── Row 3 : Bottom blocks ── */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 24 }}>
-              {BOTTOM_BLOCKS.map(({ id, label, subtitle, icon: IC, href }) => (
-                <div
-                  key={id}
-                  onClick={() => router.push(href)}
-                  style={{
-                    background: "#fff",
-                    borderRadius: "0px",
-                    padding: "18px 20px",
-                    border: "1.5px solid rgba(0,0,0,0.07)",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 14,
-                    transition: "all 0.2s ease",
+                    minHeight: 180,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = "0 8px 20px rgba(107,26,42,0.1)";
-                    e.currentTarget.style.borderColor = "rgba(107,26,42,0.15)";
-                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.background = "rgba(107,26,42,0.05)";
+                    e.currentTarget.style.borderColor = "#6B1A2A";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
-                    e.currentTarget.style.borderColor = "rgba(0,0,0,0.07)";
-                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.background = "#F8F6F3";
+                    e.currentTarget.style.borderColor = "rgba(107,26,42,0.25)";
                   }}
                 >
                   <div
                     style={{
-                      width: 44,
-                      height: 44,
+                      width: 52,
+                      height: 52,
                       borderRadius: "0px",
                       background: "rgba(107,26,42,0.08)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      flexShrink: 0,
+                      color: "#6B1A2A",
                     }}
                   >
-                    <IC size={20} color="#6B1A2A" />
+                    <Plus size={26} strokeWidth={1.5} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1A1A1A", margin: 0 }}>
-                      {label}
+                  <div style={{ textAlign: "center" }}>
+                    <p
+                      style={{
+                        fontSize: "0.85rem",
+                        fontWeight: 700,
+                        color: "#6B1A2A",
+                        margin: "0 0 4px 0",
+                      }}
+                    >
+                      Nouveau projet
                     </p>
-                    <p style={{ fontSize: "0.72rem", color: "#aaa", margin: 0 }}>{subtitle}</p>
-                  </div>
-                  <AvatarStack members={allMembers} size={30} />
-                  <div
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: "50%",
-                      border: "1.5px solid rgba(0,0,0,0.1)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <ArrowRight size={14} color="#888" />
+                    <p style={{ fontSize: "0.7rem", color: "#999", margin: 0 }}>
+                      Créer un nouveau projet
+                    </p>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </>
         )}
@@ -1333,9 +1263,10 @@ export default function ProjectsGrid() {
         <CreateModal
           teams={teams}
           onClose={() => setShowCreateModal(false)}
-          onSaved={async (project) => {
-            addToast("success", `"${project.name}" créé avec succès !`);
-            await mutate();
+          onSaved={() => {
+            mutate();
+            setShowCreateModal(false);
+            addToast("success", "Projet créé avec succès");
           }}
         />
       )}
