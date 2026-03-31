@@ -23,7 +23,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Mot de passe", type: "password" },
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         // Récupérer l'utilisateur avec son équipe
         const user = await prisma.users.findFirst({
           where: {

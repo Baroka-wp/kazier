@@ -3,18 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ChevronLeft,
-  Database,
-  Settings,
-  Users,
-  Zap,
-  Briefcase,
-  BarChart3,
-  Target,
-  Lock,
-  Layers,
-  Cpu,
-  Workflow,
-  Boxes,
   CheckCircle2,
   FileText,
   Users2,
@@ -24,11 +12,11 @@ import {
   Calendar,
   File,
   ImageIcon,
+  Settings,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Project } from "@/lib/project-actions";
 import { getTasks, Task } from "@/lib/task-actions";
-import { getReportsWithProjects } from "@/lib/report-actions";
 import dynamic from "next/dynamic";
 import { ClientOnly } from "@/components/dashboard/ClientOnly";
 import { useSession } from "next-auth/react";
@@ -97,23 +85,6 @@ type GetTasksResult =
 
 type Tab = "overview" | "team" | "tasks" | "reports";
 
-// ── Icons Map ─────────────────────────────────────────────────────────────────
-
-const AVAILABLE_ICONS = [
-  { id: "database", component: Database },
-  { id: "settings", component: Settings },
-  { id: "users", component: Users },
-  { id: "zap", component: Zap },
-  { id: "briefcase", component: Briefcase },
-  { id: "chart", component: BarChart3 },
-  { id: "target", component: Target },
-  { id: "lock", component: Lock },
-  { id: "layers", component: Layers },
-  { id: "cpu", component: Cpu },
-  { id: "workflow", component: Workflow },
-  { id: "boxes", component: Boxes },
-];
-
 const avatarColors = ["#6B1A2A", "#A0522D", "#2E6B5E", "#2C4A7C", "#5B3A8E"];
 
 // ── Helpers (Sortis du rendu pour éviter les erreurs React/Performance) ───────
@@ -127,13 +98,6 @@ function getInitials(name: string): string {
     .map((n) => n[0])
     .join("")
     .toUpperCase();
-}
-
-// ✅ CORRIGÉ: Déplacé en dehors pour éviter react-hooks/static-components
-function ProjectIcon({ iconId, size = 22 }: { iconId?: string | null; size?: number }) {
-  const iconEntry = AVAILABLE_ICONS.find((i) => i.id === iconId);
-  const IC = iconEntry?.component ?? Database;
-  return <IC size={size} />;
 }
 
 function resolveTasksFromResult(res: GetTasksResult): Task[] {
@@ -355,20 +319,6 @@ export default function ProjectDetailClient({ project }: Props) {
   const totalTasks = tasks.length;
   const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  const loadMembers = useCallback(async () => {
-    setLoadingMembers(true);
-    try {
-      const res = await fetch("/api/equipe?limit=100");
-      const data = (await res.json()) as { data?: TeamMember[] };
-      if (data?.data) {
-        setMembers(data.data.filter((m) => project.team_ids.includes(m.id)));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    setLoadingMembers(false);
-  }, [project.team_ids]);
-
   const loadTasks = useCallback(async () => {
     setLoadingTasks(true);
     try {
@@ -380,38 +330,6 @@ export default function ProjectDetailClient({ project }: Props) {
     }
     setLoadingTasks(false);
   }, [project.id]);
-
-  const loadReports = useCallback(async () => {
-    setLoadingReports(true);
-    try {
-      const res = await getReportsWithProjects();
-      if (res.success && res.reports) {
-        const projectReports: Report[] = res.reports
-          .filter((r) => r.project_id === project.id)
-          .map((r) => ({
-            id: r.id,
-            full_name: r.full_name,
-            role: r.role,
-            built: r.work_built ?? "",
-            working_built: r.working_built ?? "",
-            blocked: r.broken_features ?? "",
-            validated_learning: r.validated_learning ?? "",
-            needed_learning: r.needed_learning ?? "",
-            tomorrow_build: r.tomorrow_build ?? "",
-            extra_message: r.extra_message ?? "",
-            submitted_at: r.created_at,
-            project_id: r.project_id,
-            project_name: r.project_name,
-          }));
-        setReports(projectReports);
-        setRoles([...new Set(projectReports.map((r) => r.role).filter(Boolean))]);
-        setProjects([{ id: project.id, name: project.name ?? "" }]);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    setLoadingReports(false);
-  }, [project.id, project.name]);
 
   //  Scroll effect (inchangé)
   useEffect(() => {
