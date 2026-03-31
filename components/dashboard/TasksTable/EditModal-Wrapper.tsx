@@ -19,6 +19,7 @@ export function EditModal({
   task: Task | null;
   projects: Project[];
   teams: TeamMember[];
+  canManageTasks?: boolean;
   onClose: () => void;
   onSaved: (updated: Task, created: boolean) => void;
   defaultProjectId?: number;

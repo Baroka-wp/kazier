@@ -13,16 +13,13 @@ import {
   CheckCircle2,
   XCircle,
   Paperclip,
-  Bold,
-  Italic,
-  List,
-  Smile,
   Users,
   CalendarDays,
   Clock3,
+  ChevronDown,
 } from "lucide-react";
 
-import { type Task } from "@/lib/task-actions";
+import { type Task, deleteTask, updateTaskStatusOnly } from "@/lib/task-actions";
 import {
   type TaskComment,
   getTaskComments,
@@ -31,10 +28,10 @@ import {
   updateTaskComment,
 } from "@/lib/task-comments-actions";
 import { assignTaskToSelf } from "@/lib/team-actions";
-import { deleteTask } from "@/lib/task-actions";
 import { EditModal } from "./TasksTable/EditModal-Wrapper";
 import { DeleteModal } from "./TasksTable/DeleteModal";
 import { type Project, type TeamMember } from "./TasksTable/types";
+import ReviewConfirmModal from "@/components/dashboard/ReviewConfirmModal";
 
 const RichTextArea = dynamic(() => import("@/components/DailyForm/RichTextArea"), {
   ssr: false,
@@ -42,11 +39,7 @@ const RichTextArea = dynamic(() => import("@/components/DailyForm/RichTextArea")
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Toast = {
-  id: number;
-  type: "success" | "error";
-  message: string;
-};
+type Toast = { id: number; type: "success" | "error"; message: string };
 
 type Props = {
   task: Task;
@@ -198,6 +191,294 @@ function ToastNotification({ toast, onClose }: { toast: Toast; onClose: () => vo
   );
 }
 
+// ── StatusOnlyModal — pour le rôle T ─────────────────────────────────────────
+// Affiché à la place de EditModal quand canManageTasks === false.
+// Seul le statut est modifiable, pas les autres champs.
+
+const STATUS_OPTIONS: { value: Task["status"]; label: string; color: string; bg: string }[] = [
+  { value: "à faire", label: "À faire", color: "#6B1A2A", bg: "#6b1a2a11" },
+  { value: "en cours", label: "En cours", color: "#6B1A2A", bg: "#6b1a2a11" },
+  { value: "review", label: "Review", color: "#6B1A2A", bg: "#6b1a2a11" },
+];
+
+function StatusOnlyModal({
+  task,
+  onClose,
+  onSaved,
+}: {
+  task: Task;
+  onClose: () => void;
+  onSaved: (updated: Task) => void;
+}) {
+  const [status, setStatus] = useState<Task["status"]>(task.status);
+  const [saving, setSaving] = useState(false);
+
+  // ✅ States pour confirmation review
+  const [showReviewConfirm, setShowReviewConfirm] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<Task["status"] | null>(null);
+
+  async function handleSave() {
+    if (status === task.status) {
+      onClose();
+      return;
+    }
+
+    // ✅ INTERCEPTEUR : modale avant "review"
+    if (status === "review") {
+      setPendingStatus(status);
+      setShowReviewConfirm(true);
+      return;
+    }
+
+    // Autres statuts → direct
+    setSaving(true);
+    const res = await updateTaskStatusOnly(task.id, status);
+    setSaving(false);
+
+    if (res.success && res.task) {
+      onSaved(res.task);
+    }
+  }
+
+  // ✅ Confirmation review
+  async function confirmReview() {
+    if (!pendingStatus) return;
+
+    setShowReviewConfirm(false);
+    setSaving(true);
+
+    const res = await updateTaskStatusOnly(task.id, pendingStatus);
+    setSaving(false);
+    setPendingStatus(null);
+
+    if (res.success && res.task) {
+      onSaved(res.task);
+    }
+  }
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 350,
+          background: "rgba(0,0,0,0.40)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "16px",
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: "#fff",
+            borderRadius: "16px",
+            width: "100%",
+            maxWidth: "420px",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
+            overflow: "hidden",
+            animation: "popIn 0.2s ease",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: "20px 22px 16px",
+              borderBottom: "1px solid rgba(0,0,0,0.06)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div>
+              <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#1A1A1A" }}>
+                Modifier le statut
+              </h3>
+              <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#888" }}>{task.title}</p>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                background: "#F5F2ED",
+                border: "none",
+                borderRadius: "8px",
+                width: "30px",
+                height: "30px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "#888",
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div
+            style={{
+              padding: "20px 22px 24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+            }}
+          >
+            {/* ✅ Message si bloqué */}
+            {task.status === "review" && (
+              <div
+                style={{
+                  padding: "12px 16px",
+                  background: "rgba(253, 186, 116, 0.15)",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  borderRadius: "8px",
+                  color: "#92400e",
+                  fontSize: "0.85rem",
+                }}
+              >
+                🔒 <strong>Tâche en review</strong> — bloquée en attente de validation TM/SA
+              </div>
+            )}
+
+            {/* Custom select visuel */}
+            <div style={{ position: "relative" }}>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as Task["status"])}
+                disabled={task.status === "review"} // ✅ Désactive si en review
+                style={{
+                  width: "100%",
+                  appearance: "none",
+                  WebkitAppearance: "none",
+                  padding: "11px 38px 11px 14px",
+                  borderRadius: "10px",
+                  border: `2px solid ${STATUS_OPTIONS.find((o) => o.value === status)?.bg ?? "rgba(0,0,0,0.1)"}`,
+                  background:
+                    task.status === "review"
+                      ? "#f5f5f5" // ✅ Gris si bloqué
+                      : (STATUS_OPTIONS.find((o) => o.value === status)?.bg ?? "#fff"),
+                  color:
+                    task.status === "review"
+                      ? "#999" // ✅ Texte grisé
+                      : (STATUS_OPTIONS.find((o) => o.value === status)?.color ?? "#1A1A1A"),
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  cursor:
+                    task.status === "review"
+                      ? "not-allowed" // ✅ Curseur bloqué
+                      : "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "border-color 0.15s",
+                }}
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <option
+                    key={opt.value}
+                    value={opt.value}
+                    disabled={task.status === "review" && opt.value !== "review"} // ✅ Grise options sauf "review"
+                  >
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={15}
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  pointerEvents: "none",
+                  color: STATUS_OPTIONS.find((o) => o.value === status)?.color ?? "#888",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              padding: "0 22px 20px",
+              display: "flex",
+              gap: "8px",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              onClick={onClose}
+              style={{
+                padding: "9px 16px",
+                borderRadius: "8px",
+                border: "1.5px solid rgba(0,0,0,0.08)",
+                background: "#F5F2ED",
+                color: "#666",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontSize: "0.82rem",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || status === task.status || task.status === "review"} // ✅
+              style={{
+                padding: "9px 16px",
+                borderRadius: "8px",
+                border: "none",
+                background:
+                  saving || status === task.status || task.status === "review"
+                    ? "rgba(107,26,42,0.35)"
+                    : "#6B1A2A",
+                color: "#fff",
+                fontWeight: 700,
+                cursor:
+                  saving || status === task.status || task.status === "review"
+                    ? "not-allowed"
+                    : "pointer",
+                fontSize: "0.82rem",
+                fontFamily: "'DM Sans', sans-serif",
+                transition: "background 0.15s",
+              }}
+            >
+              {saving ? "Enregistrement..." : "Enregistrer"}
+            </button>
+          </div>
+        </div>
+        <style>{`@keyframes popIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }`}</style>
+      </div>
+
+      {showReviewConfirm && pendingStatus && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 360, // ✅ Au-dessus de StatusOnlyModal (350)
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <ReviewConfirmModal
+            onConfirm={confirmReview}
+            onCancel={() => {
+              setShowReviewConfirm(false);
+              setPendingStatus(null);
+            }}
+          />
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── MenuDropdown ──────────────────────────────────────────────────────────────
+
 function MenuDropdown({
   onEdit,
   onDelete,
@@ -218,9 +499,9 @@ function MenuDropdown({
           gap: "8px",
           padding: "9px 14px",
           borderRadius: "10px",
-          border: "1px solid rgba(107,26,42,0.16)",
-          background: "#fff",
-          color: "#6B1A2A",
+          border: "none",
+          background: "#6B1A2A",
+          color: "#fff",
           fontWeight: 600,
           cursor: "pointer",
           fontSize: "0.82rem",
@@ -238,7 +519,7 @@ function MenuDropdown({
               position: "absolute",
               right: 0,
               top: "calc(100% + 6px)",
-              width: "180px",
+              width: "200px",
               background: "#fff",
               border: "1px solid rgba(0,0,0,0.08)",
               borderRadius: "10px",
@@ -254,18 +535,25 @@ function MenuDropdown({
               }}
               style={menuItemStyle}
             >
-              <Pencil size={14} /> Modifier
+              <Pencil size={14} />
+              {/* Label selon le rôle */}
+              {canManageTasks ? "Modifier la tâche" : "Modifier le statut"}
             </button>
+
+            {/* Supprimer — TM et SA uniquement */}
             {canManageTasks && (
-              <button
-                onClick={() => {
-                  setOpen(false);
-                  onDelete();
-                }}
-                style={{ ...menuItemStyle, color: "#dc2626" }}
-              >
-                <Trash2 size={14} /> Supprimer
-              </button>
+              <>
+                <div style={{ height: "1px", background: "rgba(0,0,0,0.06)", margin: "4px 0" }} />
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    onDelete();
+                  }}
+                  style={{ ...menuItemStyle, color: "#dc2626" }}
+                >
+                  <Trash2 size={14} /> Supprimer la tâche
+                </button>
+              </>
             )}
           </div>
         </>
@@ -273,6 +561,80 @@ function MenuDropdown({
     </div>
   );
 }
+
+// ── Shared styles ─────────────────────────────────────────────────────────────
+
+const menuItemStyle: React.CSSProperties = {
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  padding: "9px 12px",
+  borderRadius: "8px",
+  border: "none",
+  background: "transparent",
+  fontSize: "0.83rem",
+  fontWeight: 600,
+  color: "#1A1A1A",
+  cursor: "pointer",
+  textAlign: "left",
+};
+
+const linkBtnStyle: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+  color: "#6B1A2A",
+  fontSize: "0.7rem",
+  fontWeight: 600,
+};
+
+const infoCardStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.55)",
+  borderRadius: "10px",
+  padding: "12px 14px",
+  border: "1px solid rgba(0,0,0,0.05)",
+  display: "flex",
+  flexDirection: "column",
+  gap: "5px",
+};
+
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: "8px",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "#F5F2ED",
+  color: "#666",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: "0.82rem",
+};
+
+const primaryBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: "8px",
+  border: "none",
+  background: "#6B1A2A",
+  color: "#fff",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: "0.82rem",
+};
+
+const dangerBtnStyle: React.CSSProperties = {
+  padding: "9px 14px",
+  borderRadius: "8px",
+  border: "none",
+  background: "#dc2626",
+  color: "#fff",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: "0.82rem",
+};
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -405,94 +767,6 @@ function CommentCard({
   );
 }
 
-// ── Shared style constants ────────────────────────────────────────────────────
-
-const menuItemStyle: React.CSSProperties = {
-  width: "100%",
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  padding: "9px 12px",
-  borderRadius: "8px",
-  border: "none",
-  background: "transparent",
-  fontSize: "0.83rem",
-  fontWeight: 600,
-  color: "#1A1A1A",
-  cursor: "pointer",
-  textAlign: "left",
-};
-
-const linkBtnStyle: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: 0,
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "4px",
-  color: "#6B1A2A",
-  fontSize: "0.7rem",
-  fontWeight: 600,
-};
-
-const infoCardStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.55)",
-  borderRadius: "10px",
-  padding: "12px 14px",
-  border: "1px solid rgba(0,0,0,0.05)",
-  display: "flex",
-  flexDirection: "column",
-  gap: "5px",
-};
-
-const infoLabelStyle: React.CSSProperties = {
-  fontSize: "0.63rem",
-  fontWeight: 800,
-  textTransform: "uppercase",
-  letterSpacing: "0.12em",
-  color: "#8d8d8d",
-};
-
-const infoValueStyle: React.CSSProperties = {
-  fontSize: "0.88rem",
-  fontWeight: 700,
-  color: "#1A1A1A",
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: "9px 14px",
-  borderRadius: "8px",
-  border: "1px solid rgba(0,0,0,0.08)",
-  background: "#F5F2ED",
-  color: "#666",
-  fontWeight: 700,
-  cursor: "pointer",
-  fontSize: "0.82rem",
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: "9px 14px",
-  borderRadius: "8px",
-  border: "none",
-  background: "#6B1A2A",
-  color: "#fff",
-  fontWeight: 700,
-  cursor: "pointer",
-  fontSize: "0.82rem",
-};
-
-const dangerBtnStyle: React.CSSProperties = {
-  padding: "9px 14px",
-  borderRadius: "8px",
-  border: "none",
-  background: "#dc2626",
-  color: "#fff",
-  fontWeight: 700,
-  cursor: "pointer",
-  fontSize: "0.82rem",
-};
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function TaskDetailPage({
@@ -518,31 +792,57 @@ export default function TaskDetailPage({
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  // ── Modal routing — clé du comportement ──────────────────────────────────
+  // canManageTasks = true  → EditModal complet (TM / SA)
+  // canManageTasks = false → StatusOnlyModal  (T)
   const [editTaskOpen, setEditTaskOpen] = useState(false);
   const [deleteTaskOpen, setDeleteTaskOpen] = useState(false);
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastCounter = useRef(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInitialCommentLoad = useRef(true);
   const [resetKey, setResetKey] = useState(0);
+
+  // Track task in local state so StatusOnlyModal update reflects instantly
+  const [localTask, setLocalTask] = useState<Task>(task);
+  useEffect(() => {
+    setLocalTask(task);
+  }, [task]);
 
   useEffect(() => {
     async function load() {
       setLoadingComments(true);
-      const res = await getTaskComments(task.id);
+      const res = await getTaskComments(localTask.id);
       if (res.success && res.comments) setComments(res.comments);
       setLoadingComments(false);
+      isInitialCommentLoad.current = true;
     }
     void load();
-  }, [task.id]);
+  }, [localTask.id]);
 
   useEffect(() => {
+    if (isInitialCommentLoad.current) {
+      isInitialCommentLoad.current = false;
+      return;
+    }
     commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [comments]);
 
   useEffect(() => {
-    const timer = setTimeout(() => window.scrollTo(0, 0), 0);
-    return () => clearTimeout(timer);
+    const el = containerRef.current;
+    if (!el) return;
+    let parent = el.parentElement;
+    while (parent) {
+      const { overflowY } = window.getComputedStyle(parent);
+      if (overflowY === "auto" || overflowY === "scroll") {
+        parent.scrollTop = 0;
+        return;
+      }
+      parent = parent.parentElement;
+    }
+    window.scrollTo(0, 0);
   }, []);
 
   function addToast(type: Toast["type"], message: string) {
@@ -552,16 +852,17 @@ export default function TaskDetailPage({
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   }
 
-  const assignedNames = task.assigned_to_names ?? [];
+  const assignedNames = localTask.assigned_to_names ?? [];
   const hasAssignees = assignedNames.length > 0;
-  const projectName = task.project_name ?? "—";
-  const dueDate = task.due_date ? formatDate(task.due_date) : "—";
+  const projectName = localTask.project_name ?? "—";
+  const dueDate = localTask.due_date ? formatDate(localTask.due_date) : "—";
 
   async function handleAssign() {
     const memberId = parseInt((session?.user as { id?: string })?.id ?? "0");
     if (!memberId) return;
-    const res = await assignTaskToSelf(task.id, memberId);
+    const res = await assignTaskToSelf(localTask.id, memberId);
     if (res.success && res.task) {
+      setLocalTask(res.task);
       onUpdated?.(res.task);
       addToast("success", "Tâche assignée avec succès");
     } else {
@@ -572,10 +873,11 @@ export default function TaskDetailPage({
   async function handleSubmit() {
     if (!newComment.trim()) return;
     setSubmitting(true);
-    const res = await addTaskComment(task.id, newComment);
+    const res = await addTaskComment(localTask.id, newComment);
     setSubmitting(false);
     if (res.success && res.comment) {
       setComments((prev) => [...prev, res.comment!]);
+      isInitialCommentLoad.current = false;
       setNewComment("");
       setResetKey((v) => v + 1);
       addToast("success", "Commentaire ajouté");
@@ -614,144 +916,57 @@ export default function TaskDetailPage({
 
   return (
     <div
+      ref={containerRef}
       style={{ width: "100%", minHeight: "100%", background: "#f7f3ed", boxSizing: "border-box" }}
     >
-      {/* ── Responsive styles ── */}
       <style>{`
-        .tdp-outer {
-          padding: 20px 24px 32px;
-        }
+        .tdp-outer { padding: 20px 24px 32px; }
         .tdp-grid {
           display: grid;
           grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-          gap: 16px;
-          align-items: start;
+          gap: 16px; align-items: start;
         }
         .tdp-panel {
-          background: #F3EDE4;
-          border-radius: 10px;
-          padding: 22px 24px;
-          border: 1px solid rgba(0,0,0,0.04);
+          background: #F3EDE4; border-radius: 10px;
+          padding: 22px 24px; border: 1px solid rgba(0,0,0,0.04);
         }
         .tdp-comments-panel {
-          background: #F3EDE4;
-          border-radius: 10px;
-          padding: 22px 24px;
-          border: 1px solid rgba(0,0,0,0.04);
-          display: flex;
-          flex-direction: column;
-          /* Fixed height on desktop so comments scroll internally */
-          height: calc(100vh - 130px);
-          min-height: 500px;
-          position: sticky;
-          top: 20px;
+          background: #F3EDE4; border-radius: 10px;
+          padding: 22px 24px; border: 1px solid rgba(0,0,0,0.04);
+          display: flex; flex-direction: column;
+          height: calc(100vh - 130px); min-height: 500px;
+          position: sticky; top: 20px;
         }
-        .tdp-task-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-          margin-bottom: 16px;
-        }
-        .tdp-task-title {
-          font-size: clamp(1.4rem, 2.5vw, 2.6rem);
-          line-height: 1.05;
-          margin: 0;
-          color: #1A1A1A;
-          font-weight: 800;
-          letter-spacing: -0.03em;
-          word-break: break-word;
-        }
-        .tdp-meta-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-          margin-bottom: 20px;
-        }
-        .tdp-info-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          margin-bottom: 22px;
-        }
-        .tdp-files-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
-        .tdp-actions-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-shrink: 0;
-        }
-
-        /* ── Tablet (< 1024px): reduce sidebar width ── */
+        .tdp-task-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+        .tdp-task-title { font-size: clamp(1.4rem, 2.5vw, 2.6rem); line-height: 1.05; margin: 0; color: #1A1A1A; font-weight: 800; letter-spacing: -0.03em; word-break: break-word; }
+        .tdp-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+        .tdp-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+        .tdp-files-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .tdp-actions-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         @media (max-width: 1024px) {
-          .tdp-grid {
-            grid-template-columns: 1fr 340px;
-          }
-          .tdp-comments-panel {
-            height: calc(100vh - 130px);
-          }
+          .tdp-grid { grid-template-columns: 1fr 340px; }
+          .tdp-comments-panel { height: calc(100vh - 130px); }
         }
-
-        /* ── Mobile (< 768px): single column ── */
         @media (max-width: 768px) {
-          .tdp-outer {
-            padding: 14px 14px 32px;
-          }
-          .tdp-grid {
-            grid-template-columns: 1fr;
-          }
-          .tdp-panel {
-            padding: 16px;
-          }
-          .tdp-comments-panel {
-            height: auto;
-            min-height: 400px;
-            position: static;
-            padding: 16px;
-          }
-          .tdp-task-header {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 12px;
-          }
-          .tdp-task-title {
-            font-size: clamp(1.3rem, 6vw, 1.8rem);
-          }
-          .tdp-actions-row {
-            justify-content: flex-start;
-          }
-          .tdp-info-grid {
-            grid-template-columns: 1fr;
-          }
-          .tdp-files-grid {
-            grid-template-columns: 1fr;
-          }
+          .tdp-outer { padding: 14px 14px 32px; }
+          .tdp-grid { grid-template-columns: 1fr; }
+          .tdp-panel { padding: 16px; }
+          .tdp-comments-panel { height: auto; min-height: 400px; position: static; padding: 16px; }
+          .tdp-task-header { flex-direction: column; align-items: stretch; gap: 12px; }
+          .tdp-task-title { font-size: clamp(1.3rem, 6vw, 1.8rem); }
+          .tdp-actions-row { justify-content: flex-start; }
+          .tdp-info-grid { grid-template-columns: 1fr; }
+          .tdp-files-grid { grid-template-columns: 1fr; }
         }
-
-        /* ── Very small (< 480px) ── */
         @media (max-width: 480px) {
-          .tdp-meta-row {
-            gap: 6px;
-          }
-          .tdp-panel, .tdp-comments-panel {
-            padding: 14px 12px;
-          }
+          .tdp-meta-row { gap: 6px; }
+          .tdp-panel, .tdp-comments-panel { padding: 14px 12px; }
         }
-
-        .rich-editor-comment .ProseMirror {
-          min-height: 72px !important;
-          padding: 10px 12px !important;
-          font-size: 0.88rem !important;
-        }
+        .rich-editor-comment .ProseMirror { min-height: 72px !important; padding: 10px 12px !important; font-size: 0.88rem !important; }
       `}</style>
 
       <div className="tdp-outer">
-        {/* ── Back button ── */}
+        {/* ── Back ── */}
         <button
           onClick={onBack}
           style={{
@@ -773,13 +988,11 @@ export default function TaskDetailPage({
           RETOUR
         </button>
 
-        {/* ── Main grid ── */}
         <div className="tdp-grid">
-          {/* ══ Left panel — Task details ══ */}
+          {/* ══ Left panel ══ */}
           <div className="tdp-panel">
-            {/* Title + actions */}
             <div className="tdp-task-header">
-              <h1 className="tdp-task-title">{task.title}</h1>
+              <h1 className="tdp-task-title">{localTask.title}</h1>
               <div className="tdp-actions-row">
                 {!hasAssignees && (
                   <button
@@ -807,7 +1020,7 @@ export default function TaskDetailPage({
               </div>
             </div>
 
-            {/* Meta row — assignees, date, status, priority */}
+            {/* Meta */}
             <div className="tdp-meta-row">
               {hasAssignees ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
@@ -846,19 +1059,16 @@ export default function TaskDetailPage({
               ) : (
                 <span style={{ fontSize: "0.82rem", color: "#7a7a7a" }}>Aucun assigné</span>
               )}
-
               <span style={{ color: "#c8b9a8", fontSize: "0.75rem" }}>•</span>
-
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <Clock3 size={14} color="#6B1A2A" />
                 <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1A1A1A" }}>
                   {dueDate}
                 </span>
               </div>
-
               <span style={{ color: "#c8b9a8", fontSize: "0.75rem" }}>•</span>
-              <StatusBadge status={task.status} />
-              <PriorityBadge priority={task.priority} />
+              <StatusBadge status={localTask.status} />
+              <PriorityBadge priority={localTask.priority} />
             </div>
 
             {/* Description */}
@@ -875,7 +1085,7 @@ export default function TaskDetailPage({
                   border: "1px solid rgba(0,0,0,0.05)",
                 }}
               >
-                {task.description || (
+                {localTask.description || (
                   <span style={{ color: "#aaa", fontStyle: "italic" }}>Aucune description</span>
                 )}
               </div>
@@ -885,23 +1095,21 @@ export default function TaskDetailPage({
             <div className="tdp-info-grid">
               <div>
                 <SectionLabel>Deadline</SectionLabel>
-                <div style={{ ...infoCardStyle }}>
+                <div style={infoCardStyle}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <CalendarDays size={15} color="#6B1A2A" />
                     <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
-                      {task.due_date ? formatDate(task.due_date) : "—"}
+                      {localTask.due_date ? formatDate(localTask.due_date) : "—"}
                     </span>
                   </div>
                 </div>
               </div>
               <div>
                 <SectionLabel>Créé par</SectionLabel>
-                <div style={{ ...infoCardStyle }}>
+                <div style={infoCardStyle}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <Users size={15} color="#6B1A2A" />
-                    <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
-                      {/* {task.created_by_name || "—"} */}—
-                    </span>
+                    <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>—</span>
                   </div>
                 </div>
               </div>
@@ -925,12 +1133,36 @@ export default function TaskDetailPage({
               <SectionLabel>Détails</SectionLabel>
               <div className="tdp-info-grid" style={{ marginBottom: 0 }}>
                 <div style={infoCardStyle}>
-                  <span style={infoLabelStyle}>Projet</span>
-                  <span style={infoValueStyle}>{projectName}</span>
+                  <span
+                    style={{
+                      fontSize: "0.63rem",
+                      fontWeight: 800,
+                      textTransform: "uppercase" as const,
+                      letterSpacing: "0.12em",
+                      color: "#8d8d8d",
+                    }}
+                  >
+                    Projet
+                  </span>
+                  <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1A1A1A" }}>
+                    {projectName}
+                  </span>
                 </div>
                 <div style={infoCardStyle}>
-                  <span style={infoLabelStyle}>Statut</span>
-                  <span style={infoValueStyle}>{task.status}</span>
+                  <span
+                    style={{
+                      fontSize: "0.63rem",
+                      fontWeight: 800,
+                      textTransform: "uppercase" as const,
+                      letterSpacing: "0.12em",
+                      color: "#8d8d8d",
+                    }}
+                  >
+                    Statut
+                  </span>
+                  <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1A1A1A" }}>
+                    {localTask.status}
+                  </span>
                 </div>
               </div>
             </div>
@@ -950,7 +1182,6 @@ export default function TaskDetailPage({
               COMMENTAIRES
             </h2>
 
-            {/* Scrollable list */}
             <div
               style={{
                 flex: 1,
@@ -999,58 +1230,42 @@ export default function TaskDetailPage({
               <div ref={commentsEndRef} />
             </div>
 
-            {/* Comment input */}
+            {/* Input zone */}
             <div
               style={{
                 background: "#fff",
                 borderRadius: "10px",
-                border: "1px solid rgba(0,0,0,0.06)",
-                overflow: "hidden",
+                border: "1px solid rgba(0,0,0,0.08)",
                 flexShrink: 0,
+                padding: "12px",
               }}
             >
-              {/* Toolbar */}
-              <div
-                style={{
-                  padding: "8px 12px",
-                  borderBottom: "1px solid rgba(0,0,0,0.06)",
-                  display: "flex",
-                  gap: "10px",
-                  alignItems: "center",
-                  color: "#888",
-                }}
-              >
-                {[Bold, Italic, List, Paperclip, Smile].map((Icon, i) => (
-                  <button
-                    key={i}
+              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                <Avatar name={session?.user?.name ?? "?"} size={30} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
                     style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "#888",
-                      display: "flex",
-                      padding: "2px",
+                      background: "#f7f3ed",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(0,0,0,0.07)",
+                      overflow: "hidden",
+                      fontSize: "0.85rem",
                     }}
                   >
-                    <Icon size={14} />
-                  </button>
-                ))}
+                    <RichTextArea key={resetKey} value={newComment} onChange={setNewComment} />
+                  </div>
+                </div>
               </div>
-              {/* Editor */}
-              <div style={{ padding: "10px 12px", fontSize: "0.85rem" }}>
-                <RichTextArea key={resetKey} value={newComment} onChange={setNewComment} />
-              </div>
-              {/* Footer */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "8px 12px",
+                  justifyContent: "flex-end",
+                  marginTop: "10px",
+                  paddingTop: "10px",
                   borderTop: "1px solid rgba(0,0,0,0.05)",
                 }}
               >
-                <span style={{ fontSize: "0.68rem", color: "#8d8d8d" }}>Auto-saving draft…</span>
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !newComment.trim()}
@@ -1058,25 +1273,77 @@ export default function TaskDetailPage({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "7px",
-                    padding: "8px 14px",
+                    padding: "8px 16px",
                     borderRadius: "8px",
                     border: "none",
                     background:
-                      submitting || !newComment.trim() ? "rgba(107,26,42,0.35)" : "#6B1A2A",
+                      submitting || !newComment.trim() ? "rgba(107,26,42,0.30)" : "#6B1A2A",
                     color: "#fff",
                     fontWeight: 700,
                     cursor: submitting || !newComment.trim() ? "not-allowed" : "pointer",
                     fontSize: "0.8rem",
+                    transition: "background 0.15s",
                   }}
                 >
                   <Send size={13} />
-                  Commenter
+                  {submitting ? "Envoi..." : "Commenter"}
                 </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── Modal routing ────────────────────────────────────────────────────
+          canManageTasks = true  → EditModal complet  (TM / SA)
+          canManageTasks = false → StatusOnlyModal    (T)
+      ── */}
+      {editTaskOpen &&
+        (canManageTasks ? (
+          <EditModal
+            mode="update"
+            task={localTask}
+            projects={projects}
+            teams={teams}
+            canManageTasks={canManageTasks}
+            onClose={() => setEditTaskOpen(false)}
+            onSaved={(updated) => {
+              setEditTaskOpen(false);
+              setLocalTask(updated);
+              onUpdated?.(updated);
+              addToast("success", "Tâche mise à jour");
+            }}
+          />
+        ) : (
+          <StatusOnlyModal
+            task={localTask}
+            onClose={() => setEditTaskOpen(false)}
+            onSaved={(updated) => {
+              setEditTaskOpen(false);
+              setLocalTask(updated);
+              onUpdated?.(updated);
+              addToast("success", "Statut mis à jour");
+            }}
+          />
+        ))}
+
+      {deleteTaskOpen && (
+        <DeleteModal
+          task={localTask}
+          loading={false}
+          onCancel={() => setDeleteTaskOpen(false)}
+          onConfirm={async () => {
+            const res = await deleteTask(localTask.id);
+            if (res.success) {
+              setDeleteTaskOpen(false);
+              addToast("success", "Tâche supprimée");
+              onBack();
+            } else {
+              addToast("error", res.error || "Erreur lors de la suppression");
+            }
+          }}
+        />
+      )}
 
       {/* ── Edit comment modal ── */}
       {editingId !== null && (
@@ -1173,40 +1440,6 @@ export default function TaskDetailPage({
             </div>
           </div>
         </div>
-      )}
-
-      {/* ── Task modals ── */}
-      {editTaskOpen && (
-        <EditModal
-          mode="update"
-          task={task}
-          projects={projects}
-          teams={teams}
-          onClose={() => setEditTaskOpen(false)}
-          onSaved={(updated) => {
-            setEditTaskOpen(false);
-            onUpdated?.(updated);
-            addToast("success", "Tâche mise à jour");
-          }}
-        />
-      )}
-
-      {deleteTaskOpen && (
-        <DeleteModal
-          task={task}
-          loading={false}
-          onCancel={() => setDeleteTaskOpen(false)}
-          onConfirm={async () => {
-            const res = await deleteTask(task.id);
-            if (res.success) {
-              setDeleteTaskOpen(false);
-              addToast("success", "Tâche supprimée");
-              onBack();
-            } else {
-              addToast("error", res.error || "Erreur lors de la suppression");
-            }
-          }}
-        />
       )}
 
       {/* ── Toasts ── */}

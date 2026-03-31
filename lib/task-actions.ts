@@ -446,6 +446,46 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
   }
 }
 
+// ── UPDATE STATUS ONLY (RÔLE T) ───────────────────────────────────────────────
+
+export async function updateTaskStatusOnly(
+  id: number,
+  status: "à faire" | "en cours" | "review" | "terminée"
+): Promise<TaskResult> {
+  try {
+    const session = await auth();
+    if (!session?.user) return { success: false, error: "Non authentifié" };
+
+    const userRole = (session.user as { role?: string }).role;
+    const permissions = getPermissions(userRole ?? null);
+
+    if (!permissions.canManageTasks && userRole !== "T") {
+      return { success: false, error: "Non autorisé à modifier le statut" };
+    }
+
+    const existing = await prisma.tasks.findUnique({ where: { id } });
+    if (!existing) return { success: false, error: "Tâche non trouvée." };
+
+    const updated = await prisma.tasks.update({ where: { id }, data: { status } });
+    const enriched = await enrichTask(updated);
+
+    revalidatePath("/dashboard/tasks");
+    revalidatePath("/dashboard");
+
+    // Notification review
+    const wasNotReview = existing.status !== "review";
+    const isNowReview = enriched.status === "review";
+    if (wasNotReview && isNowReview) {
+      notifyTaskReview(enriched).catch(console.error);
+    }
+
+    return { success: true, task: enriched };
+  } catch (err: unknown) {
+    console.error("[updateTaskStatusOnly]", err);
+    return { success: false, error: "Erreur serveur." };
+  }
+}
+
 // ── DELETE ────────────────────────────────────────────────────────────────────
 
 export async function deleteTask(id: number): Promise<{ success: boolean; error?: string }> {

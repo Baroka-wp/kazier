@@ -46,7 +46,6 @@ model project {
   // Relations
   tasks       tasks[]
   rapports    rapports[]
-  tasks       tasks[]
 }
 
 model tasks {

@@ -204,7 +204,7 @@ function AvatarStack({
 
   function avatarColor(name: string) {
     // Brand palette — warm tones cohérents avec #6B1A2A
-    const palette = ["#6B1A2A", "#8B2438", "#3D1A24", "#A0522D", "#7B3F00", "#4A1020"];
+    const palette = ["#6B1A2A"];
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
     return palette[Math.abs(hash) % palette.length];

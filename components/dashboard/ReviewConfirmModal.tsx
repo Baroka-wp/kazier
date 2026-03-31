@@ -6,6 +6,7 @@ export default function ReviewConfirmModal({
   onConfirm,
   onCancel,
 }: {
+  style?: React.CSSProperties;
   onConfirm: () => void;
   onCancel: () => void;
 }) {

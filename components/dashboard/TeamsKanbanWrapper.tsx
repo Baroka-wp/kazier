@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -13,29 +13,37 @@ import {
 } from "@dnd-kit/core";
 import { Task } from "@/lib/task-actions";
 import { updateTaskStatus } from "@/lib/team-actions";
+import { getSessionPermissions, type SessionPermissions } from "@/lib/session-actions";
 import TaskColumn from "./TaskColumn";
 import TaskCard from "./TaskCard";
-import ReviewConfirmModal from "@/components/dashboard/ReviewConfirmModal"; // 👈 ajouter
+import ReviewConfirmModal from "@/components/dashboard/ReviewConfirmModal";
 import TaskDetailPage from "./TaskDetailPage";
 
 type Props = {
   tasks: Task[];
-  teamMemberId: number;
+  teamMemberId: number; // garde pour compatibilité, sera overridé par le serveur
 };
 
 export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
-  const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [pendingDrop, setPendingDrop] = useState<{ taskId: number; status: Task["status"] } | null>(
-    null
-  ); // 👈 ajouter
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
+  const [pendingDrop, setPendingDrop] = useState<{
+    taskId: number;
+    status: Task["status"];
+  } | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    })
-  );
+  // ── Permissions depuis le serveur ─────────────────────────────────────────
+  const [perms, setPerms] = useState<SessionPermissions | null>(null);
+
+  useEffect(() => {
+    getSessionPermissions().then(setPerms);
+  }, []);
+
+  // ID résolu : serveur en priorité, prop en fallback
+  const resolvedMemberId = perms?.teamMemberId ?? teamMemberId;
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const groupedByStatus = {
     "à faire": localTasks.filter((t) => t.status === "à faire"),
@@ -49,7 +57,6 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
     setActiveTask(task ?? null);
   }
 
-  // 👇 Fonction commune pour appliquer le drop
   async function applyDrop(taskId: number, status: Task["status"]) {
     setLocalTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)));
     const res = await updateTaskStatus(taskId, status);
@@ -59,14 +66,14 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveTask(null);
-
     if (!over) return;
 
     const taskId = parseInt(String(active.id).replace("task-", ""));
     const currentTask = localTasks.find((t) => t.id === taskId);
     if (!currentTask) return;
 
-    if (!currentTask.assigned_to?.includes(teamMemberId)) return;
+    // T ne peut déplacer que ses propres tâches
+    if (!currentTask.assigned_to?.includes(resolvedMemberId)) return;
     if (currentTask.status === "review" || currentTask.status === "terminée") return;
 
     const overTask = localTasks.find((t) => `task-${t.id}` === String(over.id));
@@ -77,7 +84,7 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
     if (currentTask.status === resolvedStatus) return;
     if (resolvedStatus === "terminée") return;
 
-    // 👇 Intercepter le drop vers review
+    // Intercepter le drop vers review → confirmation
     if (resolvedStatus === "review") {
       setPendingDrop({ taskId, status: resolvedStatus });
       return;
@@ -86,13 +93,15 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
     await applyDrop(taskId, resolvedStatus);
   }
 
+  // ── Vue détail tâche ──────────────────────────────────────────────────────
   if (detailTask) {
     return (
       <TaskDetailPage
         task={detailTask}
         onBack={() => setDetailTask(null)}
-        teamMemberId={teamMemberId}
+        teamMemberId={resolvedMemberId}
         isTM={false}
+        canManageTasks={false} // T : jamais de suppression ni gestion complète
         onUpdated={(updated) => {
           setLocalTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
           setDetailTask(updated);
@@ -101,6 +110,7 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
     );
   }
 
+  // ── Vue Kanban ────────────────────────────────────────────────────────────
   return (
     <>
       <DndContext
@@ -115,7 +125,7 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
               key={status}
               status={status}
               tasks={groupedByStatus[status]}
-              teamMemberId={teamMemberId}
+              teamMemberId={resolvedMemberId}
               onTaskUpdated={(updatedTask) => {
                 setLocalTasks((prev) =>
                   prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
@@ -123,6 +133,7 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
               }}
               onCardClick={(task) => setDetailTask(task)}
               readOnly={status === "terminée"}
+              isTM={false}
             />
           ))}
         </div>
@@ -133,18 +144,19 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
               <TaskCard
                 task={activeTask}
                 index={0}
-                isAssignedToMe={activeTask.assigned_to?.includes(teamMemberId) ?? false}
+                isAssignedToMe={activeTask.assigned_to?.includes(resolvedMemberId) ?? false}
                 isFree={!activeTask.assigned_to || activeTask.assigned_to.length === 0}
-                teamMemberId={teamMemberId}
+                teamMemberId={resolvedMemberId}
                 onTaskUpdated={() => {}}
                 isDragging
+                isTM={false}
               />
             </div>
           ) : null}
         </DragOverlay>
       </DndContext>
 
-      {/* 👇 Modal confirmation review */}
+      {/* Modal confirmation review */}
       {pendingDrop && (
         <ReviewConfirmModal
           onConfirm={async () => {

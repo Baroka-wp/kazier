@@ -14,6 +14,7 @@ import {
 import { ArrowLeft, ChevronDown, FolderOpen, Plus } from "lucide-react";
 import { Task } from "@/lib/task-actions";
 import { updateTaskStatus } from "@/lib/team-actions";
+import { getSessionPermissions, type SessionPermissions } from "@/lib/session-actions";
 import TaskColumn from "./TaskColumn";
 import TaskCard from "./TaskCard";
 import TaskDetailPage from "./TaskDetailPage";
@@ -23,12 +24,10 @@ type Project = { id: number; name: string };
 type Props = {
   tasks: Task[];
   isLoading?: boolean;
-  // Props injectées depuis TasksPage
   projects?: Project[];
   selectedProjectId?: number | null;
   onProjectChange?: (id: number | null) => void;
   onAddTask?: () => void;
-  // Props standalone (usage hors TasksPage)
   projectName?: string;
   onBack?: () => void;
   isTM?: boolean;
@@ -50,13 +49,17 @@ export default function TMKanbanWrapper({
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [perms, setPerms] = useState<SessionPermissions | null>(null);
 
-  // Sync local tasks quand tasks prop change (refresh SWR)
+  // Fetch permissions from server once on mount
+  useEffect(() => {
+    getSessionPermissions().then(setPerms);
+  }, []);
+
   useEffect(() => {
     setLocalTasks(tasks);
   }, [tasks]);
 
-  // Si la tâche sélectionnée est mise à jour dans localTasks, synchro
   useEffect(() => {
     if (selectedTask) {
       const updated = localTasks.find((t) => t.id === selectedTask.id);
@@ -87,7 +90,6 @@ export default function TMKanbanWrapper({
     const taskId = parseInt(String(active.id).replace("task-", ""));
     const currentTask = localTasks.find((t) => t.id === taskId);
     if (!currentTask) return;
-
     if (currentTask.status === "terminée") return;
 
     const overTask = localTasks.find((t) => `task-${t.id}` === String(over.id));
@@ -108,16 +110,20 @@ export default function TMKanbanWrapper({
   const resolvedProjectName =
     projectName ?? projects.find((p) => p.id === selectedProjectId)?.name ?? "Projet";
 
+  // Permissions réelles depuis le serveur — fallback sur les props pendant le chargement
+  const resolvedTeamMemberId = perms?.teamMemberId ?? teamMemberId;
+  const resolvedCanManage = perms?.canManageTasks ?? isTM;
+
   // ── Vue détail tâche ──────────────────────────────────────────────────────
   if (selectedTask) {
     return (
       <TaskDetailPage
         task={selectedTask}
         onBack={() => setSelectedTask(null)}
-        teamMemberId={teamMemberId}
-        isTM={isTM}
+        teamMemberId={resolvedTeamMemberId}
+        isTM={resolvedCanManage}
+        canManageTasks={resolvedCanManage}
         onUpdated={(updatedTask: Task) => {
-          // ✅ Nom correct
           setLocalTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
           setSelectedTask(updatedTask);
         }}
@@ -148,7 +154,6 @@ export default function TMKanbanWrapper({
           flexShrink: 0,
         }}
       >
-        {/* Left — back + title */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           {onBack && (
             <button
@@ -183,7 +188,6 @@ export default function TMKanbanWrapper({
           </h1>
         </div>
 
-        {/* Right — project selector + add button */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {onProjectChange && projects.length > 0 ? (
             <div style={{ position: "relative" }}>
@@ -268,38 +272,42 @@ export default function TMKanbanWrapper({
             </button>
           )}
 
-          <button
-            onClick={onAddTask}
-            disabled={!selectedProjectId && onProjectChange !== undefined}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "8px 16px",
-              borderRadius: "10px",
-              border: "none",
-              background: !selectedProjectId && onProjectChange !== undefined ? "#ccc" : "#6B1A2A",
-              color: "#fff",
-              fontSize: "0.78rem",
-              fontWeight: 700,
-              cursor:
-                !selectedProjectId && onProjectChange !== undefined ? "not-allowed" : "pointer",
-              letterSpacing: "0.02em",
-              transition: "background 0.15s",
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-            onMouseEnter={(e) => {
-              if (selectedProjectId || onProjectChange === undefined)
-                e.currentTarget.style.background = "#8B2438";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background =
-                !selectedProjectId && onProjectChange !== undefined ? "#ccc" : "#6B1A2A";
-            }}
-          >
-            <Plus size={15} strokeWidth={2.5} />
-            AJOUTER
-          </button>
+          {/* Bouton AJOUTER — TM/SA uniquement */}
+          {resolvedCanManage && (
+            <button
+              onClick={onAddTask}
+              disabled={!selectedProjectId && onProjectChange !== undefined}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 16px",
+                borderRadius: "10px",
+                border: "none",
+                background:
+                  !selectedProjectId && onProjectChange !== undefined ? "#ccc" : "#6B1A2A",
+                color: "#fff",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor:
+                  !selectedProjectId && onProjectChange !== undefined ? "not-allowed" : "pointer",
+                letterSpacing: "0.02em",
+                transition: "background 0.15s",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+              onMouseEnter={(e) => {
+                if (selectedProjectId || onProjectChange === undefined)
+                  e.currentTarget.style.background = "#8B2438";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background =
+                  !selectedProjectId && onProjectChange !== undefined ? "#ccc" : "#6B1A2A";
+              }}
+            >
+              <Plus size={15} strokeWidth={2.5} />
+              AJOUTER
+            </button>
+          )}
         </div>
       </div>
 
@@ -308,12 +316,7 @@ export default function TMKanbanWrapper({
         <div style={{ textAlign: "center", padding: "60px", color: "#999" }}>Chargement...</div>
       ) : !selectedProjectId && onProjectChange !== undefined ? (
         <div
-          style={{
-            textAlign: "center",
-            padding: "60px 20px",
-            color: "#aaa",
-            fontSize: "0.9rem",
-          }}
+          style={{ textAlign: "center", padding: "60px 20px", color: "#aaa", fontSize: "0.9rem" }}
         >
           Sélectionnez un projet pour afficher le kanban
         </div>
@@ -340,16 +343,16 @@ export default function TMKanbanWrapper({
                 key={status}
                 status={status}
                 tasks={groupedByStatus[status]}
-                teamMemberId={teamMemberId}
+                teamMemberId={resolvedTeamMemberId}
                 onTaskUpdated={(updatedTask) => {
                   setLocalTasks((prev) =>
                     prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
                   );
                 }}
                 onCardClick={(task) => setSelectedTask(task)}
-                onAddTask={status === "à faire" ? onAddTask : undefined}
+                onAddTask={status === "à faire" && resolvedCanManage ? onAddTask : undefined}
                 readOnly={false}
-                isTM={isTM}
+                isTM={resolvedCanManage}
               />
             ))}
           </div>
@@ -369,10 +372,10 @@ export default function TMKanbanWrapper({
                   index={0}
                   isAssignedToMe={false}
                   isFree={false}
-                  teamMemberId={teamMemberId}
+                  teamMemberId={resolvedTeamMemberId}
                   onTaskUpdated={() => {}}
                   isDragging
-                  isTM={isTM}
+                  isTM={resolvedCanManage}
                 />
               </div>
             ) : null}
