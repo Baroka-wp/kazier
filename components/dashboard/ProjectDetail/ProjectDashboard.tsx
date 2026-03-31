@@ -1719,7 +1719,11 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
             <TMKanbanWrapper
               tasks={tasks}
               isLoading={loading}
-              projectName={project.name || ""}
+              projects={[{ id: project.id, name: project.name || "Projet" }]}
+              selectedProjectId={project.id}
+              onProjectChange={() => {}}
+              onAddTask={() => setShowCreateTask(true)}
+              isTM={true}
             />
           </div>
         )}

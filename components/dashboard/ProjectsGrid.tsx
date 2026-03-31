@@ -185,6 +185,8 @@ function CreateModal({
     description: "",
     icon: "",
     team_ids: [] as number[],
+    start_date: "",
+    end_date: "",
   });
   const [serverError, setServerError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -210,6 +212,8 @@ function CreateModal({
       description: values.description,
       icon: values.icon || null,
       team_ids: values.team_ids,
+      start_date: values.start_date || null,
+      end_date: values.end_date || null,
     });
     setSaving(false);
     if (result.success) {
@@ -433,6 +437,77 @@ function CreateModal({
                 boxSizing: "border-box" as const,
               }}
             />
+          </div>
+
+          {/* Dates */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 9 }}>
+            {/* Start Date */}
+            <div>
+              <small
+                style={{
+                  display: "block",
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  textTransform: "uppercase" as const,
+                  letterSpacing: "0.08em",
+                  color: "#999",
+                  marginBottom: 4,
+                }}
+              >
+                Début
+              </small>
+              <input
+                type="date"
+                value={values.start_date}
+                onChange={(e) => setField("start_date", e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  borderRadius: "0px",
+                  border: "1.5px solid rgba(0,0,0,0.08)",
+                  background: "#e8eaed",
+                  fontSize: "0.82rem",
+                  fontFamily: "'DM Sans',sans-serif",
+                  color: "#1A1A1A",
+                  outline: "none",
+                  boxSizing: "border-box" as const,
+                }}
+              />
+            </div>
+
+            {/* End Date */}
+            <div>
+              <small
+                style={{
+                  display: "block",
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  textTransform: "uppercase" as const,
+                  letterSpacing: "0.08em",
+                  color: "#999",
+                  marginBottom: 4,
+                }}
+              >
+                Fin
+              </small>
+              <input
+                type="date"
+                value={values.end_date}
+                onChange={(e) => setField("end_date", e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  borderRadius: "0px",
+                  border: "1.5px solid rgba(0,0,0,0.08)",
+                  background: "#e8eaed",
+                  fontSize: "0.82rem",
+                  fontFamily: "'DM Sans',sans-serif",
+                  color: "#1A1A1A",
+                  outline: "none",
+                  boxSizing: "border-box" as const,
+                }}
+              />
+            </div>
           </div>
 
           {/* Teams */}
