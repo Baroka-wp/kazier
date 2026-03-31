@@ -101,7 +101,7 @@ function Avatar({ name, size = 34 }: { name: string; size?: number }) {
         color: "#fff",
         flexShrink: 0,
         marginLeft: -8,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+        border: "1px solid rgba(0,0,0,0.08)",
       }}
     >
       {getInitials(name)}
@@ -151,7 +151,7 @@ function CategoryBadge({ label }: { label?: string | null }) {
       style={{
         display: "inline-block",
         padding: "3px 9px",
-        borderRadius: "20px",
+        borderRadius: "0px",
         background: "rgba(107,26,42,0.08)",
         border: "1px solid rgba(107,26,42,0.15)",
         fontSize: "0.62rem",
@@ -172,7 +172,7 @@ function ProgressBar({ value, height = 8 }: { value: number; height?: number }) 
       style={{
         width: "100%",
         height,
-        borderRadius: 999,
+        borderRadius: "50%",
         background: "rgba(107,26,42,0.1)",
         overflow: "hidden",
       }}
@@ -181,7 +181,7 @@ function ProgressBar({ value, height = 8 }: { value: number; height?: number }) 
         style={{
           width: `${value}%`,
           height: "100%",
-          borderRadius: 999,
+          borderRadius: "50%",
           background: "linear-gradient(90deg,#6B1A2A,#9B3A4A)",
           transition: "width 0.6s ease",
         }}
@@ -210,9 +210,9 @@ function ToastNotification({
         gap: 10,
         background: "#fff",
         border: `1.5px solid ${ok ? "rgba(45,122,79,0.2)" : "rgba(229,62,62,0.2)"}`,
-        borderRadius: "10px",
+        borderRadius: "0px",
         padding: "10px 14px",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+        border: "1px solid rgba(0,0,0,0.08)",
         minWidth: 260,
         animation: "slideIn 0.25s ease",
       }}
@@ -305,12 +305,12 @@ function CreateModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "#fff",
-          borderRadius: "10px",
+          borderRadius: "0px",
           width: "100%",
           maxWidth: 500,
           maxHeight: "90vh",
           overflowY: "auto",
-          boxShadow: "0 24px 60px rgba(0,0,0,0.15)",
+          border: "1px solid rgba(0,0,0,0.08)",
           animation: "popIn 0.2s ease",
         }}
       >
@@ -350,7 +350,7 @@ function CreateModal({
             style={{
               width: 28,
               height: 28,
-              borderRadius: "7px",
+              borderRadius: "0px",
               border: "1px solid rgba(0,0,0,0.08)",
               background: "#F5F2ED",
               cursor: "pointer",
@@ -370,7 +370,7 @@ function CreateModal({
               style={{
                 marginBottom: 10,
                 padding: "7px 10px",
-                borderRadius: "8px",
+                borderRadius: "0px",
                 background: "rgba(229,62,62,0.07)",
                 border: "1px solid rgba(229,62,62,0.2)",
                 fontSize: "0.78rem",
@@ -403,7 +403,7 @@ function CreateModal({
                 gap: 7,
                 padding: 9,
                 background: "#F5F2ED",
-                borderRadius: "8px",
+                borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
               }}
             >
@@ -415,7 +415,7 @@ function CreateModal({
                   style={{
                     width: "100%",
                     padding: 9,
-                    borderRadius: "7px",
+                    borderRadius: "0px",
                     border:
                       values.icon === id ? "2px solid #6B1A2A" : "1.5px solid rgba(0,0,0,0.08)",
                     background: values.icon === id ? "rgba(107,26,42,0.1)" : "#fff",
@@ -456,7 +456,7 @@ function CreateModal({
               style={{
                 width: "100%",
                 padding: "8px 10px",
-                borderRadius: "8px",
+                borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
                 background: "#F5F2ED",
                 fontSize: "0.82rem",
@@ -491,7 +491,7 @@ function CreateModal({
                 width: "100%",
                 minHeight: 72,
                 padding: "8px 10px",
-                borderRadius: "8px",
+                borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
                 background: "#F5F2ED",
                 fontSize: "0.82rem",
@@ -526,7 +526,7 @@ function CreateModal({
                 gap: 7,
                 padding: 9,
                 background: "#F5F2ED",
-                borderRadius: "8px",
+                borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
                 maxHeight: 180,
                 overflowY: "auto",
@@ -546,7 +546,7 @@ function CreateModal({
                       gap: 5,
                       padding: "5px 7px",
                       cursor: "pointer",
-                      borderRadius: "7px",
+                      borderRadius: "0px",
                       background: values.team_ids.includes(team.id)
                         ? "rgba(107,26,42,0.1)"
                         : "transparent",
@@ -577,7 +577,7 @@ function CreateModal({
               style={{
                 flex: 1,
                 padding: 9,
-                borderRadius: "8px",
+                borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
                 background: "#F5F2ED",
                 color: "#666",
@@ -595,7 +595,7 @@ function CreateModal({
               style={{
                 flex: 1,
                 padding: 9,
-                borderRadius: "8px",
+                borderRadius: "0px",
                 border: "none",
                 background: "#6B1A2A",
                 color: "#fff",
@@ -632,7 +632,7 @@ export default function ProjectsGrid() {
     { id: number; type: "success" | "error"; message: string }[]
   >([]);
 
-  const { data, mutate } = useSWR<{ data: Project[] }>("/api/projects", fetcher, {
+  const { data, mutate, isLoading } = useSWR<{ data: Project[] }>("/api/projects", fetcher, {
     dedupingInterval: 500,
   });
   const projects = data?.data ?? [];
@@ -678,474 +678,536 @@ export default function ProjectsGrid() {
         @media(max-width:600px){
           .pg-row2 { grid-template-columns: 1fr !important; }
         }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
       `}</style>
 
       <div
         style={{
-          padding: "24px 20px",
+          padding: "16px",
           maxWidth: 1100,
           margin: "0 auto",
           fontFamily: "'DM Sans',sans-serif",
           display: "flex",
           flexDirection: "column",
-          gap: 16,
+          gap: 12,
         }}
       >
-        {/* ── Row 1 : Featured + Stats ── */}
-        <div
-          className="pg-row1"
-          style={{ display: "grid", gridTemplateColumns: "1fr 270px", gap: 16 }}
-        >
-          {/* Featured */}
-          {featured ? (
-            <div
-              onClick={() => router.push(`/dashboard/projects/${featured.id}`)}
-              style={{
-                background: "#fff",
-                borderRadius: "10px",
-                padding: "24px 28px",
-                border: "1.5px solid rgba(0,0,0,0.07)",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                display: "flex",
-                flexDirection: "column",
-                gap: 20,
-              }}
-              onMouseEnter={hoverEnter}
-              onMouseLeave={hoverLeave}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  gap: 14,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: "10px",
-                      background: "rgba(107,26,42,0.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <ProjectIcon iconId={featured.icon} size={22} />
-                  </div>
-                  <CategoryBadge label={featured.name} />
-                </div>
-                {(featured.team_members?.length ?? 0) > 0 && (
-                  <AvatarStack members={featured.team_members!} size={34} />
-                )}
-              </div>
-              <h2
-                style={{
-                  fontSize: "clamp(1.3rem,2.5vw,1.8rem)",
-                  fontWeight: 700,
-                  color: "#1A1A1A",
-                  lineHeight: 1.2,
-                  margin: 0,
-                }}
-              >
-                {featured.description || featured.name}
-              </h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                <div
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                >
-                  <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "#999" }}>
-                    Progress
-                  </span>
-                  <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "#6B1A2A" }}>—</span>
-                </div>
-                <ProgressBar value={0} height={9} />
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                background: "#F5F2ED",
-                borderRadius: "10px",
-                padding: "24px 28px",
-                border: "1.5px dashed rgba(107,26,42,0.2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <p style={{ color: "#aaa", fontSize: "0.88rem" }}>Aucun projet disponible</p>
-            </div>
-          )}
-
-          {/* Stats */}
+        {/* Loader pendant le chargement */}
+        {isLoading && (
           <div
             style={{
-              background: "#6B1A2A",
-              borderRadius: "10px",
-              padding: "24px 20px",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              gap: 14,
-              color: "#fff",
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase" as const,
-                  color: "rgba(255,255,255,0.55)",
-                  marginBottom: 5,
-                }}
-              >
-                ACTIF MAINTENANT
-              </p>
-              <p style={{ fontSize: "2.8rem", fontWeight: 800, lineHeight: 1, margin: 0 }}>
-                {projects.length}
-              </p>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-              {[
-                { label: "In Production", value: Math.ceil(projects.length * 0.66) },
-                { label: "Concept Phase", value: Math.floor(projects.length * 0.34) },
-              ].map(({ label, value }) => (
-                <div
-                  key={label}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "9px 12px",
-                    borderRadius: "8px",
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                  }}
-                >
-                  <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.75)" }}>
-                    {label}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      background: "rgba(255,255,255,0.15)",
-                      padding: "2px 9px",
-                      borderRadius: "20px",
-                    }}
-                  >
-                    {String(value).padStart(2, "0")}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push("/dashboard/projects");
-              }}
-              style={{
-                width: "100%",
-                padding: "10px",
-                borderRadius: "8px",
-                border: "none",
-                background: "#fff",
-                color: "#6B1A2A",
-                fontSize: "0.82rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: "'DM Sans',sans-serif",
-                transition: "all 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#F5E8EA")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
-            >
-              Voir tout
-            </button>
-          </div>
-        </div>
-
-        {/* ── Row 2 : Small projects + New card ── */}
-        <div
-          className="pg-row2"
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}
-        >
-          {smallProjects.map((project) => {
-            const IC = project.icon ? ICON_MAP[project.icon] : null;
-            return (
-              <div
-                key={project.id}
-                onClick={() => router.push(`/dashboard/projects/${project.id}`)}
-                style={{
-                  background: "#fff",
-                  borderRadius: "10px",
-                  padding: "20px",
-                  border: "1.5px solid rgba(0,0,0,0.07)",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 14,
-                }}
-                onMouseEnter={hoverEnter}
-                onMouseLeave={hoverLeave}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: "9px",
-                      background: "rgba(107,26,42,0.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {IC ? (
-                      <IC size={20} color="#6B1A2A" />
-                    ) : (
-                      <Briefcase size={20} color="#6B1A2A" />
-                    )}
-                  </div>
-                  <span
-                    style={{
-                      fontSize: "0.65rem",
-                      fontWeight: 600,
-                      color: "#6B1A2A",
-                      background: "rgba(107,26,42,0.08)",
-                      padding: "3px 8px",
-                      borderRadius: "20px",
-                      border: "1px solid rgba(107,26,42,0.15)",
-                    }}
-                  >
-                    {project.team_members?.length ?? 0} équipes
-                  </span>
-                </div>
-                <div>
-                  <h3
-                    style={{
-                      fontSize: "0.95rem",
-                      fontWeight: 700,
-                      color: "#1A1A1A",
-                      marginBottom: 3,
-                    }}
-                  >
-                    {project.name}
-                  </h3>
-                  {project.description && (
-                    <p
-                      style={{
-                        fontSize: "0.72rem",
-                        color: "#999",
-                        margin: 0,
-                        lineHeight: 1.4,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical" as const,
-                        overflow: "hidden",
-                      }}
-                    >
-                      {project.description}
-                    </p>
-                  )}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    {(project.team_members?.length ?? 0) > 0 ? (
-                      <AvatarStack members={project.team_members!} size={28} />
-                    ) : (
-                      <span style={{ fontSize: "0.7rem", color: "#ccc" }}>Aucun membre</span>
-                    )}
-                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#aaa" }}>—%</span>
-                  </div>
-                  <ProgressBar value={0} height={5} />
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Placeholders */}
-          {smallProjects.length < 2 &&
-            Array.from({ length: 2 - smallProjects.length }).map((_, i) => (
-              <div
-                key={`ph-${i}`}
-                style={{
-                  background: "#F5F2ED",
-                  borderRadius: "10px",
-                  padding: "20px",
-                  border: "1.5px dashed rgba(0,0,0,0.1)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <p style={{ fontSize: "0.78rem", color: "#ccc" }}>Projet à venir</p>
-              </div>
-            ))}
-
-          {/* New project */}
-          <div
-            onClick={() => isSuperAdmin && setShowCreateModal(true)}
-            style={{
-              background: "#F5F2ED",
-              borderRadius: "10px",
-              padding: "20px",
-              border: "1.5px dashed rgba(107,26,42,0.2)",
-              cursor: isSuperAdmin ? "pointer" : "default",
-              transition: "all 0.2s ease",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: 10,
-              textAlign: "center" as const,
-            }}
-            onMouseEnter={(e) => {
-              if (isSuperAdmin) {
-                e.currentTarget.style.background = "rgba(107,26,42,0.05)";
-                e.currentTarget.style.borderColor = "rgba(107,26,42,0.35)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#F5F2ED";
-              e.currentTarget.style.borderColor = "rgba(107,26,42,0.2)";
-              e.currentTarget.style.transform = "translateY(0)";
+              padding: "60px 20px",
+              gap: "16px",
             }}
           >
             <div
               style={{
-                width: 48,
-                height: 48,
+                width: "40px",
+                height: "40px",
+                border: "3px solid rgba(107,26,42,0.1)",
+                borderTopColor: "#6B1A2A",
                 borderRadius: "50%",
-                border: "2px dashed rgba(107,26,42,0.3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                animation: "spin 0.8s linear infinite",
               }}
-            >
-              <Plus size={20} color="#6B1A2A" strokeWidth={2.5} />
-            </div>
-            <div>
-              <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1A1A1A", marginBottom: 3 }}>
-                Nouveau
-              </p>
-              <p style={{ fontSize: "0.72rem", color: "#999", lineHeight: 1.4 }}>
-                {isSuperAdmin ? "Initialize a fresh project for your team" : "Droits insuffisants"}
-              </p>
-            </div>
-            {isSuperAdmin && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCreateModal(true);
-                }}
-                style={{
-                  padding: "7px 18px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: "#6B1A2A",
-                  color: "#fff",
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "'DM Sans',sans-serif",
-                }}
-              >
-                Démarrer
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Row 3 : Bottom blocks ── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {BOTTOM_BLOCKS.map(({ id, label, subtitle, icon: IC, href }) => (
-            <div
-              key={id}
-              onClick={() => router.push(href)}
+            />
+            <p
               style={{
-                background: "#fff",
-                borderRadius: "10px",
-                padding: "18px 20px",
-                border: "1.5px solid rgba(0,0,0,0.07)",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 8px 20px rgba(107,26,42,0.1)";
-                e.currentTarget.style.borderColor = "rgba(107,26,42,0.15)";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
-                e.currentTarget.style.borderColor = "rgba(0,0,0,0.07)";
-                e.currentTarget.style.transform = "translateY(0)";
+                fontSize: "0.9rem",
+                color: "#666",
+                fontWeight: 500,
               }}
             >
+              Chargement des projets...
+            </p>
+          </div>
+        )}
+
+        {!isLoading && (
+          <>
+            {/* ── Row 1 : Featured + Stats ── */}
+            <div
+              className="pg-row1"
+              style={{ display: "grid", gridTemplateColumns: "1fr 270px", gap: 16 }}
+            >
+              {/* Featured */}
+              {featured ? (
+                <div
+                  onClick={() => router.push(`/dashboard/projects/${featured.id}`)}
+                  style={{
+                    background: "#fff",
+                    borderRadius: "0px",
+                    padding: "24px 28px",
+                    border: "1.5px solid rgba(0,0,0,0.07)",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 20,
+                  }}
+                  onMouseEnter={hoverEnter}
+                  onMouseLeave={hoverLeave}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
+                      gap: 14,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: "0px",
+                          background: "rgba(107,26,42,0.08)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <ProjectIcon iconId={featured.icon} size={22} />
+                      </div>
+                      <CategoryBadge label={featured.name} />
+                    </div>
+                    {(featured.team_members?.length ?? 0) > 0 && (
+                      <AvatarStack members={featured.team_members!} size={34} />
+                    )}
+                  </div>
+                  <h2
+                    style={{
+                      fontSize: "clamp(1.3rem,2.5vw,1.8rem)",
+                      fontWeight: 700,
+                      color: "#1A1A1A",
+                      lineHeight: 1.2,
+                      margin: 0,
+                    }}
+                  >
+                    {featured.description || featured.name}
+                  </h2>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "#999" }}>
+                        Progress
+                      </span>
+                      <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "#6B1A2A" }}>
+                        —
+                      </span>
+                    </div>
+                    <ProgressBar value={0} height={9} />
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: "#F5F2ED",
+                    borderRadius: "0px",
+                    padding: "24px 28px",
+                    border: "1.5px dashed rgba(107,26,42,0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <p style={{ color: "#aaa", fontSize: "0.88rem" }}>Aucun projet disponible</p>
+                </div>
+              )}
+
+              {/* Stats */}
               <div
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "10px",
-                  background: "rgba(107,26,42,0.08)",
+                  background: "#6B1A2A",
+                  borderRadius: "0px",
+                  padding: "24px 20px",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: 14,
+                  color: "#fff",
                 }}
               >
-                <IC size={20} color="#6B1A2A" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1A1A1A", margin: 0 }}>
-                  {label}
-                </p>
-                <p style={{ fontSize: "0.72rem", color: "#aaa", margin: 0 }}>{subtitle}</p>
-              </div>
-              <AvatarStack members={allMembers} size={30} />
-              <div
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: "50%",
-                  border: "1.5px solid rgba(0,0,0,0.1)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <ArrowRight size={14} color="#888" />
+                <div>
+                  <p
+                    style={{
+                      fontSize: "0.6rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase" as const,
+                      color: "rgba(255,255,255,0.55)",
+                      marginBottom: 5,
+                    }}
+                  >
+                    ACTIF MAINTENANT
+                  </p>
+                  <p style={{ fontSize: "2.8rem", fontWeight: 800, lineHeight: 1, margin: 0 }}>
+                    {projects.length}
+                  </p>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                  {[
+                    { label: "In Production", value: Math.ceil(projects.length * 0.66) },
+                    { label: "Concept Phase", value: Math.floor(projects.length * 0.34) },
+                  ].map(({ label, value }) => (
+                    <div
+                      key={label}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "9px 12px",
+                        borderRadius: "0px",
+                        background: "rgba(255,255,255,0.08)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.75)" }}>
+                        {label}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          background: "rgba(255,255,255,0.15)",
+                          padding: "2px 9px",
+                          borderRadius: "0px",
+                        }}
+                      >
+                        {String(value).padStart(2, "0")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push("/dashboard/projects");
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    borderRadius: "0px",
+                    border: "none",
+                    background: "#fff",
+                    color: "#6B1A2A",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans',sans-serif",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#F5E8EA")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                >
+                  Voir tout
+                </button>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* ── Row 2 : Small projects + New card ── */}
+            <div
+              className="pg-row2"
+              style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}
+            >
+              {smallProjects.map((project) => {
+                const IC = project.icon ? ICON_MAP[project.icon] : null;
+                return (
+                  <div
+                    key={project.id}
+                    onClick={() => router.push(`/dashboard/projects/${project.id}`)}
+                    style={{
+                      background: "#fff",
+                      borderRadius: "0px",
+                      padding: "20px",
+                      border: "1.5px solid rgba(0,0,0,0.07)",
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 14,
+                    }}
+                    onMouseEnter={hoverEnter}
+                    onMouseLeave={hoverLeave}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: "9px",
+                          background: "rgba(107,26,42,0.08)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {IC ? (
+                          <IC size={20} color="#6B1A2A" />
+                        ) : (
+                          <Briefcase size={20} color="#6B1A2A" />
+                        )}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.65rem",
+                          fontWeight: 600,
+                          color: "#6B1A2A",
+                          background: "rgba(107,26,42,0.08)",
+                          padding: "3px 8px",
+                          borderRadius: "0px",
+                          border: "1px solid rgba(107,26,42,0.15)",
+                        }}
+                      >
+                        {project.team_members?.length ?? 0} équipes
+                      </span>
+                    </div>
+                    <div>
+                      <h3
+                        style={{
+                          fontSize: "0.95rem",
+                          fontWeight: 700,
+                          color: "#1A1A1A",
+                          marginBottom: 3,
+                        }}
+                      >
+                        {project.name}
+                      </h3>
+                      {project.description && (
+                        <p
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "#999",
+                            margin: 0,
+                            lineHeight: 1.4,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical" as const,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {project.description}
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        {(project.team_members?.length ?? 0) > 0 ? (
+                          <AvatarStack members={project.team_members!} size={28} />
+                        ) : (
+                          <span style={{ fontSize: "0.7rem", color: "#ccc" }}>Aucun membre</span>
+                        )}
+                        <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#aaa" }}>
+                          —%
+                        </span>
+                      </div>
+                      <ProgressBar value={0} height={5} />
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Placeholders */}
+              {smallProjects.length < 2 &&
+                Array.from({ length: 2 - smallProjects.length }).map((_, i) => (
+                  <div
+                    key={`ph-${i}`}
+                    style={{
+                      background: "#F5F2ED",
+                      borderRadius: "0px",
+                      padding: "20px",
+                      border: "1.5px dashed rgba(0,0,0,0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <p style={{ fontSize: "0.78rem", color: "#ccc" }}>Projet à venir</p>
+                  </div>
+                ))}
+
+              {/* New project */}
+              <div
+                onClick={() => isSuperAdmin && setShowCreateModal(true)}
+                style={{
+                  background: "#F5F2ED",
+                  borderRadius: "0px",
+                  padding: "20px",
+                  border: "1.5px dashed rgba(107,26,42,0.2)",
+                  cursor: isSuperAdmin ? "pointer" : "default",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  textAlign: "center" as const,
+                }}
+                onMouseEnter={(e) => {
+                  if (isSuperAdmin) {
+                    e.currentTarget.style.background = "rgba(107,26,42,0.05)";
+                    e.currentTarget.style.borderColor = "rgba(107,26,42,0.35)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#F5F2ED";
+                  e.currentTarget.style.borderColor = "rgba(107,26,42,0.2)";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                    border: "2px dashed rgba(107,26,42,0.3)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Plus size={20} color="#6B1A2A" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <p
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.9rem",
+                      color: "#1A1A1A",
+                      marginBottom: 3,
+                    }}
+                  >
+                    Nouveau
+                  </p>
+                  <p style={{ fontSize: "0.72rem", color: "#999", lineHeight: 1.4 }}>
+                    {isSuperAdmin
+                      ? "Initialize a fresh project for your team"
+                      : "Droits insuffisants"}
+                  </p>
+                </div>
+                {isSuperAdmin && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCreateModal(true);
+                    }}
+                    style={{
+                      padding: "7px 18px",
+                      borderRadius: "0px",
+                      border: "none",
+                      background: "#6B1A2A",
+                      color: "#fff",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "'DM Sans',sans-serif",
+                    }}
+                  >
+                    Démarrer
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ── Row 3 : Bottom blocks ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {BOTTOM_BLOCKS.map(({ id, label, subtitle, icon: IC, href }) => (
+                <div
+                  key={id}
+                  onClick={() => router.push(href)}
+                  style={{
+                    background: "#fff",
+                    borderRadius: "0px",
+                    padding: "18px 20px",
+                    border: "1.5px solid rgba(0,0,0,0.07)",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = "0 8px 20px rgba(107,26,42,0.1)";
+                    e.currentTarget.style.borderColor = "rgba(107,26,42,0.15)";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
+                    e.currentTarget.style.borderColor = "rgba(0,0,0,0.07)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: "0px",
+                      background: "rgba(107,26,42,0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <IC size={20} color="#6B1A2A" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1A1A1A", margin: 0 }}>
+                      {label}
+                    </p>
+                    <p style={{ fontSize: "0.72rem", color: "#aaa", margin: 0 }}>{subtitle}</p>
+                  </div>
+                  <AvatarStack members={allMembers} size={30} />
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: "50%",
+                      border: "1.5px solid rgba(0,0,0,0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ArrowRight size={14} color="#888" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {showCreateModal && (

@@ -62,19 +62,16 @@ export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: P
     <div
       style={{
         background: "#fff",
-        borderRadius: "14px",
-        border: "1.5px solid rgba(0,0,0,0.06)",
+        borderRadius: "0px",
+        border: "1px solid rgba(0,0,0,0.08)",
         overflow: "hidden",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
         transition: "all 0.15s",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.1)";
-        (e.currentTarget as HTMLElement).style.borderColor = "rgba(107,26,42,0.1)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(107,26,42,0.3)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
-        (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.06)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.08)";
       }}
     >
       {/* Header - Sticky */}
@@ -83,8 +80,8 @@ export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: P
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "12px",
-          padding: "16px",
+          gap: "10px",
+          padding: "12px",
           cursor: "pointer",
           background: "#f9f7f4",
           borderBottom: isOpen ? "1px solid rgba(0,0,0,0.06)" : "none",
@@ -96,14 +93,14 @@ export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: P
         {/* Icon */}
         <div
           style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "10px",
+            width: "36px",
+            height: "36px",
+            borderRadius: "0px",
             background: "rgba(107,26,42,0.08)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "1.2rem",
+            fontSize: "1.1rem",
             flexShrink: 0,
           }}
         >
@@ -160,13 +157,13 @@ export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: P
       {isOpen && (
         <div
           style={{
-            padding: "12px",
+            padding: "8px",
             maxHeight: "500px",
             overflowY: "auto",
             background: "#fafafa",
             display: "flex",
             flexDirection: "column",
-            gap: "8px",
+            gap: "6px",
           }}
         >
           {tasks.length === 0 ? (

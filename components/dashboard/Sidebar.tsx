@@ -9,10 +9,8 @@ import { useSession } from "next-auth/react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { changePassword } from "@/lib/auth-actions";
 import {
-  FileText,
   Users,
   Briefcase,
-  CheckSquare,
   Users2,
   KeyRound,
   X,
@@ -34,20 +32,6 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    id: "rapports",
-    label: "Rapports",
-    icon: <FileText size={16} />,
-    href: "/dashboard/rapports",
-    requiredPermission: "canViewReports",
-  },
-  {
-    id: "equipe",
-    label: "Équipe",
-    icon: <Users size={16} />,
-    href: "/dashboard/equipe",
-    requiredPermission: "canViewTeam",
-  },
-  {
     id: "projets",
     label: "Projets",
     icon: <Briefcase size={16} />,
@@ -55,10 +39,10 @@ const NAV_ITEMS: NavItem[] = [
     requiredPermission: "canViewTeam",
   },
   {
-    id: "tasks",
-    label: "Tâches",
-    icon: <CheckSquare size={16} />,
-    href: "/dashboard/tasks",
+    id: "equipe",
+    label: "Équipe",
+    icon: <Users size={16} />,
+    href: "/dashboard/equipe",
     requiredPermission: "canViewTeam",
   },
   {

@@ -24,3 +24,32 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* UI Design System - Bordures carrées et espacement réduit */
+* {
+  --border-radius: 0px;
+  --card-padding: 12px;
+  --card-gap: 8px;
+  --border-light: 1px solid rgba(0, 0, 0, 0.08);
+  --border-medium: 1px solid rgba(0, 0, 0, 0.12);
+  --border-strong: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* Override pour les composants de formulaire natives */
+input,
+select,
+textarea,
+button {
+  border-radius: var(--border-radius) !important;
+}
+
+/* Design plat - Pas de shadows */
+.flat-card {
+  border: var(--border-light);
+  box-shadow: none !important;
+}
+
+.flat-card:hover {
+  border: var(--border-medium);
+  box-shadow: none !important;
+}

@@ -65,7 +65,7 @@ export default async function TeamProjectsPage() {
       </div>
 
       {/* Content - avec padding et border-radius */}
-      <div style={{ flex: 1, padding: "20px", overflowY: "auto" }}>
+      <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           {projects.length === 0 ? (
             <div
@@ -74,7 +74,7 @@ export default async function TeamProjectsPage() {
                 padding: "60px 20px",
                 color: "#999",
                 background: "#fafafa",
-                borderRadius: "14px",
+                borderRadius: "0px",
                 border: "1px solid rgba(0,0,0,0.06)",
               }}
             >
@@ -89,7 +89,7 @@ export default async function TeamProjectsPage() {
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
                 background: "#ffffffff",
-                gap: "16px",
+                gap: "12px",
               }}
             >
               {projects.map((project) => (

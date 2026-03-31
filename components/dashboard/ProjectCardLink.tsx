@@ -54,24 +54,20 @@ export default function ProjectCardLink({ project }: Props) {
       <div
         style={{
           background: "#fff",
-          borderRadius: "14px",
-          border: "1.5px solid rgba(0,0,0,0.06)",
-          padding: "20px",
+          borderRadius: "0px",
+          border: "1px solid rgba(0,0,0,0.08)",
+          padding: "16px",
           cursor: "pointer",
           transition: "all 0.15s",
           display: "flex",
           flexDirection: "column",
-          gap: "12px",
+          gap: "10px",
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.1)";
-          (e.currentTarget as HTMLElement).style.borderColor = "rgba(107,26,42,0.1)";
-          (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+          (e.currentTarget as HTMLElement).style.borderColor = "rgba(107,26,42,0.3)";
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
-          (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.06)";
-          (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+          (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.08)";
         }}
       >
         {/* Icon + Titre */}
@@ -88,9 +84,9 @@ export default function ProjectCardLink({ project }: Props) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "56px",
-              height: "56px",
-              borderRadius: "12px",
+              width: "48px",
+              height: "48px",
+              borderRadius: "0px",
               background: "rgba(107,26,42,0.08)",
             }}
           >
