@@ -362,11 +362,11 @@ export default function ProjectDetailClient({ project }: Props) {
       )}
 
       <div
-        style={{ minHeight: "100vh", background: "#F5F2ED", fontFamily: "'DM Sans', sans-serif" }}
+        style={{ minHeight: "100vh", background: "#e8eaed", fontFamily: "'DM Sans', sans-serif" }}
       >
         <div
           style={{
-            background: "#F5F2ED",
+            background: "#e8eaed",
             padding: "20px 28px 0",
             display: "flex",
             alignItems: "center",
@@ -428,7 +428,7 @@ export default function ProjectDetailClient({ project }: Props) {
                         height: "32px",
                         borderRadius: "50%",
                         background: avatarColors[i % avatarColors.length],
-                        border: "2px solid #F5F2ED",
+                        border: "2px solid #e8eaed",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -450,7 +450,7 @@ export default function ProjectDetailClient({ project }: Props) {
                         height: "32px",
                         borderRadius: "50%",
                         background: "#E0D8D0",
-                        border: "2px solid #F5F2ED",
+                        border: "2px solid #e8eaed",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",

@@ -89,7 +89,7 @@ export function EditModal({
               height: "30px",
               borderRadius: "8px",
               border: "1px solid rgba(0,0,0,0.08)",
-              background: "#F5F2ED",
+              background: "#e8eaed",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",

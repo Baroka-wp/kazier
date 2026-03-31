@@ -189,7 +189,7 @@ export default function TeamMemberProfileModal({ member, onClose }: Props) {
               height: "32px",
               borderRadius: "8px",
               border: "1px solid rgba(0,0,0,0.08)",
-              background: "#F5F2ED",
+              background: "#e8eaed",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -429,7 +429,7 @@ export default function TeamMemberProfileModal({ member, onClose }: Props) {
                     color: "#ccc",
                     fontSize: "0.8rem",
                     padding: "30px 20px",
-                    background: "#fafafa",
+                    background: "#f1f3f5",
                     borderRadius: "10px",
                     border: "1.5px dashed rgba(0,0,0,0.08)",
                   }}

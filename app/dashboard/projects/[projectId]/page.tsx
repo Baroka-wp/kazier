@@ -1,7 +1,7 @@
 "use server";
 
 import { getProject } from "@/lib/project-actions";
-import ProjectDetailClient from "@/components/dashboard/ProjectDetail/ProjectDetailClient";
+import ProjectDashboard from "@/components/dashboard/ProjectDetail/ProjectDashboard";
 
 type Params = {
   projectId: string;
@@ -24,5 +24,5 @@ export default async function ProjectDetailPage(props: { params: Promise<Params>
     );
   }
 
-  return <ProjectDetailClient project={result.project} />;
+  return <ProjectDashboard project={result.project} />;
 }

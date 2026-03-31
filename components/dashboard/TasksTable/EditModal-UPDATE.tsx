@@ -162,7 +162,7 @@ function UpdateTaskForm({
     padding: "8px 10px",
     borderRadius: "10px",
     border: "1.5px solid rgba(0,0,0,0.08)",
-    background: "#F5F2ED",
+    background: "#e8eaed",
     fontSize: "0.82rem",
     fontFamily: "'DM Sans', sans-serif",
     color: "#1A1A1A",
@@ -295,7 +295,7 @@ function UpdateTaskForm({
             <>
               <div
                 style={{
-                  background: "#F5F2ED",
+                  background: "#e8eaed",
                   borderRadius: "10px",
                   border: "1.5px solid rgba(0,0,0,0.08)",
                   padding: "8px 10px",
@@ -380,7 +380,7 @@ function UpdateTaskForm({
                 fontSize: "0.78rem",
                 color: "#aaa",
                 padding: "8px 10px",
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 borderRadius: "10px",
               }}
             >
@@ -411,7 +411,7 @@ function UpdateTaskForm({
             padding: "10px",
             borderRadius: "10px",
             border: "1.5px solid rgba(0,0,0,0.08)",
-            background: "#F5F2ED",
+            background: "#e8eaed",
             color: "#666",
             fontSize: "0.85rem",
             fontWeight: 600,

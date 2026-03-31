@@ -92,7 +92,7 @@ export default function TaskItemTeam({
         padding: "12px",
         borderRadius: "10px",
         border: "1px solid rgba(0,0,0,0.06)",
-        background: isDisabled ? "#fafafa" : "#fff",
+        background: isDisabled ? "#f1f3f5" : "#fff",
         transition: "all 0.15s",
         opacity: isDisabled ? 0.6 : 1,
         cursor: isDisabled ? "not-allowed" : "pointer",

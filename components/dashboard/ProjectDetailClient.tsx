@@ -131,7 +131,7 @@ export default function ProjectDetailClient({ project, initialTasks, teamMemberI
                 height: "32px",
                 borderRadius: "8px",
                 border: "1px solid rgba(0,0,0,0.08)",
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 cursor: "pointer",
                 color: "#666",
                 textDecoration: "none",
@@ -143,7 +143,7 @@ export default function ProjectDetailClient({ project, initialTasks, teamMemberI
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.background = "#F5F2ED";
+                el.style.background = "#e8eaed";
               }}
             >
               <ChevronLeft size={16} />
@@ -175,7 +175,7 @@ export default function ProjectDetailClient({ project, initialTasks, teamMemberI
             style={{
               borderRadius: "14px",
               border: "1px solid rgba(0,0,0,0.06)",
-              background: "#fafafa",
+              background: "#f1f3f5",
               padding: "16px",
               minHeight: "100%",
               overflow: "hidden",

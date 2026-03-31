@@ -349,7 +349,7 @@ function ChangePasswordModal({ userId, onClose }: { userId: string; onClose: () 
                   padding: "11px",
                   borderRadius: "12px",
                   border: "1.5px solid rgba(0,0,0,0.08)",
-                  background: "#F5F2ED",
+                  background: "#e8eaed",
                   color: "#666",
                   fontSize: "13px",
                   fontWeight: 600,

@@ -257,7 +257,7 @@ function ConfirmDeleteModal({
                 padding: "10px",
                 borderRadius: "10px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 color: "#666",
                 fontSize: "0.85rem",
                 fontWeight: 600,
@@ -467,7 +467,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                 height: "32px",
                 borderRadius: "8px",
                 border: "1px solid rgba(0,0,0,0.08)",
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -518,7 +518,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                   style={{
                     fontSize: "0.83rem",
                     color: task.description ? "#1A1A1A" : "#ccc",
-                    background: "#F5F2ED",
+                    background: "#e8eaed",
                     borderRadius: "10px",
                     padding: "10px 14px",
                     lineHeight: 1.6,
@@ -586,7 +586,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                     style={{
                       fontSize: "0.82rem",
                       color: "#1A1A1A",
-                      background: "#F5F2ED",
+                      background: "#e8eaed",
                       borderRadius: "8px",
                       padding: "6px 12px",
                       display: "inline-block",
@@ -649,7 +649,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                       color: "#ccc",
                       fontSize: "0.8rem",
                       padding: "30px 20px",
-                      background: "#fafafa",
+                      background: "#f1f3f5",
                       borderRadius: "10px",
                       border: "1.5px dashed rgba(0,0,0,0.08)",
                     }}
@@ -698,7 +698,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                           {/* Message bubble avec couleurs distinctes */}
                           <div
                             style={{
-                              background: isMe ? "#6B1A2A" : "#F5F2ED",
+                              background: isMe ? "#6B1A2A" : "#e8eaed",
                               borderRadius: isMe ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
                               padding: "10px 14px",
                               fontSize: "0.82rem",
@@ -735,7 +735,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                                     padding: "4px 10px",
                                     borderRadius: "8px",
                                     border: "1px solid rgba(0,0,0,0.08)",
-                                    background: "#F5F2ED",
+                                    background: "#e8eaed",
                                     color: "#666",
                                     fontSize: "0.75rem",
                                     fontWeight: 500,

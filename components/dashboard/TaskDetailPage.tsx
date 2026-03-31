@@ -378,7 +378,7 @@ function CommentCard({
         </div>
         <div
           style={{
-            background: isMe ? "#6B1A2A" : "#f5f2ed",
+            background: isMe ? "#6B1A2A" : "#e8eaed",
             color: isMe ? "#fff" : "#1A1A1A",
             borderRadius: isMe ? "10px 3px 10px 10px" : "3px 10px 10px 10px",
             padding: "10px 13px",
@@ -464,7 +464,7 @@ const secondaryBtnStyle: React.CSSProperties = {
   padding: "9px 14px",
   borderRadius: "8px",
   border: "1px solid rgba(0,0,0,0.08)",
-  background: "#F5F2ED",
+  background: "#e8eaed",
   color: "#666",
   fontWeight: 700,
   cursor: "pointer",

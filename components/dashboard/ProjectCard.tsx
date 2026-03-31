@@ -83,12 +83,12 @@ export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: P
           gap: "10px",
           padding: "12px",
           cursor: "pointer",
-          background: "#f9f7f4",
+          background: "#e8eaed",
           borderBottom: isOpen ? "1px solid rgba(0,0,0,0.06)" : "none",
           transition: "all 0.15s",
         }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f5f2ed")}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#f9f7f4")}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#e8eaed")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#e8eaed")}
       >
         {/* Icon */}
         <div
@@ -160,7 +160,7 @@ export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: P
             padding: "8px",
             maxHeight: "500px",
             overflowY: "auto",
-            background: "#fafafa",
+            background: "#f1f3f5",
             display: "flex",
             flexDirection: "column",
             gap: "6px",

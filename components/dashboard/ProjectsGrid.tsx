@@ -352,7 +352,7 @@ function CreateModal({
               height: 28,
               borderRadius: "0px",
               border: "1px solid rgba(0,0,0,0.08)",
-              background: "#F5F2ED",
+              background: "#e8eaed",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -402,7 +402,7 @@ function CreateModal({
                 gridTemplateColumns: "repeat(4,1fr)",
                 gap: 7,
                 padding: 9,
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
               }}
@@ -458,7 +458,7 @@ function CreateModal({
                 padding: "8px 10px",
                 borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 fontSize: "0.82rem",
                 fontFamily: "'DM Sans',sans-serif",
                 color: "#1A1A1A",
@@ -493,7 +493,7 @@ function CreateModal({
                 padding: "8px 10px",
                 borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 fontSize: "0.82rem",
                 fontFamily: "'DM Sans',sans-serif",
                 color: "#1A1A1A",
@@ -525,7 +525,7 @@ function CreateModal({
                 gridTemplateColumns: "1fr 1fr",
                 gap: 7,
                 padding: 9,
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
                 maxHeight: 180,
@@ -579,7 +579,7 @@ function CreateModal({
                 padding: 9,
                 borderRadius: "0px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 color: "#666",
                 fontSize: "0.82rem",
                 fontWeight: 600,
@@ -635,9 +635,17 @@ export default function ProjectsGrid() {
   const { data, mutate, isLoading } = useSWR<{ data: Project[] }>("/api/projects", fetcher, {
     dedupingInterval: 500,
   });
-  const projects = data?.data ?? [];
+  // Trier les projets par date de création (plus récents en premier)
+  const sortedProjects = (data?.data ?? []).sort((a, b) => {
+    const dateA = new Date(a.created_at || 0).getTime();
+    const dateB = new Date(b.created_at || 0).getTime();
+    return dateB - dateA;
+  });
+
+  const projects = sortedProjects;
   const featured = projects[0] ?? null;
   const smallProjects = projects.slice(1, 3);
+  const allProjects = projects; // Tous les projets disponibles
   const allMembers = projects
     .flatMap((p) => p.team_members ?? [])
     .filter((m, i, arr) => arr.findIndex((x) => x.id === m.id) === i)
@@ -818,7 +826,7 @@ export default function ProjectsGrid() {
               ) : (
                 <div
                   style={{
-                    background: "#F5F2ED",
+                    background: "#e8eaed",
                     borderRadius: "0px",
                     padding: "24px 28px",
                     border: "1.5px dashed rgba(107,26,42,0.2)",
@@ -1042,7 +1050,7 @@ export default function ProjectsGrid() {
                   <div
                     key={`ph-${i}`}
                     style={{
-                      background: "#F5F2ED",
+                      background: "#e8eaed",
                       borderRadius: "0px",
                       padding: "20px",
                       border: "1.5px dashed rgba(0,0,0,0.1)",
@@ -1059,7 +1067,7 @@ export default function ProjectsGrid() {
               <div
                 onClick={() => isSuperAdmin && setShowCreateModal(true)}
                 style={{
-                  background: "#F5F2ED",
+                  background: "#e8eaed",
                   borderRadius: "0px",
                   padding: "20px",
                   border: "1.5px dashed rgba(107,26,42,0.2)",
@@ -1080,7 +1088,7 @@ export default function ProjectsGrid() {
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#F5F2ED";
+                  e.currentTarget.style.background = "#e8eaed";
                   e.currentTarget.style.borderColor = "rgba(107,26,42,0.2)";
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
@@ -1139,8 +1147,119 @@ export default function ProjectsGrid() {
               </div>
             </div>
 
+            {/* ── Section : Tous les projets ── */}
+            {allProjects.length > 3 && (
+              <div style={{ marginTop: 24 }}>
+                <h2
+                  style={{
+                    fontSize: "1.2rem",
+                    fontWeight: 700,
+                    color: "#1A1A1A",
+                    marginBottom: 16,
+                  }}
+                >
+                  Tous les projets ({allProjects.length})
+                </h2>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                    gap: 12,
+                  }}
+                >
+                  {allProjects.slice(3).map((project) => {
+                    const IC = project.icon ? ICON_MAP[project.icon] : null;
+                    return (
+                      <div
+                        key={project.id}
+                        onClick={() => router.push(`/dashboard/projects/${project.id}`)}
+                        style={{
+                          background: "#fff",
+                          borderRadius: "0px",
+                          padding: "16px",
+                          border: "1px solid rgba(0,0,0,0.08)",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "rgba(107,26,42,0.3)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            marginBottom: 12,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: "0px",
+                              background: "rgba(107,26,42,0.08)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {IC ? <IC size={20} color="#6B1A2A" /> : "📦"}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <h3
+                              style={{
+                                fontSize: "0.95rem",
+                                fontWeight: 600,
+                                color: "#1A1A1A",
+                                margin: 0,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {project.name}
+                            </h3>
+                          </div>
+                        </div>
+                        <p
+                          style={{
+                            fontSize: "0.8rem",
+                            color: "#666",
+                            margin: 0,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {project.description || "Pas de description"}
+                        </p>
+                        <div
+                          style={{
+                            marginTop: 12,
+                            paddingTop: 12,
+                            borderTop: "1px solid rgba(0,0,0,0.06)",
+                            fontSize: "0.75rem",
+                            color: "#999",
+                          }}
+                        >
+                          {project.team_members?.length || 0} membre
+                          {(project.team_members?.length || 0) > 1 ? "s" : ""}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* ── Row 3 : Bottom blocks ── */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 24 }}>
               {BOTTOM_BLOCKS.map(({ id, label, subtitle, icon: IC, href }) => (
                 <div
                   key={id}

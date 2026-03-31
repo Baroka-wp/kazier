@@ -194,7 +194,7 @@ function ReportField({ value }: { value: string | null | undefined }) {
         style={{
           fontSize: "0.83rem",
           color: "#1A1A1A",
-          background: "#F5F2ED",
+          background: "#e8eaed",
           borderRadius: "10px",
           padding: "10px 14px",
           lineHeight: 1.6,
@@ -207,7 +207,7 @@ function ReportField({ value }: { value: string | null | undefined }) {
       style={{
         fontSize: "0.83rem",
         color: value ? "#1A1A1A" : "#ccc",
-        background: "#F5F2ED",
+        background: "#e8eaed",
         borderRadius: "10px",
         padding: "10px 14px",
         lineHeight: 1.6,
@@ -353,7 +353,7 @@ function DeleteModal({
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              background: "#F5F2ED",
+              background: "#e8eaed",
               borderRadius: "10px",
               padding: "8px 14px",
               marginBottom: "14px",
@@ -393,7 +393,7 @@ function DeleteModal({
                       padding: "8px 12px",
                       borderRadius: "10px",
                       border: `1.5px solid ${selected.has(r.id) ? "rgba(229,62,62,0.3)" : "rgba(0,0,0,0.07)"}`,
-                      background: selected.has(r.id) ? "rgba(229,62,62,0.04)" : "#F5F2ED",
+                      background: selected.has(r.id) ? "rgba(229,62,62,0.04)" : "#e8eaed",
                       cursor: "pointer",
                       transition: "all 0.15s",
                     }}
@@ -489,7 +489,7 @@ function DeleteModal({
               padding: "10px",
               borderRadius: "10px",
               border: "1.5px solid rgba(0,0,0,0.08)",
-              background: "#F5F2ED",
+              background: "#e8eaed",
               color: "#666",
               fontSize: "0.85rem",
               fontWeight: 600,
@@ -617,7 +617,7 @@ function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => voi
                 height: "32px",
                 borderRadius: "8px",
                 border: "1px solid rgba(0,0,0,0.08)",
-                background: "#F5F2ED",
+                background: "#e8eaed",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -629,7 +629,7 @@ function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => voi
                 e.currentTarget.style.background = "#e8e4df";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#F5F2ED";
+                e.currentTarget.style.background = "#e8eaed";
               }}
             >
               <X size={16} />
@@ -780,7 +780,7 @@ function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => voi
               padding: "8px 20px",
               borderRadius: "10px",
               border: "1.5px solid rgba(0,0,0,0.08)",
-              background: "#F5F2ED",
+              background: "#e8eaed",
               color: "#666",
               fontSize: "0.85rem",
               fontWeight: 600,
@@ -792,7 +792,7 @@ function GroupModal({ group, onClose }: { group: ReportGroup; onClose: () => voi
               e.currentTarget.style.background = "#e8e4df";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#F5F2ED";
+              e.currentTarget.style.background = "#e8eaed";
             }}
           >
             Fermer
@@ -911,7 +911,7 @@ function EditModal({
               height: "30px",
               borderRadius: "8px",
               border: "1px solid rgba(0,0,0,0.08)",
-              background: "#F5F2ED",
+              background: "#e8eaed",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -963,7 +963,7 @@ function EditModal({
               padding: "10px",
               borderRadius: "10px",
               border: "1.5px solid rgba(0,0,0,0.08)",
-              background: "#F5F2ED",
+              background: "#e8eaed",
               color: "#666",
               fontSize: "0.85rem",
               fontWeight: 600,
@@ -1168,7 +1168,7 @@ export default function RapportsTable({
               paddingBottom: "8px",
               border: "1.5px solid rgba(0,0,0,0.08)",
               borderRadius: "10px",
-              background: "#F5F2ED",
+              background: "#e8eaed",
               fontSize: "0.82rem",
               fontFamily: "'DM Sans', sans-serif",
               color: f.value ? "#1A1A1A" : "#aaa",
@@ -1206,7 +1206,7 @@ export default function RapportsTable({
           padding: "8px 14px",
           borderRadius: "10px",
           border: "1.5px solid rgba(0,0,0,0.08)",
-          background: "#F5F2ED",
+          background: "#e8eaed",
           color: "#666",
           fontSize: "0.82rem",
           fontWeight: 500,
@@ -1219,7 +1219,7 @@ export default function RapportsTable({
           e.currentTarget.style.color = "#6B1A2A";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = "#F5F2ED";
+          e.currentTarget.style.background = "#e8eaed";
           e.currentTarget.style.color = "#666";
         }}
       >

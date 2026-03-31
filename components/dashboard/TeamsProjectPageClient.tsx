@@ -35,7 +35,7 @@ export default function TeamsProjectPageClient({ tasks, teamMemberId, projectNam
             height: "40px",
             borderRadius: "10px",
             border: "1px solid rgba(0,0,0,0.08)",
-            background: "#F5F2ED",
+            background: "#e8eaed",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -44,7 +44,7 @@ export default function TeamsProjectPageClient({ tasks, teamMemberId, projectNam
             transition: "all 0.15s",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(107,26,42,0.07)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#F5F2ED")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#e8eaed")}
         >
           <ChevronLeft size={20} />
         </button>

@@ -60,7 +60,7 @@ export default function DateTimeInput({ value, onChange, placeholder }: Props) {
           paddingRight: value && hovered ? "32px" : "10px",
           borderRadius: "10px",
           border: "1.5px solid rgba(0,0,0,0.08)",
-          background: "#F5F2ED",
+          background: "#e8eaed",
           fontSize: "0.82rem",
           fontFamily: "'DM Sans', sans-serif",
           color: "#1A1A1A",

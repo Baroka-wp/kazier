@@ -209,7 +209,7 @@ export default function DataTable<T extends { id: number | string }>({
                   paddingBottom: "8px",
                   border: "1.5px solid rgba(0,0,0,0.08)",
                   borderRadius: "10px",
-                  background: "#F5F2ED",
+                  background: "#e8eaed",
                   fontSize: "0.82rem",
                   fontFamily: "'DM Sans', sans-serif",
                   color: "#1A1A1A",
@@ -256,7 +256,7 @@ export default function DataTable<T extends { id: number | string }>({
                 padding: "8px 12px",
                 borderRadius: "10px",
                 border: "1.5px solid rgba(0,0,0,0.08)",
-                background: refreshing ? "rgba(107,26,42,0.05)" : "#F5F2ED",
+                background: refreshing ? "rgba(107,26,42,0.05)" : "#e8eaed",
                 color: refreshing ? "#6B1A2A" : "#888",
                 fontSize: "0.78rem",
                 fontWeight: 500,
@@ -274,7 +274,7 @@ export default function DataTable<T extends { id: number | string }>({
               }}
               onMouseLeave={(e) => {
                 if (!refreshing) {
-                  e.currentTarget.style.background = "#F5F2ED";
+                  e.currentTarget.style.background = "#e8eaed";
                   e.currentTarget.style.color = "#888";
                   e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
                 }
@@ -310,7 +310,7 @@ export default function DataTable<T extends { id: number | string }>({
                     textTransform: "uppercase",
                     letterSpacing: "0.1em",
                     color: sortKey === col.key ? "#6B1A2A" : "#aaa",
-                    background: "#F5F2ED",
+                    background: "#e8eaed",
                     borderBottom: "1px solid rgba(0,0,0,0.06)",
                     whiteSpace: "nowrap",
                     cursor: col.sortable ? "pointer" : "default",
@@ -345,7 +345,7 @@ export default function DataTable<T extends { id: number | string }>({
                     textTransform: "uppercase",
                     letterSpacing: "0.1em",
                     color: "#aaa",
-                    background: "#F5F2ED",
+                    background: "#e8eaed",
                     borderBottom: "1px solid rgba(0,0,0,0.06)",
                   }}
                 >
@@ -547,7 +547,7 @@ function ActionButton({
         height: "30px",
         borderRadius: "8px",
         border: "1px solid rgba(0,0,0,0.08)",
-        background: hovered ? config.hoverBg : "#F5F2ED",
+        background: hovered ? config.hoverBg : "#e8eaed",
         color: hovered ? config.hoverColor : "#aaa",
         display: "flex",
         alignItems: "center",
@@ -587,7 +587,7 @@ function PageBtn({
         padding: "0 6px",
         borderRadius: "8px",
         border: active ? "none" : "1px solid rgba(0,0,0,0.08)",
-        background: active ? "#6B1A2A" : hovered && !disabled ? "rgba(107,26,42,0.07)" : "#F5F2ED",
+        background: active ? "#6B1A2A" : hovered && !disabled ? "rgba(107,26,42,0.07)" : "#e8eaed",
         color: active ? "white" : disabled ? "#ccc" : "#666",
         fontSize: "0.78rem",
         fontWeight: active ? 600 : 400,

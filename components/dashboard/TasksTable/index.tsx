@@ -233,7 +233,7 @@ function NamePills({ names }: { names?: string[] }) {
                       height: "28px",
                       borderRadius: "8px",
                       border: "1px solid rgba(0,0,0,0.08)",
-                      background: "#F5F2ED",
+                      background: "#e8eaed",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
@@ -246,7 +246,7 @@ function NamePills({ names }: { names?: string[] }) {
                       e.currentTarget.style.color = "#6B1A2A";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#F5F2ED";
+                      e.currentTarget.style.background = "#e8eaed";
                       e.currentTarget.style.color = "#888";
                     }}
                   >
@@ -276,7 +276,7 @@ function NamePills({ names }: { names?: string[] }) {
                           gap: "10px",
                           padding: "8px 10px",
                           borderRadius: "10px",
-                          background: "#F5F2ED",
+                          background: "#e8eaed",
                           animation: `itemFadeIn 0.2s ease both`,
                           animationDelay: `${0.05 + i * 0.04}s`,
                           transition: "background 0.15s",
@@ -284,7 +284,7 @@ function NamePills({ names }: { names?: string[] }) {
                         onMouseEnter={(e) =>
                           (e.currentTarget.style.background = "rgba(107,26,42,0.07)")
                         }
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "#F5F2ED")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#e8eaed")}
                       >
                         <div
                           style={{
