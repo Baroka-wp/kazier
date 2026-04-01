@@ -1,15 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, Users, CheckSquare, FileText, Plus, Settings, X, Layers, Database } from "lucide-react";
+import {
+  ChevronLeft,
+  Users,
+  CheckSquare,
+  FileText,
+  Plus,
+  Settings,
+  X,
+  Layers,
+  Database,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Project, TeamMember, getTeams } from "@/lib/project-actions";
-import { getTasks, Task, createTask, getTeamMembersByProject } from "@/lib/task-actions";
+import { getTasks, Task, getTeamMembersByProject } from "@/lib/task-actions";
 import { getReportsWithProjects } from "@/lib/report-actions";
 import { updateProject } from "@/lib/project-actions";
 import TMKanbanWrapper from "@/components/dashboard/TMKanbanWrapper";
 import GanttChart from "@/components/dashboard/GanttChart";
 import MilestoneModal from "@/components/dashboard/MilestoneModal";
+import TaskFormModal from "@/components/dashboard/TaskFormModal";
 import { getMilestones, type Milestone, deleteMilestone } from "@/lib/milestone-actions";
 
 type ProjectExtended = Project & {
@@ -33,416 +44,6 @@ type Report = {
   project_name?: string;
 };
 
-// ── Create Task Modal ─────────────────────────────────────────────────────────
-function CreateTaskModal({
-  projectId,
-  onClose,
-  onSaved,
-}: {
-  projectId: number;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [values, setValues] = useState({
-    title: "",
-    description: "",
-    priority: "medium" as const,
-    due_date: "",
-    assigned_to: [] as number[],
-  });
-
-  const [projectMembers, setProjectMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState("");
-
-  useEffect(() => {
-    async function loadMembers() {
-      const res = await getTeamMembersByProject(projectId);
-      if (res.success && res.members) {
-        setProjectMembers(res.members);
-      }
-    }
-    loadMembers();
-  }, [projectId]);
-
-  function toggleMember(id: number) {
-    setValues((v) => ({
-      ...v,
-      assigned_to: v.assigned_to.includes(id)
-        ? v.assigned_to.filter((x) => x !== id)
-        : [...v.assigned_to, id],
-    }));
-  }
-
-  async function handleSubmit() {
-    if (!values.title.trim()) {
-      setServerError("Le titre est obligatoire.");
-      return;
-    }
-    setLoading(true);
-
-    const data = {
-      title: values.title,
-      description: values.description,
-      status: "à faire" as const,
-      priority: values.priority,
-      project_id: projectId,
-      assigned_to: values.assigned_to.length ? values.assigned_to : null,
-      due_date: values.due_date || null,
-    };
-
-    const result = await createTask(data);
-    setLoading(false);
-
-    if (result.success) {
-      onSaved();
-      onClose();
-    } else {
-      setServerError(result.error || "Erreur lors de la création.");
-    }
-  }
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.35)",
-        zIndex: 150,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "#fff",
-          borderRadius: "0",
-          width: "100%",
-          maxWidth: 520,
-          maxHeight: "90vh",
-          overflowY: "auto",
-          border: "1px solid rgba(0,0,0,0.08)",
-          animation: "popIn 0.2s ease",
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: "18px 20px",
-            borderBottom: "1px solid rgba(0,0,0,0.06)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            position: "sticky",
-            top: 0,
-            background: "#fff",
-            zIndex: 1,
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontSize: "0.65rem",
-                fontWeight: 600,
-                textTransform: "uppercase" as const,
-                letterSpacing: "0.1em",
-                color: "#aaa",
-                marginBottom: 2,
-              }}
-            >
-              Nouvelle tâche
-            </div>
-            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A" }}>
-              Ajouter une tâche
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "8px",
-              border: "1px solid rgba(0,0,0,0.08)",
-              background: "#e8eaed",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#888",
-              transition: "all 0.15s",
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div style={{ padding: "20px" }}>
-          {serverError && (
-            <div
-              style={{
-                marginBottom: 12,
-                padding: "10px 12px",
-                borderRadius: "0",
-                background: "rgba(229,62,62,0.07)",
-                border: "1px solid rgba(229,62,62,0.2)",
-                fontSize: "0.8rem",
-                color: "#e53e3e",
-              }}
-            >
-              {serverError}
-            </div>
-          )}
-
-          {/* Title */}
-          <div style={{ marginBottom: 12 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: "#666",
-                marginBottom: 6,
-              }}
-            >
-              Titre *
-            </label>
-            <input
-              type="text"
-              value={values.title}
-              onChange={(e) => setValues((v) => ({ ...v, title: e.target.value }))}
-              placeholder="Ex: Implémenter l'authentification"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: "0",
-                border: "1.5px solid rgba(0,0,0,0.08)",
-                background: "#e8eaed",
-                fontSize: "0.9rem",
-                fontFamily: "'DM Sans', sans-serif",
-                color: "#1A1A1A",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          {/* Description */}
-          <div style={{ marginBottom: 12 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: "#666",
-                marginBottom: 6,
-              }}
-            >
-              Description
-            </label>
-            <textarea
-              value={values.description}
-              onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
-              placeholder="Décrivez la tâche..."
-              rows={3}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: "0",
-                border: "1.5px solid rgba(0,0,0,0.08)",
-                background: "#e8eaed",
-                fontSize: "0.9rem",
-                fontFamily: "'DM Sans', sans-serif",
-                color: "#1A1A1A",
-                outline: "none",
-                resize: "vertical" as const,
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          {/* Priority */}
-          <div style={{ marginBottom: 12 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: "#666",
-                marginBottom: 6,
-              }}
-            >
-              Priorité
-            </label>
-            <div style={{ display: "flex", gap: 8 }}>
-              {(["low", "medium", "high"] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setValues((v) => ({ ...v, priority: p }))}
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    borderRadius: "0",
-                    border: values.priority === p ? "2px solid #6B1A2A" : "1.5px solid rgba(0,0,0,0.08)",
-                    background: values.priority === p ? "rgba(107,26,42,0.08)" : "#fff",
-                    color: values.priority === p ? "#6B1A2A" : "#666",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: "'DM Sans', sans-serif",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {p === "low" ? "Basse" : p === "medium" ? "Moyenne" : "Haute"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Due Date */}
-          <div style={{ marginBottom: 12 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: "#666",
-                marginBottom: 6,
-              }}
-            >
-              Date d'échéance
-            </label>
-            <input
-              type="date"
-              value={values.due_date}
-              onChange={(e) => setValues((v) => ({ ...v, due_date: e.target.value }))}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: "0",
-                border: "1.5px solid rgba(0,0,0,0.08)",
-                background: "#e8eaed",
-                fontSize: "0.9rem",
-                fontFamily: "'DM Sans', sans-serif",
-                color: "#1A1A1A",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          {/* Assign To */}
-          <div style={{ marginBottom: 16 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: "#666",
-                marginBottom: 6,
-              }}
-            >
-              Assigner à
-            </label>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-                padding: 10,
-                background: "#e8eaed",
-                borderRadius: "0",
-                border: "1.5px solid rgba(0,0,0,0.08)",
-                maxHeight: 160,
-                overflowY: "auto",
-              }}
-            >
-              {projectMembers.length === 0 ? (
-                <p style={{ fontSize: "0.8rem", color: "#999", gridColumn: "1 / -1" }}>
-                  Aucun membre dans ce projet
-                </p>
-              ) : (
-                projectMembers.map((member) => (
-                  <label
-                    key={member.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "8px 10px",
-                      cursor: "pointer",
-                      borderRadius: "0",
-                      background: values.assigned_to.includes(member.id)
-                        ? "rgba(107,26,42,0.1)"
-                        : "transparent",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={values.assigned_to.includes(member.id)}
-                      onChange={() => toggleMember(member.id)}
-                      style={{ cursor: "pointer" }}
-                    />
-                    <span style={{ fontSize: "0.85rem", color: "#666" }}>
-                      {member.full_name}
-                    </span>
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={onClose}
-              disabled={loading}
-              style={{
-                flex: 1,
-                padding: "11px",
-                borderRadius: "0",
-                border: "1.5px solid rgba(0,0,0,0.08)",
-                background: "#e8eaed",
-                color: "#666",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              style={{
-                flex: 1,
-                padding: "11px",
-                borderRadius: "0",
-                border: "none",
-                background: loading ? "rgba(107,26,42,0.5)" : "#6B1A2A",
-                color: "white",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                cursor: loading ? "not-allowed" : "pointer",
-                fontFamily: "'DM Sans', sans-serif",
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? "Ajout..." : "Ajouter"}
-            </button>
-          </div>
-        </div>
-      </div>
-      <style>{`@keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}`}</style>
-    </div>
-  );
-}
-
 // ── Add Member Modal ──────────────────────────────────────────────────────────
 function AddMemberModal({
   project,
@@ -453,9 +54,7 @@ function AddMemberModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>(
-    project.team_ids || []
-  );
+  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>(project.team_ids || []);
   const [teams, setTeams] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
@@ -591,7 +190,7 @@ function AddMemberModal({
               marginBottom: 12,
             }}
           >
-            Sélectionnez les membres de l'équipe pour ce projet
+            Sélectionnez les membres de l&apos;équipe pour ce projet
           </p>
 
           <div
@@ -629,9 +228,7 @@ function AddMemberModal({
                   onChange={() => toggleTeam(team.id)}
                   style={{ cursor: "pointer" }}
                 />
-                <span style={{ fontSize: "0.85rem", color: "#666" }}>
-                  {team.full_name}
-                </span>
+                <span style={{ fontSize: "0.85rem", color: "#666" }}>{team.full_name}</span>
               </label>
             ))}
           </div>
@@ -749,7 +346,15 @@ function ReportsModal({
               <FileText size={18} color="#6B1A2A" />
             </div>
             <div>
-              <div style={{ fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa" }}>
+              <div
+                style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "#aaa",
+                }}
+              >
                 Historique
               </div>
               <div style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A" }}>
@@ -805,7 +410,13 @@ function ReportsModal({
                     e.currentTarget.style.borderColor = "rgba(0,0,0,0.04)";
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1A1A1A" }}>
                       {report.full_name}
                     </span>
@@ -829,13 +440,7 @@ function ReportsModal({
 }
 
 // ── Report Detail Modal ──────────────────────────────────────────────────────
-function ReportDetailModal({
-  report,
-  onClose,
-}: {
-  report: Report;
-  onClose: () => void;
-}) {
+function ReportDetailModal({ report, onClose }: { report: Report; onClose: () => void }) {
   const fields = [
     { key: "working_built", label: "En cours de construction" },
     { key: "extra_message", label: "Message supplémentaire" },
@@ -863,7 +468,7 @@ function ReportDetailModal({
     );
   }
 
-  function Avatar({ name }: { name: string }) {
+  const reportAvatar = (name: string) => {
     const initials = name
       .split(" ")
       .filter(Boolean)
@@ -888,7 +493,7 @@ function ReportDetailModal({
         {initials}
       </div>
     );
-  }
+  };
 
   return (
     <div
@@ -930,7 +535,7 @@ function ReportDetailModal({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <Avatar name={report.full_name} />
+            {reportAvatar(report.full_name)}
             <div>
               <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1A1A1A" }}>
                 {report.full_name}
@@ -1045,6 +650,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
+  const [projectMembers, setProjectMembers] = useState<TeamMember[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -1052,16 +658,21 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
         const tasksResult = await getTasks();
         const allTasks =
           "data" in tasksResult ? tasksResult.data : tasksResult.success ? tasksResult.tasks : [];
-        setTasks(allTasks.filter((t: Task) => t.project_id === project.id));
+        setTasks((allTasks || []).filter((t: Task) => t.project_id === project.id));
 
         const reportsResult = await getReportsWithProjects();
         if (reportsResult.success && reportsResult.reports) {
-          setReports(reportsResult.reports.filter((r) => r.project_id === project.id));
+          setReports(reportsResult.reports.filter((r) => r.project_id === project.id) as Report[]);
         }
 
         const milestonesResult = await getMilestones(project.id);
         if (milestonesResult.success && milestonesResult.milestones) {
           setMilestones(milestonesResult.milestones);
+        }
+
+        const membersResult = await getTeamMembersByProject(project.id);
+        if (membersResult.success && membersResult.members) {
+          setProjectMembers(membersResult.members);
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -1073,11 +684,12 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
   }, [project.id]);
 
   const teamMembers = project.team_members || [];
-  const inProgressTasks = tasks.filter((t) => t.status !== "terminée" && !t.completed);
-  const completedTasks = tasks.filter((t) => t.status === "terminée" || t.completed);
+  const inProgressTasks = tasks.filter((t) => t.status !== "terminée");
+  const completedTasks = tasks.filter((t) => t.status === "terminée");
   const recentReports = reports.slice(0, 5);
   const totalTasks = tasks.length;
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
+  const completionRate =
+    totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
 
   // Calculate remaining time
   function getRemainingTime() {
@@ -1089,7 +701,9 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
 
     // If project hasn't started yet
     if (now < startDate) {
-      const daysUntilStart = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const daysUntilStart = Math.ceil(
+        (startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
       return `Début dans ${daysUntilStart}j`;
     }
 
@@ -1138,8 +752,16 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
   const timeProgress = getTimeProgress();
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  const AVATAR_COLORS = ["#6B1A2A", "#8B2A3A", "#4A1020", "#9B3A4A", "#5A0A1A", "#7C2233", "#3A0D18"];
-  
+  const AVATAR_COLORS = [
+    "#6B1A2A",
+    "#8B2A3A",
+    "#4A1020",
+    "#9B3A4A",
+    "#5A0A1A",
+    "#7C2233",
+    "#3A0D18",
+  ];
+
   function getInitials(name = "") {
     return name
       .trim()
@@ -1149,7 +771,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
       .map((w) => w[0].toUpperCase())
       .join("");
   }
-  
+
   function getAvatarColor(name = "") {
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -1180,17 +802,20 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
     );
   }
 
-  function AvatarStack({ members = [], size = 40 }: { members: typeof teamMembers; size?: number }) {
+  function AvatarStack({
+    members = [],
+    size = 40,
+  }: {
+    members: typeof teamMembers;
+    size?: number;
+  }) {
     const visible = members.slice(0, 5);
     const extra = members.length - 5;
     return (
       <div style={{ display: "flex", alignItems: "center" }}>
         {visible.map((m, i) => (
           <div key={i} style={{ marginLeft: i === 0 ? 0 : -10 }}>
-            <Avatar 
-              name={`${m.first_name || ""} ${m.last_name || ""}`} 
-              size={size} 
-            />
+            <Avatar name={`${m.first_name || ""} ${m.last_name || ""}`} size={size} />
           </div>
         ))}
         {extra > 0 && (
@@ -1224,7 +849,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
     value,
     icon: Icon,
     color = "#6B1A2A",
-    subtext
+    subtext,
   }: {
     label: string;
     value: string | number;
@@ -1260,16 +885,22 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
           <Icon size={20} color={color} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div
+            style={{
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              color: "#888",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
             {label}
           </div>
           <div style={{ fontSize: "1.7rem", fontWeight: 700, color: "#1A1A1A", lineHeight: 1.1 }}>
             {value}
           </div>
           {subtext && (
-            <div style={{ fontSize: "0.7rem", color: "#888", marginTop: "2px" }}>
-              {subtext}
-            </div>
+            <div style={{ fontSize: "0.7rem", color: "#888", marginTop: "2px" }}>{subtext}</div>
           )}
         </div>
       </div>
@@ -1280,9 +911,8 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
     // Refresh tasks
     setLoading(true);
     getTasks().then((result) => {
-      const allTasks =
-        "data" in result ? result.data : result.success ? result.tasks : [];
-      setTasks(allTasks.filter((t: Task) => t.project_id === project.id));
+      const allTasks = "data" in result ? result.data : result.success ? result.tasks : [];
+      setTasks((allTasks || []).filter((t: Task) => t.project_id === project.id));
       setLoading(false);
     });
   }
@@ -1333,7 +963,15 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
             </button>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div
                 style={{
@@ -1352,7 +990,15 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                 {project.icon === "layers" && <Layers size={28} color="#6B1A2A" />}
                 {project.icon === "file-text" && <FileText size={28} color="#6B1A2A" />}
                 {project.icon === "check-square" && <CheckSquare size={28} color="#6B1A2A" />}
-                {(!project.icon || !["database", "settings", "users", "layers", "file-text", "check-square"].includes(project.icon)) && <FileText size={28} color="#6B1A2A" />}
+                {(!project.icon ||
+                  ![
+                    "database",
+                    "settings",
+                    "users",
+                    "layers",
+                    "file-text",
+                    "check-square",
+                  ].includes(project.icon)) && <FileText size={28} color="#6B1A2A" />}
               </div>
               <div>
                 <h1 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
@@ -1406,7 +1052,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                   transition: "all 0.15s",
                 }}
               >
-                Vue d'ensemble
+                Vue d&apos;ensemble
               </button>
               <button
                 onClick={() => setActiveTab("kanban")}
@@ -1446,7 +1092,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "16px" }}>
+      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
         {activeTab === "overview" ? (
           <>
             {/* Stats Row - Asymmetric Layout */}
@@ -1470,7 +1116,9 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                   gap: "14px",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div
                       style={{
@@ -1486,7 +1134,14 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                     >
                       <Users size={18} color="#6B1A2A" />
                     </div>
-                    <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#888", textTransform: "uppercase" }}>
+                    <span
+                      style={{
+                        fontSize: "0.7rem",
+                        fontWeight: 600,
+                        color: "#888",
+                        textTransform: "uppercase",
+                      }}
+                    >
                       Équipe
                     </span>
                   </div>
@@ -1539,7 +1194,14 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                   border: "1px solid rgba(0,0,0,0.1)",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "14px",
+                  }}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div
                       style={{
@@ -1555,7 +1217,9 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                     >
                       <FileText size={16} color="#6B1A2A" />
                     </div>
-                    <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1A1A1A", margin: 0 }}>
+                    <h3
+                      style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1A1A1A", margin: 0 }}
+                    >
                       Rapports
                     </h3>
                   </div>
@@ -1589,7 +1253,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                     )}
                   </div>
                 </div>
-                
+
                 {loading ? (
                   <div style={{ padding: "30px", textAlign: "center", color: "#999" }}>
                     Chargement...
@@ -1621,7 +1285,13 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                           e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
                           <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1A1A1A" }}>
                             {report.full_name}
                           </span>
@@ -1650,7 +1320,14 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                   gap: "12px",
                 }}
               >
-                <h3 style={{ fontSize: "0.75rem", fontWeight: 600, color: "#888", textTransform: "uppercase" }}>
+                <h3
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "#888",
+                    textTransform: "uppercase",
+                  }}
+                >
                   Actions rapides
                 </h3>
 
@@ -1721,20 +1398,45 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                     border: "1px solid rgba(0,0,0,0.05)",
                   }}
                 >
-                  <div style={{ fontSize: "0.7rem", color: "#888", marginBottom: "8px", fontWeight: 600 }}>
+                  <div
+                    style={{
+                      fontSize: "0.7rem",
+                      color: "#888",
+                      marginBottom: "8px",
+                      fontWeight: 600,
+                    }}
+                  >
                     STATISTIQUES
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "5px",
+                    }}
+                  >
                     <span style={{ fontSize: "0.8rem", color: "#666" }}>Tâches en cours</span>
-                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1A1A1A" }}>{inProgressTasks.length}</span>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1A1A1A" }}>
+                      {inProgressTasks.length}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "5px",
+                    }}
+                  >
                     <span style={{ fontSize: "0.8rem", color: "#666" }}>Tâches terminées</span>
-                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1A1A1A" }}>{completedTasks.length}</span>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1A1A1A" }}>
+                      {completedTasks.length}
+                    </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ fontSize: "0.8rem", color: "#666" }}>Rapports totaux</span>
-                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1A1A1A" }}>{reports.length}</span>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1A1A1A" }}>
+                      {reports.length}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1755,14 +1457,25 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
           </div>
         ) : (
           /* Gantt Tab */
-          <div style={{ height: "calc(100vh - 200px)", background: "#fff", borderRadius: "0", border: "1px solid rgba(0,0,0,0.08)" }}>
+          <div
+            style={{
+              height: "calc(100vh - 200px)",
+              background: "#fff",
+              borderRadius: "0",
+              border: "1px solid rgba(0,0,0,0.08)",
+            }}
+          >
             <GanttChart
               tasks={tasks}
               milestones={milestones}
               projectStart={project.start_date ? new Date(project.start_date) : null}
               projectEnd={project.end_date ? new Date(project.end_date) : null}
               projectId={project.id}
-              teamMembers={teamMembers}
+              teamMembers={teamMembers.map((m) => ({
+                id: m.id,
+                first_name: m.first_name || "",
+                last_name: m.last_name || "",
+              }))}
               onAddMilestone={() => {
                 setEditingMilestone(null);
                 setShowMilestoneModal(true);
@@ -1782,8 +1495,12 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                 const refreshData = async () => {
                   const tasksResult = await getTasks();
                   const allTasks =
-                    "data" in tasksResult ? tasksResult.data : tasksResult.success ? tasksResult.tasks : [];
-                  setTasks(allTasks.filter((t: Task) => t.project_id === project.id));
+                    "data" in tasksResult
+                      ? tasksResult.data
+                      : tasksResult.success
+                        ? tasksResult.tasks
+                        : [];
+                  setTasks((allTasks || []).filter((t: Task) => t.project_id === project.id));
 
                   const milestonesResult = await getMilestones(project.id);
                   if (milestonesResult.success && milestonesResult.milestones) {
@@ -1799,13 +1516,21 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
 
       {/* Modals */}
       {showCreateTask && (
-        <CreateTaskModal
+        <TaskFormModal
+          show={showCreateTask}
+          mode="create"
+          task={null}
           projectId={project.id}
+          teamMembers={projectMembers.map((m) => ({
+            id: m.id,
+            first_name: m.first_name || "",
+            last_name: m.last_name || "",
+          }))}
           onClose={() => setShowCreateTask(false)}
-          onSaved={handleTaskSaved}
+          onSuccess={handleTaskSaved}
         />
       )}
-      
+
       {showAddMember && (
         <AddMemberModal
           project={project}
@@ -1826,10 +1551,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
       )}
 
       {selectedReport && (
-        <ReportDetailModal
-          report={selectedReport}
-          onClose={() => setSelectedReport(null)}
-        />
+        <ReportDetailModal report={selectedReport} onClose={() => setSelectedReport(null)} />
       )}
 
       {showMilestoneModal && (

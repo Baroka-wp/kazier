@@ -35,9 +35,7 @@ export default function ProjectEditForm({ project }: { project: ProjectExtended 
   function toggleTeam(id: number) {
     setValues((v) => ({
       ...v,
-      team_ids: v.team_ids.includes(id)
-        ? v.team_ids.filter((x) => x !== id)
-        : [...v.team_ids, id],
+      team_ids: v.team_ids.includes(id) ? v.team_ids.filter((x) => x !== id) : [...v.team_ids, id],
     }));
   }
 
@@ -557,9 +555,7 @@ export default function ProjectEditForm({ project }: { project: ProjectExtended 
                       onChange={() => toggleTeam(team.id)}
                       style={{ cursor: "pointer" }}
                     />
-                    <span style={{ fontSize: "0.85rem", color: "#666" }}>
-                      {team.full_name}
-                    </span>
+                    <span style={{ fontSize: "0.85rem", color: "#666" }}>{team.full_name}</span>
                   </label>
                 ))
               )}

@@ -44,6 +44,7 @@ type PrismaTask = {
   priority: string | null;
   project_id: number | null;
   assigned_to: unknown;
+  start_date: Date | null;
   due_date: Date | null;
   created_at: Date;
 };
@@ -76,6 +77,7 @@ async function enrichTasksWithNames(tasks: PrismaTask[]): Promise<Task[]> {
       priority: (task.priority as "low" | "medium" | "high") ?? "medium",
       project_id: task.project_id,
       assigned_to: assignedIds,
+      start_date: task.start_date ? task.start_date.toISOString().split("T")[0] : null,
       due_date: task.due_date ? task.due_date.toISOString().split("T")[0] : null,
       created_at: task.created_at.toISOString(),
       assigned_to_names: assignedIds.map((id: number) => namesMap[id]).filter(Boolean),

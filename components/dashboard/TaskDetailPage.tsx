@@ -34,8 +34,8 @@ import {
   updateTaskComment,
 } from "@/lib/task-comments-actions";
 import { assignTaskToSelf } from "@/lib/team-actions";
-import { deleteTask } from "@/lib/task-actions";
-import { EditModal } from "./TasksTable/EditModal-Wrapper";
+import { deleteTask, getTeamMembersByProject } from "@/lib/task-actions";
+import TaskFormModal from "./TaskFormModal";
 import { DeleteModal } from "./TasksTable/DeleteModal";
 import { type Project, type TeamMember } from "./TasksTable/types";
 
@@ -437,11 +437,27 @@ export default function TaskDetailPage({
 
   const [editTaskOpen, setEditTaskOpen] = useState(false);
   const [deleteTaskOpen, setDeleteTaskOpen] = useState(false);
+  const [projectTeamMembers, setProjectTeamMembers] = useState<
+    Array<{ id: number; first_name: string; last_name: string }>
+  >([]);
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastCounter = useRef(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const [resetKey, setResetKey] = useState(0);
+
+  // Load team members when edit modal opens
+  useEffect(() => {
+    async function loadTeamMembers() {
+      if (editTaskOpen && task.project_id) {
+        const result = await getTeamMembersByProject(task.project_id);
+        if (result.success && result.members) {
+          setProjectTeamMembers(result.members);
+        }
+      }
+    }
+    loadTeamMembers();
+  }, [editTaskOpen, task.project_id]);
 
   useEffect(() => {
     async function load() {
@@ -916,9 +932,7 @@ export default function TaskDetailPage({
             <div className="tdp-comments-title">
               <MessageSquare size={16} color="#6B1A2A" />
               COMMENTAIRES
-              {comments.length > 0 && (
-                <span className="tdp-comments-badge">{comments.length}</span>
-              )}
+              {comments.length > 0 && <span className="tdp-comments-badge">{comments.length}</span>}
             </div>
             <button
               style={{
@@ -1129,16 +1143,18 @@ export default function TaskDetailPage({
       )}
 
       {/* ── Task modals ── */}
-      {editTaskOpen && (
-        <EditModal
-          mode="update"
+      {editTaskOpen && task.project_id && (
+        <TaskFormModal
+          show={editTaskOpen}
+          mode="edit"
           task={task}
-          projects={projects}
-          teams={teams}
+          projectId={task.project_id}
+          teamMembers={projectTeamMembers}
           onClose={() => setEditTaskOpen(false)}
-          onSaved={(updated) => {
+          onSuccess={() => {
             setEditTaskOpen(false);
-            onUpdated?.(updated);
+            // Refresh the task by calling onUpdated with current task
+            onUpdated?.(task);
             addToast("success", "Tâche mise à jour");
           }}
         />

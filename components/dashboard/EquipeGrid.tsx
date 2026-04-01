@@ -2,7 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Mail, Phone, Crown, Search, Filter, ChevronLeft, ChevronRight, Plus, X, Eye, EyeOff } from "lucide-react";
+import {
+  Users,
+  Mail,
+  Phone,
+  Crown,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  X,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -213,7 +226,15 @@ export default function EquipeGrid({
         }}
       >
         <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "20px",
+              flexWrap: "wrap",
+            }}
+          >
             {/* Title + Count */}
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div
@@ -352,9 +373,7 @@ export default function EquipeGrid({
       {/* Content */}
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "16px" }}>
         {loading ? (
-          <div style={{ padding: "60px", textAlign: "center", color: "#999" }}>
-            Chargement...
-          </div>
+          <div style={{ padding: "60px", textAlign: "center", color: "#999" }}>Chargement...</div>
         ) : members.length === 0 ? (
           <div style={{ padding: "60px", textAlign: "center", color: "#999" }}>
             Aucun membre trouvé
@@ -392,10 +411,27 @@ export default function EquipeGrid({
                     e.currentTarget.style.background = "#fff";
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-                    <Avatar name={member.full_name} size={index === 0 && members.length > 1 ? 56 : 44} />
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <Avatar
+                      name={member.full_name}
+                      size={index === 0 && members.length > 1 ? 56 : 44}
+                    />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          marginBottom: "4px",
+                        }}
+                      >
                         <h3
                           style={{
                             fontSize: index === 0 && members.length > 1 ? "1rem" : "0.9rem",
@@ -857,7 +893,9 @@ export default function EquipeGrid({
 
                 {/* Boss */}
                 <div style={{ display: "flex", alignItems: "center", paddingTop: "28px" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                  <label
+                    style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}
+                  >
                     <input
                       type="checkbox"
                       checked={formData.is_boss}
@@ -865,7 +903,7 @@ export default function EquipeGrid({
                       style={{ width: "16px", height: "16px", cursor: "pointer" }}
                     />
                     <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#666" }}>
-                      Chef d'équipe
+                      Chef d&apos;équipe
                     </span>
                   </label>
                 </div>

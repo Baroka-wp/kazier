@@ -7,6 +7,7 @@ export type Task = {
   priority: "low" | "medium" | "high";
   project_id: number | null;
   assigned_to: number[] | null; // ✅ tableau, pas un scalaire
+  start_date: string | null;
   due_date: string | null;
   created_at: string;
   assigned_to_names?: string[]; // ✅ pluriel + tableau (aligné sur task-actions)

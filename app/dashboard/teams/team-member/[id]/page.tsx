@@ -2,7 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Crown, Mail, Phone, User, Calendar, TrendingUp, Hash, Briefcase, Database, Settings, Users as UsersIcon, Layers } from "lucide-react";
+import {
+  ArrowLeft,
+  Crown,
+  Mail,
+  Phone,
+  User,
+  Calendar,
+  TrendingUp,
+  Hash,
+  Briefcase,
+  Database,
+  Settings,
+  Users as UsersIcon,
+  Layers,
+} from "lucide-react";
 import type { TeamMemberProfileData } from "@/app/api/equipe/[id]/profile/route";
 import Link from "next/link";
 
@@ -262,7 +276,7 @@ export default function TeamProfilePage() {
               padding: 0,
             }}
           >
-            <ArrowLeft size={16} /> Retour à l'équipe
+            <ArrowLeft size={16} /> Retour à l&apos;équipe
           </button>
         </div>
       </div>
@@ -282,7 +296,9 @@ export default function TeamProfilePage() {
           <div style={{ display: "flex", alignItems: "center", gap: "24px", flexWrap: "wrap" }}>
             <Avatar name={member.full_name} size={100} />
             <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}
+              >
                 <h1 style={{ fontSize: "1.8rem", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
                   {member.full_name}
                 </h1>
@@ -381,7 +397,9 @@ export default function TeamProfilePage() {
               flexDirection: "column",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}
+            >
               <div
                 style={{
                   width: "32px",
@@ -414,9 +432,7 @@ export default function TeamProfilePage() {
               <div style={{ fontSize: "3rem", fontWeight: 800, color: "#6B1A2A", lineHeight: 1 }}>
                 {avgGlobal.toFixed(1)}
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: "4px" }}>
-                sur 5.0
-              </div>
+              <div style={{ fontSize: "0.75rem", color: "#888", marginTop: "4px" }}>sur 5.0</div>
               <div style={{ fontSize: "0.7rem", color: "#aaa", marginTop: "8px" }}>
                 {total} évaluation{total > 1 ? "s" : ""}
               </div>
@@ -493,7 +509,14 @@ export default function TeamProfilePage() {
               Projets ({projects.length})
             </h2>
             {projects.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "20px 0", color: "#999", fontSize: "0.85rem" }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "20px 0",
+                  color: "#999",
+                  fontSize: "0.85rem",
+                }}
+              >
                 Aucun projet assigné
               </div>
             ) : (

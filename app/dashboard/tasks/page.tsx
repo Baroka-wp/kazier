@@ -1,18 +1,20 @@
 "use client";
 
 import useSWR from "swr";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { isTeamManager } from "@/lib/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
 import TMKanbanWrapper from "@/components/dashboard/TMKanbanWrapper";
 import TaskFormModal from "@/components/dashboard/TaskFormModal";
 import { useSWRConfig } from "swr";
+import { getTeamMembersByProject } from "@/lib/task-actions";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type Project = { id: number; name: string };
 type ProjectsResponse = { data: Project[] };
+type TeamMember = { id: number; first_name: string; last_name: string };
 
 export default function TasksPage() {
   const { mutate: globalMutate } = useSWRConfig();
@@ -24,6 +26,22 @@ export default function TasksPage() {
 
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  // Fetch team members when project changes
+  useEffect(() => {
+    async function loadMembers() {
+      if (!selectedProjectId) {
+        setTeamMembers([]);
+        return;
+      }
+      const result = await getTeamMembersByProject(selectedProjectId);
+      if (result.success && result.members) {
+        setTeamMembers(result.members);
+      }
+    }
+    loadMembers();
+  }, [selectedProjectId]);
 
   // Fetch projets
   const { data: projectsData } = useSWR<ProjectsResponse>(
@@ -68,7 +86,7 @@ export default function TasksPage() {
         mode="create"
         task={null}
         projectId={selectedProjectId || 0}
-        teamMembers={[]}
+        teamMembers={teamMembers}
         onClose={() => setShowAddTask(false)}
         onSuccess={async () => {
           setShowAddTask(false);

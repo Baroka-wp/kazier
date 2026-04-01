@@ -1,7 +1,7 @@
 "use client";
 
 import { Task, createTask, updateTask } from "@/lib/task-actions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
 type Props = {
@@ -92,13 +92,12 @@ export default function TaskFormModal({
   const [formData, setFormData] = useState<TaskFormData>(getInitialFormData());
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset form when modal opens
-  if (show && (mode === "edit" ? task : true)) {
-    const newFormData = getInitialFormData();
-    if (JSON.stringify(formData) !== JSON.stringify(newFormData)) {
-      setFormData(newFormData);
+  // Reset form when modal opens or task changes
+  useEffect(() => {
+    if (show) {
+      setFormData(getInitialFormData());
     }
-  }
+  }, [show, mode, task?.id]);
 
   // Convert datetime-local format to backend format (YYYY-MM-DD HH:MM)
   const formatDateForBackend = (dateStr: string): string => {
@@ -389,7 +388,10 @@ export default function TaskFormModal({
                 <select
                   value={formData.priority}
                   onChange={(e) =>
-                    setFormData({ ...formData, priority: e.target.value as TaskFormData["priority"] })
+                    setFormData({
+                      ...formData,
+                      priority: e.target.value as TaskFormData["priority"],
+                    })
                   }
                   style={{
                     width: "100%",
@@ -411,33 +413,46 @@ export default function TaskFormModal({
             </div>
 
             {/* Assigned to */}
-            {teamMembers.length > 0 && (
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.9rem",
-                    fontWeight: 600,
-                    color: "#333",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Assigné à
-                </label>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "8px",
-                    padding: "12px",
-                    background: "#fafafa",
-                    border: "1px solid rgba(0,0,0,0.15)",
-                    borderRadius: "0",
-                    maxHeight: "200px",
-                    overflowY: "auto",
-                  }}
-                >
-                  {teamMembers.map((member) => {
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  color: "#333",
+                  marginBottom: "8px",
+                }}
+              >
+                Assigné à
+              </label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "8px",
+                  padding: "12px",
+                  background: "#fafafa",
+                  border: "1px solid rgba(0,0,0,0.15)",
+                  borderRadius: "0",
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  minHeight: "80px",
+                }}
+              >
+                {teamMembers.length === 0 ? (
+                  <div
+                    style={{
+                      gridColumn: "1 / -1",
+                      textAlign: "center",
+                      color: "#999",
+                      fontSize: "0.85rem",
+                      padding: "20px",
+                    }}
+                  >
+                    Aucun membre dans ce projet
+                  </div>
+                ) : (
+                  teamMembers.map((member) => {
                     const fullName = `${member.first_name} ${member.last_name}`;
                     const isChecked = formData.assigned_to.includes(member.id);
                     return (
@@ -499,10 +514,15 @@ export default function TaskFormModal({
                         </span>
                       </label>
                     );
-                  })}
-                </div>
+                  })
+                )}
               </div>
-            )}
+              {teamMembers.length > 0 && (
+                <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "6px" }}>
+                  Sélectionnez un ou plusieurs membres
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Actions */}

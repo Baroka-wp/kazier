@@ -346,8 +346,18 @@ export async function updateProject(id: number, data: UpdateProjectData): Promis
       team_ids: data.team_ids ?? oldTeamIds,
       objectives: data.objectives !== undefined ? data.objectives : existing.objectives,
       stakeholders: data.stakeholders !== undefined ? data.stakeholders : existing.stakeholders,
-      start_date: data.start_date !== undefined ? data.start_date : existing.start_date,
-      end_date: data.end_date !== undefined ? data.end_date : existing.end_date,
+      start_date:
+        data.start_date !== undefined
+          ? data.start_date
+          : existing.start_date instanceof Date
+            ? existing.start_date.toISOString().split("T")[0]
+            : existing.start_date,
+      end_date:
+        data.end_date !== undefined
+          ? data.end_date
+          : existing.end_date instanceof Date
+            ? existing.end_date.toISOString().split("T")[0]
+            : existing.end_date,
     };
 
     const validation = validateProject(mergedData);

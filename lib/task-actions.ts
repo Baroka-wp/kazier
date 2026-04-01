@@ -511,6 +511,7 @@ type PrismaTask = {
   priority: string | null;
   project_id: number | null;
   assigned_to: unknown;
+  start_date: Date | null;
   due_date: Date | null;
   created_at: Date;
 };
@@ -613,7 +614,7 @@ export async function getProjectsForTasks(): Promise<{
 
 export async function getTeamMembersByProject(projectId: number): Promise<{
   success: boolean;
-  members?: Array<{ id: number; full_name: string }>;
+  members?: Array<{ id: number; first_name: string; last_name: string; full_name: string }>;
   error?: string;
 }> {
   try {
@@ -635,7 +636,12 @@ export async function getTeamMembersByProject(projectId: number): Promise<{
 
     return {
       success: true,
-      members: result.map((t) => ({ id: t.id, full_name: `${t.first_name} ${t.last_name}` })),
+      members: result.map((t) => ({
+        id: t.id,
+        first_name: t.first_name || "",
+        last_name: t.last_name || "",
+        full_name: `${t.first_name || ""} ${t.last_name || ""}`.trim(),
+      })),
     };
   } catch (err: unknown) {
     console.error("[getTeamMembersByProject]", err instanceof Error ? err.message : String(err));

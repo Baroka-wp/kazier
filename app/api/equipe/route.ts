@@ -142,9 +142,6 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("[API /equipe POST]", error);
-    return NextResponse.json(
-      { error: "Erreur lors de la création du membre" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erreur lors de la création du membre" }, { status: 500 });
   }
 }
