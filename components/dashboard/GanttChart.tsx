@@ -47,6 +47,7 @@ export default function GanttChart({
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [taskModalMode, setTaskModalMode] = useState<"create" | "edit">("create");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +74,10 @@ export default function GanttChart({
   const totalDays = Math.ceil((maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24));
   const dayWidth = 30 * zoom; // pixels per day
   const chartWidth = totalDays * dayWidth;
+
+  // Get today's position
+  const today = new Date();
+  const todayPosition = ((today.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24)) * dayWidth;
 
   // Generate day headers
   const days: { date: Date; day: number; month: number; isMonday: boolean }[] = [];
@@ -391,6 +396,36 @@ export default function GanttChart({
               />
             ) : null
           )}
+          {/* Today line */}
+          <div
+            style={{
+              position: "absolute",
+              left: todayPosition,
+              top: 0,
+              bottom: 0,
+              width: "2px",
+              background: "#dc2626",
+              zIndex: 10,
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "#dc2626",
+                color: "#fff",
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                padding: "2px 6px",
+                borderRadius: "0 0 4px 4px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              AUJ.
+            </div>
+          </div>
         </div>
 
         <div style={{ width: chartWidth, padding: "16px", minHeight: "100%" }}>
@@ -543,8 +578,19 @@ export default function GanttChart({
                         height: "52px",
                         cursor: isDragging ? "grabbing" : "grab",
                       }}
-                      onMouseEnter={() => setHoveredTask(task.id)}
-                      onMouseLeave={() => setHoveredTask(null)}
+                      onMouseEnter={(e) => {
+                        setHoveredTask(task.id);
+                        setTooltipPos({ x: e.clientX, y: e.clientY });
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredTask(null);
+                        setTooltipPos(null);
+                      }}
+                      onMouseMove={(e) => {
+                        if (hoveredTask === task.id) {
+                          setTooltipPos({ x: e.clientX, y: e.clientY });
+                        }
+                      }}
                     >
                       {/* Task bar */}
                       <div
@@ -638,6 +684,125 @@ export default function GanttChart({
           </div>
         </div>
       </div>
+
+      {/* Task tooltip */}
+      {tooltipPos && hoveredTask && (
+        <div
+          style={{
+            position: "fixed",
+            left: tooltipPos.x + 10,
+            top: tooltipPos.y - 10,
+            background: "#fff",
+            border: "1px solid rgba(0,0,0,0.15)",
+            borderRadius: "0",
+            padding: "12px 14px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            zIndex: 1000,
+            pointerEvents: "none",
+            minWidth: "220px",
+            maxWidth: "320px",
+          }}
+        >
+          {(() => {
+            const task = tasks.find((t) => t.id === hoveredTask);
+            if (!task) return null;
+            return (
+              <>
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "#888",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Tâche
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.95rem",
+                    fontWeight: 700,
+                    color: "#1A1A1A",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {task.title}
+                </div>
+                {task.description && (
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#666",
+                      marginBottom: "8px",
+                      lineHeight: 1.5,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {task.description}
+                  </div>
+                )}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {task.status && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#888" }}>Statut</span>
+                      <span style={{ fontWeight: 600, color: "#1A1A1A", textTransform: "capitalize" }}>
+                        {task.status}
+                      </span>
+                    </div>
+                  )}
+                  {task.priority && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#888" }}>Priorité</span>
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          color:
+                            task.priority === "high"
+                              ? "#dc2626"
+                              : task.priority === "medium"
+                              ? "#b45309"
+                              : "#16a34a",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {task.priority === "high"
+                          ? "Haute"
+                          : task.priority === "medium"
+                          ? "Moyenne"
+                          : "Basse"}
+                      </span>
+                    </div>
+                  )}
+                  {task.due_date && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#888" }}>Échéance</span>
+                      <span style={{ fontWeight: 600, color: "#1A1A1A" }}>
+                        {new Date(task.due_date).toLocaleDateString("fr-FR", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {/* TaskFormModal */}
       <TaskFormModal

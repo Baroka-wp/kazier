@@ -424,36 +424,82 @@ export default function TaskFormModal({
                 >
                   Assigné à
                 </label>
-                <select
-                  multiple
-                  value={formData.assigned_to.map(String)}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, (option) =>
-                      Number(option.value)
-                    );
-                    setFormData({ ...formData, assigned_to: selected });
-                  }}
+                <div
                   style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    borderRadius: "0",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "8px",
+                    padding: "12px",
+                    background: "#fafafa",
                     border: "1px solid rgba(0,0,0,0.15)",
-                    fontSize: "0.95rem",
-                    fontFamily: "'DM Sans', sans-serif",
-                    outline: "none",
-                    background: "#fff",
-                    color: "#1A1A1A",
-                    minHeight: "120px",
+                    borderRadius: "0",
+                    maxHeight: "200px",
+                    overflowY: "auto",
                   }}
                 >
-                  {teamMembers.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.first_name} {member.last_name}
-                    </option>
-                  ))}
-                </select>
-                <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "6px" }}>
-                  Maintenez Ctrl/Cmd pour sélectionner plusieurs membres
+                  {teamMembers.map((member) => {
+                    const fullName = `${member.first_name} ${member.last_name}`;
+                    const isChecked = formData.assigned_to.includes(member.id);
+                    return (
+                      <label
+                        key={member.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "8px 10px",
+                          background: isChecked ? "rgba(107,26,42,0.08)" : "#fff",
+                          border: isChecked ? "1px solid #6B1A2A" : "1px solid rgba(0,0,0,0.08)",
+                          borderRadius: "0",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isChecked) {
+                            e.currentTarget.style.background = "#f0f0f0";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isChecked) {
+                            e.currentTarget.style.background = "#fff";
+                          }
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {
+                            if (isChecked) {
+                              setFormData({
+                                ...formData,
+                                assigned_to: formData.assigned_to.filter((id) => id !== member.id),
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                assigned_to: [...formData.assigned_to, member.id],
+                              });
+                            }
+                          }}
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            cursor: "pointer",
+                            accentColor: "#6B1A2A",
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: "0.85rem",
+                            color: isChecked ? "#6B1A2A" : "#333",
+                            fontWeight: isChecked ? 600 : 400,
+                          }}
+                        >
+                          {fullName}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}

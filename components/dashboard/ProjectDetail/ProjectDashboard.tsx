@@ -1779,7 +1779,18 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
               }}
               onTaskUpdate={() => {
                 // Refresh tasks
-                loadData();
+                const refreshData = async () => {
+                  const tasksResult = await getTasks();
+                  const allTasks =
+                    "data" in tasksResult ? tasksResult.data : tasksResult.success ? tasksResult.tasks : [];
+                  setTasks(allTasks.filter((t: Task) => t.project_id === project.id));
+
+                  const milestonesResult = await getMilestones(project.id);
+                  if (milestonesResult.success && milestonesResult.milestones) {
+                    setMilestones(milestonesResult.milestones);
+                  }
+                };
+                refreshData();
               }}
             />
           </div>
