@@ -403,11 +403,20 @@ export default function DailyFormLong() {
                         style={{
                           padding: "12px 16px",
                           cursor: "pointer",
-                          borderBottom: "1px solid #F2EFE9",
+                          borderBottom: "1px solid #E8E4DC",
                           background: "#fff",
+                          color: "#000",
+                          fontSize: "1rem",
+                          fontWeight: 500,
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#F2EFE9")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#6B1A2A";
+                          e.currentTarget.style.color = "#fff";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "#fff";
+                          e.currentTarget.style.color = "#000";
+                        }}
                       >
                         {s.full_name}
                       </div>
@@ -420,7 +429,10 @@ export default function DailyFormLong() {
             {teamId && (
               <>
                 {/* 2. Projets */}
-                <Section icon={<FolderKanban size={24} color="#6B1A2A" />} title="Vos projets">
+                <Section
+                  icon={<FolderKanban size={24} color="#6B1A2A" />}
+                  title="Sélectionnez les projets sur lesquels vous avez travaillé"
+                >
                   {projects.length === 0 ? (
                     <p style={{ color: "#999", fontSize: "0.95rem" }}>
                       Aucun projet assigné pour le moment.
