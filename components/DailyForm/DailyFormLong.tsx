@@ -22,8 +22,10 @@ import {
   Target,
   Users,
   Star,
+  Languages,
 } from "lucide-react";
 import Confetti from "./Confetti";
+import { type Language, useTranslation } from "./translations";
 
 type Suggestion = { id: number; full_name: string };
 type Project = { id: number; name: string; description: string; icon: string };
@@ -82,6 +84,9 @@ function evalReducer(state: EvalState, action: EvalAction): EvalState {
 }
 
 export default function DailyFormLong() {
+  const [lang, setLang] = useState<Language>("fr");
+  const t = useTranslation(lang);
+
   const [fullName, setFullName] = useState("");
   const [teamId, setTeamId] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -184,25 +189,25 @@ export default function DailyFormLong() {
     setError("");
 
     if (!teamId) {
-      setError("Veuillez sélectionner votre nom.");
+      setError(t.errorSelectName);
       return;
     }
 
     const alreadySubmitted = await checkAlreadySubmitted(teamId);
     if (alreadySubmitted) {
-      setError("Vous avez déjà soumis votre rapport aujourd'hui.");
+      setError(t.errorAlreadySubmitted);
       return;
     }
 
     if (selectedProjects.length === 0) {
-      setError("Veuillez sélectionner au moins un projet.");
+      setError(t.errorSelectProject);
       return;
     }
 
     const hasTask = selectedTaskIds.length > 0;
     const hasMessage = extraMessage.trim().length > 0;
     if (!hasTask && !hasMessage) {
-      setError("Veuillez sélectionner des tâches ou ajouter un message.");
+      setError(t.errorSelectTaskOrMessage);
       return;
     }
 
@@ -212,7 +217,7 @@ export default function DailyFormLong() {
         return e && e.communication > 0 && e.collaboration > 0 && e.punctuality > 0;
       });
       if (!allEvaluated) {
-        setError("Veuillez évaluer tous vos coéquipiers.");
+        setError(t.errorEvaluateAll);
         return;
       }
     }
@@ -231,7 +236,7 @@ export default function DailyFormLong() {
     });
 
     if (!result.success) {
-      setError("Erreur lors de la soumission. Veuillez réessayer.");
+      setError(t.errorSubmission);
       setSubmitting(false);
       return;
     }
@@ -295,7 +300,7 @@ export default function DailyFormLong() {
               fontFamily: "'DM Sans', sans-serif",
             }}
           >
-            Rapport soumis !
+            {t.reportSubmitted}
           </h1>
           <p
             style={{
@@ -305,7 +310,7 @@ export default function DailyFormLong() {
               fontFamily: "'DM Sans', sans-serif",
             }}
           >
-            Merci {fullName}. Votre rapport quotidien a été envoyé avec succès.
+            {t.thankYou} {fullName}. {t.successMessage}
           </p>
         </div>
       </div>
@@ -323,7 +328,51 @@ export default function DailyFormLong() {
     >
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "48px" }}>
+        <div style={{ textAlign: "center", marginBottom: "48px", position: "relative" }}>
+          {/* Language Selector */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              display: "flex",
+              gap: "8px",
+              alignItems: "center",
+            }}
+          >
+            <Languages size={20} color="#6B1A2A" />
+            <button
+              onClick={() => setLang("fr")}
+              style={{
+                padding: "8px 16px",
+                border: lang === "fr" ? "2px solid #6B1A2A" : "1px solid #D4CFC5",
+                background: lang === "fr" ? "rgba(107,26,42,0.1)" : "#fff",
+                color: lang === "fr" ? "#6B1A2A" : "#666",
+                fontSize: "0.9rem",
+                fontWeight: lang === "fr" ? 700 : 500,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              FR
+            </button>
+            <button
+              onClick={() => setLang("en")}
+              style={{
+                padding: "8px 16px",
+                border: lang === "en" ? "2px solid #6B1A2A" : "1px solid #D4CFC5",
+                background: lang === "en" ? "rgba(107,26,42,0.1)" : "#fff",
+                color: lang === "en" ? "#6B1A2A" : "#666",
+                fontSize: "0.9rem",
+                fontWeight: lang === "en" ? 700 : 500,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              EN
+            </button>
+          </div>
+
           <h1
             style={{
               fontSize: "2.5rem",
@@ -333,11 +382,9 @@ export default function DailyFormLong() {
               letterSpacing: "-0.02em",
             }}
           >
-            Rapport Quotidien
+            {t.pageTitle}
           </h1>
-          <p style={{ fontSize: "1.1rem", color: "#666", lineHeight: 1.6 }}>
-            Partagez votre progression et vos objectifs
-          </p>
+          <p style={{ fontSize: "1.1rem", color: "#666", lineHeight: 1.6 }}>{t.pageSubtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -349,13 +396,13 @@ export default function DailyFormLong() {
             }}
           >
             {/* 1. Identification */}
-            <Section icon={<UserCheck size={24} color="#6B1A2A" />} title="Qui êtes-vous ?">
+            <Section icon={<UserCheck size={24} color="#6B1A2A" />} title={t.whoAreYou}>
               <div style={{ position: "relative" }}>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => handleNameSearch(e.target.value)}
-                  placeholder="Tapez votre nom..."
+                  placeholder={t.typeName}
                   required
                   style={{
                     width: "100%",
@@ -429,14 +476,9 @@ export default function DailyFormLong() {
             {teamId && (
               <>
                 {/* 2. Projets */}
-                <Section
-                  icon={<FolderKanban size={24} color="#6B1A2A" />}
-                  title="Sélectionnez les projets sur lesquels vous avez travaillé"
-                >
+                <Section icon={<FolderKanban size={24} color="#6B1A2A" />} title={t.selectProjects}>
                   {projects.length === 0 ? (
-                    <p style={{ color: "#999", fontSize: "0.95rem" }}>
-                      Aucun projet assigné pour le moment.
-                    </p>
+                    <p style={{ color: "#999", fontSize: "0.95rem" }}>{t.noProjects}</p>
                   ) : (
                     <div style={{ display: "grid", gap: "12px" }}>
                       {projects.map((project) => (
@@ -453,7 +495,7 @@ export default function DailyFormLong() {
 
                 {/* 3. Tâches */}
                 {selectedProjects.length > 0 && (
-                  <Section icon={<ListChecks size={24} color="#6B1A2A" />} title="Tâches validées">
+                  <Section icon={<ListChecks size={24} color="#6B1A2A" />} title={t.validatedTasks}>
                     {tasks.filter((t) => selectedProjects.some((p) => p.id === t.project_id))
                       .length === 0 ? (
                       <p style={{ color: "#999", fontSize: "0.95rem" }}>
@@ -483,12 +525,12 @@ export default function DailyFormLong() {
                           marginBottom: "8px",
                         }}
                       >
-                        Message complémentaire (optionnel)
+                        {t.additionalMessage}
                       </label>
                       <textarea
                         value={extraMessage}
                         onChange={(e) => setExtraMessage(e.target.value)}
-                        placeholder="Ajoutez des détails supplémentaires..."
+                        placeholder={t.additionalMessagePlaceholder}
                         rows={3}
                         style={{
                           width: "100%",
@@ -509,14 +551,11 @@ export default function DailyFormLong() {
                 )}
 
                 {/* 4. Challenges */}
-                <Section
-                  icon={<Lightbulb size={24} color="#6B1A2A" />}
-                  title="Challenges rencontrés"
-                >
+                <Section icon={<Lightbulb size={24} color="#6B1A2A" />} title={t.challenges}>
                   <textarea
                     value={challenges}
                     onChange={(e) => setChallenges(e.target.value)}
-                    placeholder="Décrivez les difficultés rencontrées..."
+                    placeholder={t.challengesPlaceholder}
                     rows={4}
                     style={{
                       width: "100%",
@@ -535,14 +574,11 @@ export default function DailyFormLong() {
                 </Section>
 
                 {/* 5. À apprendre */}
-                <Section
-                  icon={<BookOpen size={24} color="#6B1A2A" />}
-                  title="Ce que vous devez apprendre"
-                >
+                <Section icon={<BookOpen size={24} color="#6B1A2A" />} title={t.learningNeeds}>
                   <textarea
                     value={neededLearning}
                     onChange={(e) => setNeededLearning(e.target.value)}
-                    placeholder="Quelles compétences ou connaissances vous manquent ?"
+                    placeholder={t.learningNeedsPlaceholder}
                     rows={4}
                     style={{
                       width: "100%",
@@ -561,11 +597,11 @@ export default function DailyFormLong() {
                 </Section>
 
                 {/* 6. Objectifs de demain */}
-                <Section icon={<Target size={24} color="#6B1A2A" />} title="Objectifs de demain">
+                <Section icon={<Target size={24} color="#6B1A2A" />} title={t.tomorrowGoals}>
                   <textarea
                     value={tomorrowBuild}
                     onChange={(e) => setTomorrowBuild(e.target.value)}
-                    placeholder="Que prévoyez-vous de réaliser demain ?"
+                    placeholder={t.tomorrowGoalsPlaceholder}
                     rows={4}
                     style={{
                       width: "100%",
@@ -585,10 +621,7 @@ export default function DailyFormLong() {
 
                 {/* 7. Évaluations */}
                 {teammates.length > 0 && (
-                  <Section
-                    icon={<Users size={24} color="#6B1A2A" />}
-                    title="Évaluez vos coéquipiers"
-                  >
+                  <Section icon={<Users size={24} color="#6B1A2A" />} title={t.evaluateTeammates}>
                     <div style={{ display: "grid", gap: "24px" }}>
                       {teammates.map((teammate) => (
                         <EvaluationCard
@@ -646,12 +679,12 @@ export default function DailyFormLong() {
               {submitting ? (
                 <>
                   <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
-                  Envoi en cours...
+                  {t.submitting}
                 </>
               ) : (
                 <>
                   <Send size={24} />
-                  Soumettre le rapport
+                  {t.submitReport}
                 </>
               )}
             </button>
