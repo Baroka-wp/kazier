@@ -103,7 +103,6 @@ export default function DailyFormLong() {
   const [confetti, setConfetti] = useState(false);
   const [error, setError] = useState("");
 
-  // Charger coéquipiers quand projets ou teamId change
   useEffect(() => {
     let cancelled = false;
 
@@ -247,7 +246,6 @@ export default function DailyFormLong() {
     setConfetti(true);
     setTimeout(() => setConfetti(false), 3000);
 
-    // Reset après 5 secondes
     setTimeout(() => {
       setSubmitted(false);
       setFullName("");
@@ -269,7 +267,7 @@ export default function DailyFormLong() {
       <div
         style={{
           minHeight: "100vh",
-          background: "linear-gradient(135deg, #F2EFE9 0%, #E8E4DC 100%)",
+          background: "#F2EFE9",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -281,11 +279,10 @@ export default function DailyFormLong() {
         <div
           style={{
             background: "#fff",
-            borderRadius: "16px",
+            border: "1px solid #D4CFC5",
             padding: "60px 40px",
             maxWidth: "600px",
             textAlign: "center",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
           }}
         >
           <CheckCircle2 size={80} color="#10b981" style={{ margin: "0 auto 24px" }} />
@@ -319,7 +316,7 @@ export default function DailyFormLong() {
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #F2EFE9 0%, #E8E4DC 100%)",
+        background: "#F2EFE9",
         padding: "40px 20px",
         fontFamily: "'DM Sans', sans-serif",
       }}
@@ -347,9 +344,8 @@ export default function DailyFormLong() {
           <div
             style={{
               background: "#fff",
-              borderRadius: "16px",
+              border: "1px solid #D4CFC5",
               padding: "40px",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
             }}
           >
             {/* 1. Identification */}
@@ -364,14 +360,15 @@ export default function DailyFormLong() {
                   style={{
                     width: "100%",
                     padding: "14px 16px",
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    borderRadius: "8px",
+                    border: "1px solid #D4CFC5",
+                    background: "#fff",
                     fontSize: "1rem",
                     fontFamily: "'DM Sans', sans-serif",
-                    transition: "border 0.2s",
+                    outline: "none",
+                    color: "#000",
                   }}
                   onFocus={(e) => (e.target.style.borderColor = "#6B1A2A")}
-                  onBlur={(e) => (e.target.style.borderColor = "rgba(0,0,0,0.12)")}
+                  onBlur={(e) => (e.target.style.borderColor = "#D4CFC5")}
                 />
                 {loadingSearch && (
                   <Loader2
@@ -389,13 +386,11 @@ export default function DailyFormLong() {
                   <div
                     style={{
                       position: "absolute",
-                      top: "calc(100% + 8px)",
+                      top: "calc(100% + 4px)",
                       left: 0,
                       right: 0,
                       background: "#fff",
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      borderRadius: "8px",
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                      border: "1px solid #D4CFC5",
                       zIndex: 10,
                       maxHeight: "240px",
                       overflow: "auto",
@@ -408,8 +403,8 @@ export default function DailyFormLong() {
                         style={{
                           padding: "12px 16px",
                           cursor: "pointer",
-                          borderBottom: "1px solid rgba(0,0,0,0.06)",
-                          transition: "background 0.2s",
+                          borderBottom: "1px solid #F2EFE9",
+                          background: "#fff",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "#F2EFE9")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
@@ -486,12 +481,16 @@ export default function DailyFormLong() {
                         style={{
                           width: "100%",
                           padding: "12px 16px",
-                          border: "1px solid rgba(0,0,0,0.12)",
-                          borderRadius: "8px",
+                          border: "1px solid #D4CFC5",
+                          background: "#fff",
                           fontSize: "0.95rem",
                           fontFamily: "'DM Sans', sans-serif",
                           resize: "vertical",
+                          outline: "none",
+                          color: "#000",
                         }}
+                        onFocus={(e) => (e.target.style.borderColor = "#6B1A2A")}
+                        onBlur={(e) => (e.target.style.borderColor = "#D4CFC5")}
                       />
                     </div>
                   </Section>
@@ -510,12 +509,16 @@ export default function DailyFormLong() {
                     style={{
                       width: "100%",
                       padding: "12px 16px",
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      borderRadius: "8px",
+                      border: "1px solid #D4CFC5",
+                      background: "#fff",
                       fontSize: "0.95rem",
                       fontFamily: "'DM Sans', sans-serif",
                       resize: "vertical",
+                      outline: "none",
+                      color: "#000",
                     }}
+                    onFocus={(e) => (e.target.style.borderColor = "#6B1A2A")}
+                    onBlur={(e) => (e.target.style.borderColor = "#D4CFC5")}
                   />
                 </Section>
 
@@ -532,12 +535,16 @@ export default function DailyFormLong() {
                     style={{
                       width: "100%",
                       padding: "12px 16px",
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      borderRadius: "8px",
+                      border: "1px solid #D4CFC5",
+                      background: "#fff",
                       fontSize: "0.95rem",
                       fontFamily: "'DM Sans', sans-serif",
                       resize: "vertical",
+                      outline: "none",
+                      color: "#000",
                     }}
+                    onFocus={(e) => (e.target.style.borderColor = "#6B1A2A")}
+                    onBlur={(e) => (e.target.style.borderColor = "#D4CFC5")}
                   />
                 </Section>
 
@@ -551,12 +558,16 @@ export default function DailyFormLong() {
                     style={{
                       width: "100%",
                       padding: "12px 16px",
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      borderRadius: "8px",
+                      border: "1px solid #D4CFC5",
+                      background: "#fff",
                       fontSize: "0.95rem",
                       fontFamily: "'DM Sans', sans-serif",
                       resize: "vertical",
+                      outline: "none",
+                      color: "#000",
                     }}
+                    onFocus={(e) => (e.target.style.borderColor = "#6B1A2A")}
+                    onBlur={(e) => (e.target.style.borderColor = "#D4CFC5")}
                   />
                 </Section>
 
@@ -590,7 +601,6 @@ export default function DailyFormLong() {
                   padding: "14px 16px",
                   background: "rgba(239, 68, 68, 0.1)",
                   border: "1px solid #ef4444",
-                  borderRadius: "8px",
                   color: "#dc2626",
                   fontSize: "0.95rem",
                   marginTop: "24px",
@@ -610,7 +620,6 @@ export default function DailyFormLong() {
                 background: submitting || !teamId ? "#ccc" : "#6B1A2A",
                 color: "#fff",
                 border: "none",
-                borderRadius: "8px",
                 fontSize: "1.1rem",
                 fontWeight: 700,
                 cursor: submitting || !teamId ? "not-allowed" : "pointer",
@@ -620,21 +629,6 @@ export default function DailyFormLong() {
                 gap: "12px",
                 marginTop: "32px",
                 fontFamily: "'DM Sans', sans-serif",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                if (!submitting && teamId) {
-                  e.currentTarget.style.background = "#8B2A3A";
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(107,26,42,0.3)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!submitting && teamId) {
-                  e.currentTarget.style.background = "#6B1A2A";
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "none";
-                }
               }}
             >
               {submitting ? (
@@ -678,7 +672,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ marginBottom: "32px", paddingBottom: "32px", borderBottom: "1px solid #e5e5e5" }}>
+    <div style={{ marginBottom: "32px", paddingBottom: "32px", borderBottom: "1px solid #E8E4DC" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
         {icon}
         <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
@@ -705,25 +699,21 @@ function ProjectCard({
       onClick={onToggle}
       style={{
         padding: "16px 20px",
-        border: selected ? "2px solid #6B1A2A" : "1px solid rgba(0,0,0,0.12)",
-        borderRadius: "8px",
+        border: selected ? "2px solid #6B1A2A" : "1px solid #D4CFC5",
         cursor: "pointer",
         background: selected ? "rgba(107,26,42,0.05)" : "#fff",
-        transition: "all 0.2s",
         display: "flex",
         alignItems: "center",
         gap: "16px",
       }}
       onMouseEnter={(e) => {
         if (!selected) {
-          e.currentTarget.style.borderColor = "rgba(107,26,42,0.3)";
-          e.currentTarget.style.background = "rgba(107,26,42,0.02)";
+          e.currentTarget.style.borderColor = "#6B1A2A";
         }
       }}
       onMouseLeave={(e) => {
         if (!selected) {
-          e.currentTarget.style.borderColor = "rgba(0,0,0,0.12)";
-          e.currentTarget.style.background = "#fff";
+          e.currentTarget.style.borderColor = "#D4CFC5";
         }
       }}
     >
@@ -731,7 +721,6 @@ function ProjectCard({
         style={{
           width: "20px",
           height: "20px",
-          borderRadius: "4px",
           border: selected ? "2px solid #6B1A2A" : "2px solid #ccc",
           background: selected ? "#6B1A2A" : "#fff",
           display: "flex",
@@ -775,23 +764,21 @@ function TaskCard({
       onClick={onToggle}
       style={{
         padding: "12px 16px",
-        border: selected ? "2px solid #6B1A2A" : "1px solid rgba(0,0,0,0.12)",
-        borderRadius: "8px",
+        border: selected ? "2px solid #6B1A2A" : "1px solid #D4CFC5",
         cursor: "pointer",
         background: selected ? "rgba(107,26,42,0.05)" : "#fff",
-        transition: "all 0.2s",
         display: "flex",
         alignItems: "center",
         gap: "12px",
       }}
       onMouseEnter={(e) => {
         if (!selected) {
-          e.currentTarget.style.borderColor = "rgba(107,26,42,0.3)";
+          e.currentTarget.style.borderColor = "#6B1A2A";
         }
       }}
       onMouseLeave={(e) => {
         if (!selected) {
-          e.currentTarget.style.borderColor = "rgba(0,0,0,0.12)";
+          e.currentTarget.style.borderColor = "#D4CFC5";
         }
       }}
     >
@@ -799,7 +786,6 @@ function TaskCard({
         style={{
           width: "18px",
           height: "18px",
-          borderRadius: "4px",
           border: selected ? "2px solid #6B1A2A" : "2px solid #ccc",
           background: selected ? "#6B1A2A" : "#fff",
           display: "flex",
@@ -813,12 +799,12 @@ function TaskCard({
       <div style={{ flex: 1, fontSize: "0.95rem", color: "#1A1A1A" }}>{task.title}</div>
       <span
         style={{
-          padding: "3px 10px",
-          borderRadius: "20px",
+          padding: "4px 12px",
           fontSize: "0.7rem",
           fontWeight: 600,
           background: statusStyle.bg,
           color: statusStyle.color,
+          border: `1px solid ${statusStyle.color}`,
         }}
       >
         {task.status}
@@ -848,8 +834,7 @@ function EvaluationCard({
       style={{
         padding: "20px",
         background: "#F9F9F9",
-        borderRadius: "8px",
-        border: "1px solid rgba(0,0,0,0.06)",
+        border: "1px solid #D4CFC5",
       }}
     >
       <h4 style={{ fontSize: "1.05rem", fontWeight: 600, color: "#1A1A1A", marginBottom: "16px" }}>
@@ -887,7 +872,6 @@ function EvaluationCard({
                   size={32}
                   fill={evaluation && evaluation[criterion.id] >= rating ? "#fbbf24" : "none"}
                   color={evaluation && evaluation[criterion.id] >= rating ? "#fbbf24" : "#ccc"}
-                  style={{ transition: "all 0.2s" }}
                 />
               </button>
             ))}
@@ -914,12 +898,16 @@ function EvaluationCard({
           style={{
             width: "100%",
             padding: "10px 12px",
-            border: "1px solid rgba(0,0,0,0.12)",
-            borderRadius: "6px",
+            border: "1px solid #D4CFC5",
+            background: "#fff",
             fontSize: "0.9rem",
             fontFamily: "'DM Sans', sans-serif",
             resize: "vertical",
+            outline: "none",
+            color: "#000",
           }}
+          onFocus={(e) => (e.target.style.borderColor = "#6B1A2A")}
+          onBlur={(e) => (e.target.style.borderColor = "#D4CFC5")}
         />
       </div>
     </div>
