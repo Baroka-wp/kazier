@@ -6,17 +6,8 @@ import { useSession } from "next-auth/react";
 import { isTeamManager } from "@/lib/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
 import TMKanbanWrapper from "@/components/dashboard/TMKanbanWrapper";
-import dynamic from "next/dynamic";
+import TaskFormModal from "@/components/dashboard/TaskFormModal";
 import { useSWRConfig } from "swr";
-import { type Project as TaskProject } from "@/components/dashboard/TasksTable/types";
-
-const EditModal = dynamic(
-  () =>
-    import("@/components/dashboard/TasksTable/EditModal-Wrapper").then((m) => ({
-      default: m.EditModal,
-    })),
-  { ssr: false }
-);
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -72,23 +63,21 @@ export default function TasksPage() {
         onAddTask={() => setShowAddTask(true)}
       />
 
-      {showAddTask && selectedProjectId && (
-        <EditModal
-          mode="create"
-          task={null}
-          projects={projects as unknown as TaskProject[]}
-          teams={[]}
-          defaultProjectId={selectedProjectId}
-          onClose={() => setShowAddTask(false)}
-          onSaved={async () => {
-            setShowAddTask(false);
-            await globalMutate((key) => typeof key === "string" && key.startsWith("/api/tasks"), {
-              revalidate: true,
-            });
-            await refreshKanban();
-          }}
-        />
-      )}
+      <TaskFormModal
+        show={showAddTask && !!selectedProjectId}
+        mode="create"
+        task={null}
+        projectId={selectedProjectId || 0}
+        teamMembers={[]}
+        onClose={() => setShowAddTask(false)}
+        onSuccess={async () => {
+          setShowAddTask(false);
+          await globalMutate((key) => typeof key === "string" && key.startsWith("/api/tasks"), {
+            revalidate: true,
+          });
+          await refreshKanban();
+        }}
+      />
     </div>
   );
 }

@@ -8,6 +8,9 @@ import { getTasks, Task, createTask, getTeamMembersByProject } from "@/lib/task-
 import { getReportsWithProjects } from "@/lib/report-actions";
 import { updateProject } from "@/lib/project-actions";
 import TMKanbanWrapper from "@/components/dashboard/TMKanbanWrapper";
+import GanttChart from "@/components/dashboard/GanttChart";
+import MilestoneModal from "@/components/dashboard/MilestoneModal";
+import { getMilestones, type Milestone, deleteMilestone } from "@/lib/milestone-actions";
 
 type ProjectExtended = Project & {
   description: string | null;
@@ -1031,14 +1034,17 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "kanban">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "kanban" | "gantt">("overview");
 
   // Modals state
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -1051,6 +1057,11 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
         const reportsResult = await getReportsWithProjects();
         if (reportsResult.success && reportsResult.reports) {
           setReports(reportsResult.reports.filter((r) => r.project_id === project.id));
+        }
+
+        const milestonesResult = await getMilestones(project.id);
+        if (milestonesResult.success && milestonesResult.milestones) {
+          setMilestones(milestonesResult.milestones);
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -1413,6 +1424,22 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
               >
                 Kanban
               </button>
+              <button
+                onClick={() => setActiveTab("gantt")}
+                style={{
+                  padding: "10px 20px",
+                  background: activeTab === "gantt" ? "#6B1A2A" : "#fff",
+                  color: activeTab === "gantt" ? "#fff" : "#666",
+                  border: activeTab === "gantt" ? "none" : "1px solid rgba(0,0,0,0.15)",
+                  borderRadius: "0",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+              >
+                Gantt
+              </button>
             </div>
           </div>
         </div>
@@ -1713,7 +1740,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
               </div>
             </div>
           </>
-        ) : (
+        ) : activeTab === "kanban" ? (
           /* Kanban Tab */
           <div style={{ height: "calc(100vh - 200px)" }}>
             <TMKanbanWrapper
@@ -1724,6 +1751,36 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
               onProjectChange={() => {}}
               onAddTask={() => setShowCreateTask(true)}
               isTM={true}
+            />
+          </div>
+        ) : (
+          /* Gantt Tab */
+          <div style={{ height: "calc(100vh - 200px)", background: "#fff", borderRadius: "0", border: "1px solid rgba(0,0,0,0.08)" }}>
+            <GanttChart
+              tasks={tasks}
+              milestones={milestones}
+              projectStart={project.start_date ? new Date(project.start_date) : null}
+              projectEnd={project.end_date ? new Date(project.end_date) : null}
+              projectId={project.id}
+              teamMembers={teamMembers}
+              onAddMilestone={() => {
+                setEditingMilestone(null);
+                setShowMilestoneModal(true);
+              }}
+              onEditMilestone={(milestone) => {
+                setEditingMilestone(milestone);
+                setShowMilestoneModal(true);
+              }}
+              onDeleteMilestone={async (id) => {
+                const result = await deleteMilestone(id);
+                if (result.success) {
+                  setMilestones(milestones.filter((m) => m.id !== id));
+                }
+              }}
+              onTaskUpdate={() => {
+                // Refresh tasks
+                loadData();
+              }}
             />
           </div>
         )}
@@ -1761,6 +1818,26 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
         <ReportDetailModal
           report={selectedReport}
           onClose={() => setSelectedReport(null)}
+        />
+      )}
+
+      {showMilestoneModal && (
+        <MilestoneModal
+          mode={editingMilestone ? "update" : "create"}
+          milestone={editingMilestone}
+          projectId={project.id}
+          onClose={() => {
+            setShowMilestoneModal(false);
+            setEditingMilestone(null);
+          }}
+          onSaved={async () => {
+            setShowMilestoneModal(false);
+            setEditingMilestone(null);
+            const result = await getMilestones(project.id);
+            if (result.success && result.milestones) {
+              setMilestones(result.milestones);
+            }
+          }}
         />
       )}
     </div>

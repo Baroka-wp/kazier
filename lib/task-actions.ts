@@ -35,6 +35,7 @@ export type Task = {
   priority: "low" | "medium" | "high";
   project_id: number | null;
   assigned_to: number[] | null;
+  start_date: string | null;
   due_date: string | null;
   created_at: string;
   assigned_to_names?: string[];
@@ -48,6 +49,7 @@ export type CreateTaskData = {
   priority?: "low" | "medium" | "high";
   project_id?: number | null;
   assigned_to?: number[] | null;
+  start_date?: string | null;
   due_date?: string | null;
 };
 
@@ -232,6 +234,20 @@ export async function createTask(data: CreateTaskData): Promise<TaskResult> {
     const validation = validateTask(data);
     if (!validation.valid) return { success: false, error: validation.error };
 
+    let startDate: Date | null = null;
+    if (data.start_date) {
+      const match = data.start_date.match(/^(\d{4}-\d{2}-\d{2})[\sT](\d{2}:\d{2})/);
+      if (match) {
+        const [, datePart, timePart] = match;
+        const [year, month, day] = datePart.split("-").map(Number);
+        const [hour, minute] = timePart.split(":").map(Number);
+        startDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
+      } else {
+        startDate = new Date(data.start_date);
+      }
+      if (isNaN(startDate.getTime())) startDate = null;
+    }
+
     let dueDate: Date | null = null;
     if (data.due_date) {
       const match = data.due_date.match(/^(\d{4}-\d{2}-\d{2})[\sT](\d{2}:\d{2})/);
@@ -254,6 +270,7 @@ export async function createTask(data: CreateTaskData): Promise<TaskResult> {
         priority: data.priority || "medium",
         project_id: data.project_id || null,
         assigned_to: data.assigned_to || [],
+        start_date: startDate,
         due_date: dueDate,
       },
     });
@@ -374,6 +391,12 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
       project_id: data.project_id !== undefined ? data.project_id : existing.project_id,
       assigned_to:
         data.assigned_to !== undefined ? data.assigned_to : parseAssignedTo(existing.assigned_to),
+      start_date:
+        data.start_date !== undefined
+          ? data.start_date
+          : existing.start_date
+            ? serializeDueDate(existing.start_date)
+            : null,
       due_date:
         data.due_date !== undefined
           ? data.due_date
@@ -384,6 +407,20 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
 
     const validation = validateTask(mergedData);
     if (!validation.valid) return { success: false, error: validation.error };
+
+    let startDate: Date | null = null;
+    if (mergedData.start_date) {
+      const match = mergedData.start_date.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/);
+      if (match) {
+        const [, datePart, timePart] = match;
+        const [year, month, day] = datePart.split("-").map(Number);
+        const [hour, minute] = timePart.split(":").map(Number);
+        startDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
+      } else {
+        startDate = new Date(mergedData.start_date);
+      }
+      if (isNaN(startDate.getTime())) startDate = null;
+    }
 
     let dueDate: Date | null = null;
     if (mergedData.due_date) {
@@ -406,8 +443,11 @@ export async function updateTask(id: number, data: UpdateTaskData): Promise<Task
         description: mergedData.description?.trim() || "",
         status: mergedData.status!,
         priority: mergedData.priority!,
-        project_id: mergedData.project_id ?? null,
+        project: mergedData.project_id
+          ? { connect: { id: mergedData.project_id } }
+          : { disconnect: true },
         assigned_to: mergedData.assigned_to || [],
+        start_date: startDate,
         due_date: dueDate,
       },
     });
@@ -516,6 +556,7 @@ async function enrichTask(task: PrismaTask): Promise<Task> {
     priority: (task.priority as "low" | "medium" | "high") ?? "medium",
     project_id: task.project_id,
     assigned_to: assignedIds,
+    start_date: serializeDueDate(task.start_date),
     due_date: serializeDueDate(task.due_date),
     created_at:
       typeof task.created_at === "string" ? task.created_at : task.created_at.toISOString(),

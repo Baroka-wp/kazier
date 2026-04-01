@@ -50,6 +50,7 @@ model project {
   // Relations
   tasks              tasks[]
   rapports           rapports[]
+  milestones         milestones[]
 }
 
 model tasks {
@@ -60,6 +61,7 @@ model tasks {
   priority      String?
   project_id    Int?
   assigned_to   Int[]
+  start_date    DateTime?       @db.Timestamptz(6)
   due_date      DateTime?       @db.Timestamptz(6)
   created_at    DateTime        @default(now())
   reminder_sent Boolean         @default(false)
@@ -75,6 +77,16 @@ model task_comments {
   created_at DateTime @default(now())
   task       tasks    @relation(fields: [task_id], references: [id], onDelete: Cascade)
   team       teams    @relation(fields: [team_id], references: [id])
+}
+
+model milestones {
+  id           Int       @id @default(autoincrement())
+  project_id   Int
+  title        String
+  due_date     DateTime  @db.Date
+  deliverables String?   @db.Text
+  created_at   DateTime  @default(now())
+  project      project   @relation(fields: [project_id], references: [id], onDelete: Cascade)
 }
 
 model rapports {
