@@ -93,6 +93,7 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
         onBack={() => setDetailTask(null)}
         teamMemberId={teamMemberId}
         isTM={false}
+        canManageTasks={true}
         onUpdated={(updated) => {
           setLocalTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
           setDetailTask(updated);

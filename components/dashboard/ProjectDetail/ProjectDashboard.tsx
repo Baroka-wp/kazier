@@ -11,9 +11,11 @@ import {
   X,
   Layers,
   Database,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Project, TeamMember, getTeams } from "@/lib/project-actions";
+import { Project, TeamMember, getTeams, deleteProject } from "@/lib/project-actions";
 import { getTasks, Task, getTeamMembersByProject } from "@/lib/task-actions";
 import { getReportsWithProjects } from "@/lib/report-actions";
 import { updateProject } from "@/lib/project-actions";
@@ -439,6 +441,199 @@ function ReportsModal({
   );
 }
 
+// ── Project Settings Modal ───────────────────────────────────────────────────
+function ProjectSettingsModal({
+  project,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  project: ProjectExtended;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.35)",
+        zIndex: 150,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: "0",
+          width: "100%",
+          maxWidth: 400,
+          border: "1px solid rgba(0,0,0,0.08)",
+          animation: "popIn 0.2s ease",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: "18px 20px",
+            borderBottom: "1px solid rgba(0,0,0,0.06)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 600,
+                textTransform: "uppercase" as const,
+                letterSpacing: "0.1em",
+                color: "#aaa",
+                marginBottom: 2,
+              }}
+            >
+              Paramètres
+            </div>
+            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#1A1A1A" }}>
+              {project.name}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "8px",
+              border: "1px solid rgba(0,0,0,0.08)",
+              background: "#e8eaed",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#888",
+              transition: "all 0.15s",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Options */}
+        <div style={{ padding: "20px" }}>
+          <button
+            onClick={() => {
+              onClose();
+              onEdit();
+            }}
+            style={{
+              width: "100%",
+              padding: "14px 16px",
+              background: "#fff",
+              border: "1px solid rgba(0,0,0,0.1)",
+              borderRadius: "0",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              marginBottom: "12px",
+              transition: "all 0.15s",
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#f8f9fa";
+              e.currentTarget.style.borderColor = "rgba(107,26,42,0.2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#fff";
+              e.currentTarget.style.borderColor = "rgba(0,0,0,0.1)";
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "0",
+                background: "rgba(59,130,246,0.08)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Edit size={20} color="#3b82f6" />
+            </div>
+            <div style={{ flex: 1, textAlign: "left" }}>
+              <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1A1A1A" }}>
+                Modifier le projet
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "2px" }}>
+                Éditer les informations du projet
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => {
+              onClose();
+              onDelete();
+            }}
+            style={{
+              width: "100%",
+              padding: "14px 16px",
+              background: "#fff",
+              border: "1px solid rgba(0,0,0,0.1)",
+              borderRadius: "0",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              transition: "all 0.15s",
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(239,68,68,0.05)";
+              e.currentTarget.style.borderColor = "rgba(239,68,68,0.3)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#fff";
+              e.currentTarget.style.borderColor = "rgba(0,0,0,0.1)";
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "0",
+                background: "rgba(239,68,68,0.08)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Trash2 size={20} color="#ef4444" />
+            </div>
+            <div style={{ flex: 1, textAlign: "left" }}>
+              <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1A1A1A" }}>
+                Supprimer le projet
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "2px" }}>
+                Cette action est irréversible
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}`}</style>
+    </div>
+  );
+}
+
 // ── Report Detail Modal ──────────────────────────────────────────────────────
 function ReportDetailModal({ report, onClose }: { report: Report; onClose: () => void }) {
   const fields = [
@@ -647,6 +842,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
@@ -1012,7 +1208,7 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
 
             <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
               <button
-                onClick={() => router.push(`/dashboard/projects/${project.id}/edit`)}
+                onClick={() => setShowSettingsModal(true)}
                 style={{
                   padding: "10px 14px",
                   background: "#e8eaed",
@@ -1033,10 +1229,10 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "#e8eaed";
                 }}
-                title="Modifier le projet"
+                title="Paramètres du projet"
               >
                 <Settings size={18} />
-                <span>Modifier</span>
+                <span>Settings</span>
               </button>
               <button
                 onClick={() => setActiveTab("overview")}
@@ -1536,6 +1732,28 @@ export default function ProjectDashboard({ project }: { project: ProjectExtended
           project={project}
           onClose={() => setShowAddMember(false)}
           onSaved={handleMemberSaved}
+        />
+      )}
+
+      {showSettingsModal && (
+        <ProjectSettingsModal
+          project={project}
+          onClose={() => setShowSettingsModal(false)}
+          onEdit={() => router.push(`/dashboard/projects/${project.id}/edit`)}
+          onDelete={async () => {
+            if (
+              confirm(
+                `Êtes-vous sûr de vouloir supprimer le projet "${project.name}" ? Cette action est irréversible.`
+              )
+            ) {
+              const result = await deleteProject(project.id);
+              if (result.success) {
+                router.push("/dashboard/projects");
+              } else {
+                alert(result.error || "Erreur lors de la suppression du projet");
+              }
+            }
+          }}
         />
       )}
 

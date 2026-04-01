@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable react-hooks/preserve-manual-memoization */
-
 import { Task, updateTask } from "@/lib/task-actions";
 import { Milestone } from "@/lib/milestone-actions";
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -332,6 +330,19 @@ export default function GanttChart({
       document.body.style.cursor = "default";
     };
   }, [isDragging]);
+
+  // Auto-scroll to today's position on mount
+  useEffect(() => {
+    if (chartRef.current && todayPosition > 0) {
+      // Center today's position in the viewport
+      const scrollLeft = todayPosition - chartRef.current.clientWidth / 2;
+      chartRef.current.scrollTo({
+        left: Math.max(0, scrollLeft),
+        behavior: "smooth",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array = run only on mount (todayPosition should not trigger re-scroll)
 
   function handleTaskModalSuccess() {
     setShowTaskModal(false);

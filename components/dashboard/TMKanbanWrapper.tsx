@@ -106,6 +106,7 @@ export default function TMKanbanWrapper({
         onBack={() => setSelectedTask(null)}
         teamMemberId={teamMemberId}
         isTM={isTM}
+        canManageTasks={true}
         onUpdated={(updatedTask: Task) => {
           setLocalTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
           setSelectedTask(updatedTask);
