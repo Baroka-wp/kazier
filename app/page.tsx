@@ -1,9 +1,9 @@
-import DailyForm from "@/components/DailyForm";
+import DailyFormLong from "@/components/DailyForm/DailyFormLong";
 
 export default function Home() {
   return (
     <>
-      <DailyForm />
+      <DailyFormLong />
     </>
   );
 }
