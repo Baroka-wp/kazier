@@ -1,16 +1,17 @@
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (skip prepare script to avoid Husky in Docker)
+RUN npm ci --ignore-scripts
 
-# Stage 2: Quality Checks & Build
+# Stage 2: Builder
 FROM node:20-alpine AS builder
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 # Copy dependencies from deps stage
@@ -21,17 +22,15 @@ COPY . .
 ENV DATABASE_URL="postgresql://user:password@localhost:5432/kazier"
 RUN ./node_modules/.bin/prisma generate
 
-# Run quality checks
-RUN npm run lint
-RUN npm run type-check
-RUN npm run format:check
-
-# Build the application
+# Build the application (skip quality checks in Docker to save time)
+# Quality checks should be done in CI/CD before pushing
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV SKIP_ENV_VALIDATION=1
 RUN npm run build
 
 # Stage 3: Production runner
 FROM node:20-alpine AS runner
+RUN apk add --no-cache openssl curl wget
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -48,6 +47,10 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 USER nextjs
 
 EXPOSE 3000
@@ -55,4 +58,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "server.js"]

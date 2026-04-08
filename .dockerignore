@@ -42,6 +42,9 @@ coverage
 .travis.yml
 .circleci
 
+# Husky (not needed in Docker)
+.husky
+
 # IDE
 .vscode
 .idea
@@ -50,9 +53,10 @@ coverage
 *~
 
 # Docker
-Dockerfile
+# Keep Dockerfile and docker-compose for Coolify
+# Dockerfile
 .dockerignore
-docker-compose*.yml
+# docker-compose*.yml
 
 # Documentation
 README.md
