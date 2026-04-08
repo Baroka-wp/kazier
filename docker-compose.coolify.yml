@@ -1,18 +1,15 @@
 version: '3.8'
 
-# ⚠️ CONFIGURATION POUR COOLIFY (PRODUCTION)
-# Pour le développement local, utilisez: docker-compose.local.yml
-
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
       target: runner
-    # Pas de container_name - Coolify le gère automatiquement
+    # ⚠️ Pas de container_name - Coolify le gère automatiquement
     expose:
       - "3000"
-    # Pas de ports mappés - Coolify utilise un reverse proxy (Traefik)
+    # ⚠️ Pas de ports mappés - Coolify utilise un reverse proxy (Traefik)
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
@@ -40,5 +37,4 @@ services:
       retries: 3
       start_period: 40s
 
-# Pas de volumes ni networks - Coolify les gère automatiquement
-# La base de données est sur Neon (externe)
+# ⚠️ Pas de volumes ni networks - Coolify les gère automatiquement
