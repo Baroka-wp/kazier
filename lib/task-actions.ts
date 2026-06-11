@@ -649,9 +649,11 @@ export async function getTeamMembersByProject(projectId: number): Promise<{
   }
 }
 
-// ── GET TASKS BY MEMBER ───────────────────────────────────────────────────────
+// ── GET OPEN TASKS FOR MEMBER (dashboard view) ────────────────────────────────
+// Renommée pour éviter la collision avec lib/actions.ts::getTasksByMember
+// (qui retourne un format brut différent, consommé par DailyForm).
 
-export async function getTasksByMember(memberId: number): Promise<{
+export async function getOpenTasksForMember(memberId: number): Promise<{
   success: boolean;
   tasks?: Task[];
   error?: string;
@@ -670,7 +672,7 @@ export async function getTasksByMember(memberId: number): Promise<{
     const enriched = await Promise.all(result.map((t) => enrichTask(t)));
     return { success: true, tasks: enriched };
   } catch (err: unknown) {
-    console.error("[getTasksByMember]", err instanceof Error ? err.message : String(err));
+    console.error("[getOpenTasksForMember]", err instanceof Error ? err.message : String(err));
     return { success: false, error: "Erreur lors de la récupération des tâches." };
   }
 }
