@@ -1,38 +1,36 @@
 "use server";
 
-import { prisma } from "./prisma";
-import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
-import { getPermissions } from "@/lib/permissions";
+/**
+ * Wrappers Server Actions — pages Projets.
+ * Délègue à lib/core/projects et lib/core/members puis adapte le shape.
+ */
 
-async function requireTeamManagement() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Non authentifié");
-  const userRole = (session.user as { role?: string }).role;
-  const permissions = getPermissions(userRole ?? null);
-  if (!permissions.canManageTeam) throw new Error("Non autorisé: permissions insuffisantes");
-  return session.user;
-}
+import { projects, members as membersCore } from "@/lib/core";
+import type { ProjectRow, ProjectDetail } from "@/lib/core/projects";
+import { currentActor } from "@/lib/server/with-auth";
+import { revalidatePath } from "next/cache";
+
+// ── Types historiques préservés ──────────────────────────────────────────
 
 export type TeamMember = {
-  id: number;
+  id: string;
   first_name: string | null;
   last_name: string | null;
   full_name: string;
   User?: {
-    id: number;
+    id: string;
     email: string | null;
     role: string | null;
   } | null;
 };
 
 export type Project = {
-  id: number;
+  id: string;
   name: string | null;
   description: string | null;
   icon: string | null;
   created_at?: Date;
-  team_ids: number[];
+  team_ids: string[];
   team_members?: TeamMember[];
   objectives?: string | null;
   stakeholders?: string | null;
@@ -44,7 +42,7 @@ export type CreateProjectData = {
   name: string;
   description: string;
   icon?: string | null;
-  team_ids?: number[];
+  team_ids?: string[];
   objectives?: string | null;
   stakeholders?: string | null;
   start_date?: string | null;
@@ -59,7 +57,7 @@ export type PaginationParams = {
   page?: number;
   limit?: number;
   search?: string;
-  teamId?: number;
+  teamId?: string;
 };
 
 export type PaginatedResult<T> = {
@@ -70,371 +68,197 @@ export type PaginatedResult<T> = {
   totalPages: number;
 };
 
-async function sendSlackProjectAssignment(params: {
-  slack_id: string;
-  first_name: string;
-  project_name: string;
-  project_icon: string;
-}) {
-  try {
-    const response = await fetch("https://slack.com/api/chat.postMessage", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        channel: params.slack_id,
-        blocks: [
-          {
-            type: "section",
-            text: { type: "mrkdwn", text: `Bonjour *${params.first_name}* 👋` },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `📁 Vous avez été ajouté au projet *${params.project_name}* !\n\nVous faites maintenant partie de ce projet. Pensez à soumettre votre rapport quotidien.`,
-            },
-          },
-          {
-            type: "actions",
-            elements: [
-              {
-                type: "button",
-                text: { type: "plain_text", text: "📝 Soumettre mon rapport" },
-                url: process.env.NEXT_PUBLIC_FORM_URL,
-                style: "primary",
-              },
-            ],
-          },
-        ],
-      }),
-    });
-    const data = await response.json();
-    if (!data.ok) console.error("[sendSlackProjectAssignment]", data.error);
-  } catch (err) {
-    console.error("[sendSlackProjectAssignment]", err);
-  }
+// ── Helpers d'adaptation ─────────────────────────────────────────────────
+
+function fromRow(p: ProjectRow, membersList: TeamMember[] = []): Project {
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    icon: p.icon,
+    created_at: p.createdAt,
+    team_ids: membersList.map((m) => m.id),
+    team_members: membersList,
+    objectives: p.objectives,
+    stakeholders: p.stakeholders,
+    start_date: p.startDate,
+    end_date: p.endDate,
+  };
 }
 
-function validateProject(
-  data: CreateProjectData
-): { valid: true } | { valid: false; error: string } {
-  const name = data.name?.trim();
-  if (!name || name.length < 2)
-    return { valid: false, error: "Le nom doit contenir au moins 2 caractères." };
-  if (name.length > 100)
-    return { valid: false, error: "Le nom est trop long (100 caractères max)." };
-  const description = data.description?.trim();
-  if (!description || description.length < 5)
-    return { valid: false, error: "La description doit contenir au moins 5 caractères." };
-  if (description.length > 500)
-    return { valid: false, error: "La description est trop longue (500 caractères max)." };
-  return { valid: true };
+function fromDetail(p: ProjectDetail): Project {
+  const teamMembers: TeamMember[] = p.members.map((m) => ({
+    id: m.memberId,
+    first_name: m.fullName.split(" ")[0] ?? null,
+    last_name: m.fullName.split(" ").slice(1).join(" ") || null,
+    full_name: m.fullName,
+    User: null, // chargé séparément si besoin via getTeams()
+  }));
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    icon: p.icon,
+    created_at: p.createdAt,
+    team_ids: teamMembers.map((m) => m.id),
+    team_members: teamMembers,
+    objectives: p.objectives,
+    stakeholders: p.stakeholders,
+    start_date: p.startDate,
+    end_date: p.endDate,
+  };
 }
 
-async function populateTeamMembers(team_ids: number[]): Promise<TeamMember[]> {
-  if (!team_ids.length) return [];
-  try {
-    const members = await prisma.teams.findMany({
-      where: { id: { in: team_ids } },
-      select: {
-        id: true,
-        first_name: true,
-        last_name: true,
-        users: { take: 1 },
-      },
-      orderBy: { first_name: "asc" },
-    });
-    return members.map((m) => ({
-      id: m.id,
-      first_name: m.first_name,
-      last_name: m.last_name,
-      full_name: `${m.first_name} ${m.last_name}`,
-      User: m.users[0] ?? null,
-    }));
-  } catch (err) {
-    console.error("[populateTeamMembers]", err);
-    return [];
-  }
-}
+// ── createProject ────────────────────────────────────────────────────────
 
 export async function createProject(data: CreateProjectData): Promise<ProjectResult> {
   try {
-    await requireTeamManagement();
-    const validation = validateProject(data);
-    if (!validation.valid) return { success: false, error: validation.error };
-
-    const name = data.name.trim();
-    const description = data.description.trim();
-    const icon = data.icon || null;
-    const team_ids = data.team_ids || [];
-    const objectives = data.objectives?.trim() || null;
-    const stakeholders = data.stakeholders?.trim() || null;
-    const start_date = data.start_date ? new Date(data.start_date) : null;
-    const end_date = data.end_date ? new Date(data.end_date) : null;
-
-    const project = await prisma.project.create({
-      data: { name, description, icon, team_ids, objectives, stakeholders, start_date, end_date },
+    const actor = await currentActor();
+    const res = await projects.create(actor, {
+      name: data.name,
+      description: data.description,
+      icon: data.icon ?? undefined,
+      objectives: data.objectives ?? undefined,
+      stakeholders: data.stakeholders ?? undefined,
+      startDate: data.start_date ?? undefined,
+      endDate: data.end_date ?? undefined,
+      memberIds: data.team_ids ?? [],
     });
-
-    const members = await populateTeamMembers(team_ids);
-
-    if (team_ids.length > 0) {
-      const membersWithSlack = await prisma.teams.findMany({
-        where: { id: { in: team_ids }, slack_id: { not: null } },
-        select: { id: true, first_name: true, slack_id: true },
-      });
-      await Promise.all(
-        membersWithSlack.map((m) =>
-          sendSlackProjectAssignment({
-            slack_id: m.slack_id!,
-            first_name: m.first_name ?? "",
-            project_name: name,
-            project_icon: icon || "",
-          })
-        )
-      );
-    }
-
-    revalidatePath("/dashboard/projets");
+    if (!res.ok) return { success: false, error: res.message };
+    revalidatePath("/dashboard/projects");
     revalidatePath("/dashboard");
-
-    return {
-      success: true,
-      project: {
-        id: project.id,
-        name: project.name,
-        description: project.description,
-        icon: project.icon,
-        team_ids: project.team_ids,
-        team_members: members,
-        objectives: project.objectives,
-        stakeholders: project.stakeholders,
-        start_date: project.start_date,
-        end_date: project.end_date,
-      },
-    };
-  } catch (err: unknown) {
-    console.error("[createProject]", err instanceof Error ? err.message : String(err));
+    return { success: true, project: fromDetail(res.data) };
+  } catch (e) {
+    console.error("[createProject]", e);
     return { success: false, error: "Erreur lors de la création du projet." };
   }
 }
 
-export async function getProject(id: number): Promise<ProjectResult> {
+// ── getProject ───────────────────────────────────────────────────────────
+
+export async function getProject(id: string): Promise<ProjectResult> {
   try {
-    const project = await prisma.project.findUnique({ where: { id } });
-    if (!project) return { success: false, error: "Projet non trouvé." };
-    const members = await populateTeamMembers(project.team_ids);
-    return {
-      success: true,
-      project: {
-        id: project.id,
-        name: project.name,
-        description: project.description,
-        icon: project.icon,
-        created_at: project.created_at,
-        team_ids: project.team_ids,
-        team_members: members,
-        objectives: project.objectives,
-        stakeholders: project.stakeholders,
-        start_date: project.start_date,
-        end_date: project.end_date,
-      },
-    };
-  } catch (err: unknown) {
-    console.error("[getProject]", err instanceof Error ? err.message : String(err));
+    const actor = await currentActor();
+    const res = await projects.get(actor, id);
+    if (!res.ok) return { success: false, error: res.message };
+    return { success: true, project: fromDetail(res.data) };
+  } catch (e) {
+    console.error("[getProject]", e);
     return { success: false, error: "Erreur lors de la récupération du projet." };
   }
 }
 
+// ── getProjects ──────────────────────────────────────────────────────────
+
 export async function getProjects(
   params?: PaginationParams
 ): Promise<PaginatedResult<Project> | { success: boolean; projects?: Project[]; error?: string }> {
-  if (!params) {
-    const projects = await prisma.project.findMany({ orderBy: { id: "desc" } });
-    const typedProjects: Project[] = await Promise.all(
-      projects.map(async (p) => {
-        const members = await populateTeamMembers(p.team_ids);
-        return {
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          icon: p.icon,
-          team_ids: p.team_ids,
-          team_members: members,
-        };
+  try {
+    const actor = await currentActor();
+    const res = await projects.list(actor, {
+      page: params?.page,
+      limit: params?.limit,
+      search: params?.search,
+      memberId: params?.teamId,
+    });
+    if (!res.ok) return { success: false, error: res.message };
+
+    // Pour chaque projet, on enrichit les members (l'UI les affiche)
+    const enriched = await Promise.all(
+      res.data.data.map(async (p) => {
+        const detail = await projects.get(actor, p.id);
+        if (detail.ok) {
+          return fromDetail(detail.data);
+        }
+        return fromRow(p);
       })
     );
-    return { success: true, projects: typedProjects };
+
+    if (!params) {
+      return { success: true, projects: enriched };
+    }
+    return {
+      data: enriched,
+      total: res.data.total,
+      page: res.data.page,
+      limit: res.data.limit,
+      totalPages: res.data.totalPages,
+    };
+  } catch (e) {
+    console.error("[getProjects]", e);
+    return { success: false, error: "Erreur lors de la récupération des projets." };
   }
-
-  const page = params.page ?? 1;
-  const limit = params.limit ?? 10;
-  const search = params.search;
-
-  type WhereClause = {
-    OR?: Array<{
-      name?: { contains: string; mode: "insensitive" };
-      description?: { contains: string; mode: "insensitive" };
-    }>;
-    team_ids?: { has: number }; // 👈 ajouter
-  };
-  const where: WhereClause = {};
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" as const } },
-      { description: { contains: search, mode: "insensitive" as const } },
-    ];
-  }
-
-  // const total = await prisma.project.count({ where });
-  // 👇 Filtrer par team_id si TM
-
-  if (params.teamId) {
-    where.team_ids = { has: params.teamId };
-  }
-
-  const total = await prisma.project.count({ where });
-
-  const projects = await prisma.project.findMany({
-    where,
-    orderBy: { id: "desc" },
-    skip: (page - 1) * limit,
-    take: limit,
-  });
-
-  const typedProjects: Project[] = await Promise.all(
-    projects.map(async (p) => {
-      const members = await populateTeamMembers(p.team_ids);
-      return {
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        icon: p.icon,
-        team_ids: p.team_ids,
-        team_members: members,
-        objectives: p.objectives,
-        stakeholders: p.stakeholders,
-        start_date: p.start_date,
-        end_date: p.end_date,
-      };
-    })
-  );
-
-  return {
-    data: typedProjects,
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
-  };
 }
 
-export async function updateProject(id: number, data: UpdateProjectData): Promise<ProjectResult> {
+// ── updateProject ────────────────────────────────────────────────────────
+
+export async function updateProject(
+  id: string,
+  data: UpdateProjectData
+): Promise<ProjectResult> {
   try {
-    await requireTeamManagement();
-    const existing = await prisma.project.findUnique({ where: { id } });
-    if (!existing) return { success: false, error: "Projet non trouvé." };
-
-    const oldTeamIds = existing.team_ids;
-    const mergedData: CreateProjectData = {
-      name: data.name ?? existing.name ?? "",
-      description: data.description ?? existing.description ?? "",
-      icon: data.icon !== undefined ? data.icon : existing.icon,
-      team_ids: data.team_ids ?? oldTeamIds,
-      objectives: data.objectives !== undefined ? data.objectives : existing.objectives,
-      stakeholders: data.stakeholders !== undefined ? data.stakeholders : existing.stakeholders,
-      start_date:
-        data.start_date !== undefined
-          ? data.start_date
-          : existing.start_date instanceof Date
-            ? existing.start_date.toISOString().split("T")[0]
-            : existing.start_date,
-      end_date:
-        data.end_date !== undefined
-          ? data.end_date
-          : existing.end_date instanceof Date
-            ? existing.end_date.toISOString().split("T")[0]
-            : existing.end_date,
-    };
-
-    const validation = validateProject(mergedData);
-    if (!validation.valid) return { success: false, error: validation.error };
-
-    const newTeamIds = mergedData.team_ids || [];
-
-    const updated = await prisma.project.update({
-      where: { id },
-      data: {
-        name: mergedData.name.trim(),
-        description: mergedData.description.trim(),
-        icon: mergedData.icon,
-        team_ids: newTeamIds,
-        objectives: mergedData.objectives,
-        stakeholders: mergedData.stakeholders,
-        start_date: mergedData.start_date ? new Date(mergedData.start_date) : null,
-        end_date: mergedData.end_date ? new Date(mergedData.end_date) : null,
-      },
+    const actor = await currentActor();
+    const res = await projects.update(actor, id, {
+      name: data.name,
+      description: data.description,
+      icon: data.icon ?? undefined,
+      objectives: data.objectives ?? undefined,
+      stakeholders: data.stakeholders ?? undefined,
+      startDate: data.start_date ?? undefined,
+      endDate: data.end_date ?? undefined,
     });
+    if (!res.ok) return { success: false, error: res.message };
 
-    const addedIds = newTeamIds.filter((tid: number) => !oldTeamIds.includes(tid));
-    if (addedIds.length > 0) {
-      const newMembers = await prisma.teams.findMany({
-        where: { id: { in: addedIds }, slack_id: { not: null } },
-        select: { id: true, first_name: true, slack_id: true },
-      });
-      await Promise.all(
-        newMembers.map((m) =>
-          sendSlackProjectAssignment({
-            slack_id: m.slack_id!,
-            first_name: m.first_name ?? "",
-            project_name: mergedData.name.trim(),
-            project_icon: mergedData.icon || "",
-          })
-        )
-      );
+    // Si team_ids fourni, on synchronise les ProjectMembers via add/remove
+    if (data.team_ids !== undefined) {
+      const detail = await projects.get(actor, id);
+      if (detail.ok) {
+        const current = new Set(detail.data.members.map((m) => m.memberId));
+        const next = new Set(data.team_ids);
+        const toAdd = [...next].filter((x) => !current.has(x));
+        const toRemove = [...current].filter((x) => !next.has(x));
+        await Promise.all([
+          ...toAdd.map((memberId) =>
+            projects.addMember(actor, { projectId: id, memberId })
+          ),
+          ...toRemove.map((memberId) =>
+            projects.removeMember(actor, { projectId: id, memberId })
+          ),
+        ]);
+      }
     }
 
-    const members = await populateTeamMembers(newTeamIds);
+    const refreshed = await projects.get(actor, id);
+    if (!refreshed.ok) return { success: false, error: refreshed.message };
 
-    revalidatePath("/dashboard/projets");
+    revalidatePath("/dashboard/projects");
     revalidatePath("/dashboard");
-
-    return {
-      success: true,
-      project: {
-        id: updated.id,
-        name: updated.name,
-        description: updated.description,
-        icon: updated.icon,
-        team_ids: updated.team_ids,
-        team_members: members,
-        objectives: updated.objectives,
-        stakeholders: updated.stakeholders,
-        start_date: updated.start_date,
-        end_date: updated.end_date,
-      },
-    };
-  } catch (err: unknown) {
-    console.error("[updateProject]", err instanceof Error ? err.message : String(err));
+    return { success: true, project: fromDetail(refreshed.data) };
+  } catch (e) {
+    console.error("[updateProject]", e);
     return { success: false, error: "Erreur lors de la modification du projet." };
   }
 }
 
-export async function deleteProject(id: number): Promise<{ success: boolean; error?: string }> {
+// ── deleteProject ────────────────────────────────────────────────────────
+
+export async function deleteProject(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireTeamManagement();
-    await prisma.project.delete({ where: { id } });
-    revalidatePath("/dashboard/projets");
+    const actor = await currentActor();
+    const res = await projects.remove(actor, id);
+    if (!res.ok) return { success: false, error: res.message };
+    revalidatePath("/dashboard/projects");
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (err: unknown) {
-    console.error("[deleteProject]", err instanceof Error ? err.message : String(err));
+  } catch (e) {
+    console.error("[deleteProject]", e);
     return { success: false, error: "Erreur lors de la suppression du projet." };
   }
 }
+
+// ── getTeams (liste tous les membres pour pickers) ──────────────────────
 
 export async function getTeams(): Promise<{
   success: boolean;
@@ -442,27 +266,22 @@ export async function getTeams(): Promise<{
   error?: string;
 }> {
   try {
-    const teams = await prisma.teams.findMany({
-      select: {
-        id: true,
-        first_name: true,
-        last_name: true,
-        users: { take: 1 },
-      },
-      orderBy: { first_name: "asc" },
-    });
-    return {
-      success: true,
-      teams: teams.map((t) => ({
-        id: t.id,
-        first_name: t.first_name,
-        last_name: t.last_name,
-        full_name: `${t.first_name} ${t.last_name}`,
-        User: t.users[0] ?? null,
-      })),
-    };
-  } catch (err: unknown) {
-    console.error("[getTeams]", err instanceof Error ? err.message : String(err));
+    const actor = await currentActor();
+    const res = await membersCore.list(actor, { limit: 100 });
+    if (!res.ok) return { success: false, error: res.message };
+
+    const teams: TeamMember[] = res.data.data.map((m) => ({
+      id: m.id,
+      first_name: m.firstName,
+      last_name: m.lastName,
+      full_name: m.fullName,
+      User: m.hasAuth
+        ? { id: m.id, email: m.email, role: m.role }
+        : null,
+    }));
+    return { success: true, teams };
+  } catch (e) {
+    console.error("[getTeams]", e);
     return { success: false, error: "Erreur lors de la récupération des équipes." };
   }
 }

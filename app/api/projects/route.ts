@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProjects } from "@/lib/project-actions";
 import { auth } from "@/auth";
-import { isTeamManager } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
-  //Vérification de l'authentification
   if (!session) {
     return new NextResponse("Non authentifié : Session manquante", { status: 401 });
   }
-  const user = session?.user as { role?: string; team_id?: number };
+  const user = session.user as { id?: string; role?: string };
   const role = user?.role ?? null;
 
   const searchParams = request.nextUrl.searchParams;
@@ -17,11 +15,10 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "10");
   const search = searchParams.get("search") || "";
 
-  // SA → teamId = undefined → voit tout
-  // TM → teamId = son team_id → voit seulement ses projets
-  const teamId = isTeamManager(role) ? user?.team_id : undefined;
+  // Un PROJECT_MANAGER ne voit que les projets dont il est membre.
+  // Pour SUPER_ADMIN, on ne filtre pas.
+  const teamId = role === "PROJECT_MANAGER" || role === "TM" ? user.id : undefined;
 
   const result = await getProjects({ page, limit, search, teamId });
-
   return Response.json(result);
 }

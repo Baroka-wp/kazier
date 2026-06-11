@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { isTeamManager } from "@/lib/permissions";
+import { prisma, projects as projectsCore } from "@/lib/core";
 
 export type TeamMember = {
-  id: number;
+  id: string;
   first_name: string | null;
   last_name: string | null;
   full_name: string;
@@ -12,8 +11,8 @@ export type TeamMember = {
   age: number | null;
   is_boss: boolean;
   slack_id: string | null;
-  created_at: string; // côté front, tu utilises déjà string
-  user_id: number | null;
+  created_at: string;
+  user_id: string | null;
   email: string | null;
   role: string | null;
 };
@@ -26,14 +25,14 @@ export type EvaluationStats = {
 };
 
 export type EvaluationComment = {
-  id: number;
+  id: string;
   evaluator_name: string;
   report_date: string;
   comment: string;
 };
 
 export type ProjectInfo = {
-  id: number;
+  id: string;
   name: string;
   icon: string | null;
 };
@@ -48,122 +47,100 @@ export type TeamMemberProfileData = {
 export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
-    const user = session?.user as { role?: string; team_id?: number } | undefined;
+    const user = session?.user as { id?: string; role?: string } | undefined;
     const role = user?.role ?? null;
+    const { id: memberId } = await context.params;
 
-    // params est une Promise en Next.js récent, il faut l'await
-    const { id } = await context.params;
-    const memberId = parseInt(id, 10);
-
-    if (isNaN(memberId)) {
-      return NextResponse.json({ error: "Identifiant de membre invalide" }, { status: 400 });
-    }
-
-    // 1) Récupérer le membre
-    const team = await prisma.teams.findUnique({
+    // 1) Membre cible + auth
+    const target = await prisma.member.findUnique({
       where: { id: memberId },
-      include: {
-        users: true,
-      },
+      include: { auth: { select: { id: true, email: true } } },
     });
-
-    if (!team) {
+    if (!target) {
       return NextResponse.json({ error: "Membre introuvable" }, { status: 404 });
     }
 
-    const userEntity = team.users[0] ?? null;
-
-    const member = {
-      id: team.id,
-      first_name: team.first_name,
-      last_name: team.last_name,
-      full_name: `${team.first_name || ""} ${team.last_name || ""}`.trim(),
-      phone: team.phone,
-      age: team.age,
-      is_boss: team.is_boss,
-      slack_id: team.slack_id,
-      created_at: team.created_at.toISOString(),
-      user_id: userEntity?.id ?? null,
-      email: userEntity?.email ?? null,
-      role: userEntity?.role ?? null,
+    const member: TeamMember = {
+      id: target.id,
+      first_name: target.firstName,
+      last_name: target.lastName,
+      full_name: `${target.firstName} ${target.lastName}`.trim(),
+      phone: target.phone,
+      age: target.age,
+      is_boss: target.isBoss,
+      slack_id: target.slackId,
+      created_at: target.createdAt.toISOString(),
+      user_id: target.auth?.id ?? null,
+      email: target.auth?.email ?? target.email,
+      role: target.role,
     };
 
-    // 2) Filtres d’accès pour TM
-    let allowedTeamIds: number[] | undefined = undefined;
-
-    if (isTeamManager(role) && user?.team_id) {
-      const projects = await prisma.project.findMany({
-        where: { team_ids: { has: user.team_id } },
-        select: { team_ids: true },
-      });
-      const ids = [...new Set(projects.flatMap((p) => p.team_ids))];
-      allowedTeamIds = ids;
+    // 2) Filtres d'accès pour PM
+    if ((role === "PROJECT_MANAGER" || role === "TM") && user?.id) {
+      const projList = await projectsCore.list(
+        { type: "HUMAN", memberId: user.id, role: "PROJECT_MANAGER" },
+        { memberId: user.id, limit: 100 }
+      );
+      const allowedMemberIds = new Set<string>();
+      if (projList.ok) {
+        await Promise.all(
+          projList.data.data.map(async (p) => {
+            const detail = await projectsCore.get(
+              { type: "HUMAN", memberId: user.id!, role: "PROJECT_MANAGER" },
+              p.id
+            );
+            if (detail.ok) detail.data.members.forEach((m) => allowedMemberIds.add(m.memberId));
+          })
+        );
+        if (!allowedMemberIds.has(memberId)) {
+          return NextResponse.json({ error: "Accès non autorisé à ce membre" }, { status: 403 });
+        }
+      }
     }
 
-    if (allowedTeamIds && !allowedTeamIds.includes(memberId)) {
-      return NextResponse.json({ error: "Accès non autorisé à ce membre" }, { status: 403 });
-    }
-
-    // 3) Évaluations du membre
+    // 3) Évaluations reçues
     const evaluations = await prisma.evaluation.findMany({
-      where: {
-        evaluated_id: memberId,
-      },
-      include: {
-        evaluator: true,
-      },
-      orderBy: { report_date: "desc" },
+      where: { evaluatedId: memberId },
+      include: { evaluator: { select: { firstName: true, lastName: true } } },
+      orderBy: { reportDate: "desc" },
     });
 
     const total = evaluations.length;
-
-    function avg(getField: (e: (typeof evaluations)[number]) => number) {
+    const avg = (getField: (e: (typeof evaluations)[number]) => number) => {
       if (!total) return { average: 0, percentage: 0 };
       const sum = evaluations.reduce((acc, e) => acc + getField(e), 0);
       const average = sum / total;
-      const percentage = Math.round((average / 5) * 100);
-      return { average, percentage };
-    }
+      return { average, percentage: Math.round((average / 5) * 100) };
+    };
 
-    const stats = {
+    const stats: EvaluationStats = {
       totalEvaluations: total,
       communication: avg((e) => e.communication),
       collaboration: avg((e) => e.collaboration),
       punctuality: avg((e) => e.punctuality),
     };
 
-    const comments = evaluations
+    const comments: EvaluationComment[] = evaluations
       .filter((e) => e.comment)
       .slice(0, 5)
-      .map((e) => {
-        const evaluatorName =
-          `${e.evaluator.first_name ?? ""} ${e.evaluator.last_name ?? ""}`.trim() || "Anonyme";
-
-        return {
-          id: e.id,
-          evaluator_name: evaluatorName,
-          report_date: e.report_date.toISOString(),
-          comment: e.comment as string,
-        };
-      });
+      .map((e) => ({
+        id: e.id,
+        evaluator_name:
+          `${e.evaluator.firstName} ${e.evaluator.lastName}`.trim() || "Anonyme",
+        report_date: e.reportDate.toISOString(),
+        comment: e.comment as string,
+      }));
 
     // 4) Projets du membre
-    const projects = await prisma.project.findMany({
-      where: {
-        team_ids: { has: memberId },
-      },
-      select: {
-        id: true,
-        name: true,
-        icon: true,
-      },
-      orderBy: { name: "asc" },
+    const memberships = await prisma.projectMember.findMany({
+      where: { memberId },
+      include: { project: { select: { id: true, name: true, icon: true } } },
+      orderBy: { project: { name: "asc" } },
     });
-
-    const projectsInfo = projects.map((p) => ({
-      id: p.id,
-      name: p.name ?? "Sans nom",
-      icon: p.icon,
+    const projectsInfo: ProjectInfo[] = memberships.map((m) => ({
+      id: m.project.id,
+      name: m.project.name,
+      icon: m.project.icon,
     }));
 
     return NextResponse.json({

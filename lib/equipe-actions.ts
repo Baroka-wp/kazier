@@ -1,11 +1,18 @@
 "use server";
 
-import { prisma } from "./prisma";
+/**
+ * Wrapper Server Action — page Équipe.
+ * Délègue à lib/core/members puis adapte le shape vers TeamMemberWithUser
+ * pour ne pas casser l'UI existante.
+ */
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+import { members } from "@/lib/core";
+import { currentActor } from "@/lib/server/with-auth";
+
+// ── Types historiques préservés (consommés par l'UI) ─────────────────────
 
 export type TeamMemberWithUser = {
-  id: number;
+  id: string; // ex-number, maintenant cuid
   first_name: string | null;
   last_name: string | null;
   full_name: string;
@@ -14,28 +21,18 @@ export type TeamMemberWithUser = {
   is_boss: boolean;
   slack_id: string | null;
   created_at: Date;
-  user_id: number | null;
+  user_id: string | null;
   email: string | null;
   role: string | null;
   user_created_at: Date | null;
 };
 
-export type TeamsDataResult = {
-  members: TeamMemberWithUser[];
-  totalMembers: number;
-  bosses: number;
-  withAccount: number;
-  withoutAccount: number;
-  roles: string[];
-};
-
-// Type pour la pagination
 export type PaginationParams = {
   page?: number;
   limit?: number;
   search?: string;
   role?: string;
-  allowedTeamIds?: number[]; // Pour filtrer les équipes accessibles à un TM
+  allowedTeamIds?: string[]; // ex-number[], maintenant cuid[]
 };
 
 export type PaginatedResult<T> = {
@@ -46,132 +43,51 @@ export type PaginatedResult<T> = {
   totalPages: number;
 };
 
-// ── Get Teams Data (avec pagination) ─────────────────────────────────────────
+// ── getTeamsData ─────────────────────────────────────────────────────────
 
 export async function getTeamsData(
   params?: PaginationParams
 ): Promise<PaginatedResult<TeamMemberWithUser> & { roles: string[] }> {
-  const page = params?.page ?? 1;
-  const limit = params?.limit ?? 10;
-  const search = params?.search;
-  const role = params?.role;
+  const actor = await currentActor();
+  const res = await members.list(actor, {
+    page: params?.page,
+    limit: params?.limit,
+    search: params?.search,
+    role: params?.role as "SUPER_ADMIN" | "PROJECT_MANAGER" | "MEMBER" | undefined,
+  });
+  if (!res.ok) throw new Error(res.message);
 
-  // Construire les filtres WHERE
-  type WhereClause = {
-    OR?: Array<{
-      first_name?: { contains: string; mode: "insensitive" };
-      last_name?: { contains: string; mode: "insensitive" };
-      email?: { contains: string; mode: "insensitive" };
-      phone?: { contains: string; mode: "insensitive" };
-    }>;
-    role?: string;
-    id?: { in: number[] };
-  };
-  const where: WhereClause = {};
-
-  if (search) {
-    where.OR = [
-      { first_name: { contains: search, mode: "insensitive" as const } },
-      { last_name: { contains: search, mode: "insensitive" as const } },
-      { email: { contains: search, mode: "insensitive" as const } },
-      { phone: { contains: search, mode: "insensitive" as const } },
-    ];
-  }
-
-  if (role) {
-    where.role = role;
-  }
-
+  // Filtre supplémentaire allowedTeamIds (sécurité PM)
+  let rows = res.data.data;
   if (params?.allowedTeamIds) {
-    where.id = { in: params.allowedTeamIds };
+    const allowed = new Set(params.allowedTeamIds);
+    rows = rows.filter((m) => allowed.has(m.id));
   }
 
-  // Récupérer le total
-  const total = await prisma.teams.count({ where });
+  const data: TeamMemberWithUser[] = rows.map((m) => ({
+    id: m.id,
+    first_name: m.firstName,
+    last_name: m.lastName,
+    full_name: m.fullName,
+    phone: m.phone,
+    age: m.age,
+    is_boss: m.isBoss,
+    slack_id: m.slackId,
+    created_at: m.createdAt,
+    user_id: m.hasAuth ? m.id : null,
+    email: m.email,
+    role: m.role,
+    user_created_at: m.hasAuth ? m.createdAt : null,
+  }));
 
-  // Récupérer les membres paginés
-  const teamsData = await prisma.teams.findMany({
-    where,
-    include: {
-      users: true,
-    },
-    orderBy: {
-      created_at: "desc",
-    },
-    skip: (page - 1) * limit,
-    take: limit,
-  });
-
-  // Transform to match expected format
-  const members: TeamMemberWithUser[] = teamsData.map((t) => {
-    const user = t.users[0];
-    return {
-      id: t.id,
-      first_name: t.first_name,
-      last_name: t.last_name,
-      full_name: `${t.first_name || ""} ${t.last_name || ""}`.trim(),
-      phone: t.phone,
-      age: t.age,
-      is_boss: t.is_boss,
-      slack_id: t.slack_id,
-      created_at: t.created_at,
-      user_id: user?.id ?? null,
-      email: user?.email ?? null,
-      role: user?.role ?? null,
-      user_created_at: user ? new Date() : null,
-    };
-  });
-
-  const roles = [...new Set(members.map((m) => m.role).filter(Boolean))] as string[];
+  const roles = [...new Set(data.map((m) => m.role).filter(Boolean))] as string[];
 
   return {
-    data: members,
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
+    data,
+    total: params?.allowedTeamIds ? data.length : res.data.total,
+    page: res.data.page,
+    limit: res.data.limit,
+    totalPages: res.data.totalPages,
     roles,
   };
-}
-
-// ── Get Teams Data (ancienne version pour compatibilité) ─────────────────────
-
-export async function getTeamsDataLegacy(): Promise<TeamsDataResult> {
-  const teamsData = await prisma.teams.findMany({
-    include: {
-      users: true,
-    },
-    orderBy: {
-      created_at: "desc",
-    },
-  });
-
-  // Transform to match expected format
-  const members: TeamMemberWithUser[] = teamsData.map((t) => {
-    const user = t.users[0]; // Get first user (if exists)
-    return {
-      id: t.id,
-      first_name: t.first_name,
-      last_name: t.last_name,
-      full_name: `${t.first_name || ""} ${t.last_name || ""}`.trim(),
-      phone: t.phone,
-      age: t.age,
-      is_boss: t.is_boss,
-      slack_id: t.slack_id,
-      created_at: t.created_at,
-      user_id: user?.id ?? null,
-      email: user?.email ?? null,
-      role: user?.role ?? null,
-      user_created_at: user ? new Date() : null,
-    };
-  });
-
-  const totalMembers = members.length;
-  const bosses = members.filter((m) => m.is_boss).length;
-  const withAccount = members.filter((m) => m.user_id !== null).length;
-  const withoutAccount = totalMembers - withAccount;
-
-  const roles = [...new Set(members.map((m) => m.role).filter(Boolean))] as string[];
-
-  return { members, totalMembers, bosses, withAccount, withoutAccount, roles };
 }
