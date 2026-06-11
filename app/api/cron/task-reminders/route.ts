@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
-import { sendTaskReminders } from "@/lib/notify-task-reminder";
+import { sendTaskReminders } from "@/lib/server/jobs/task-reminders";
 
 export async function GET() {
-  // Sécuriser avec un token secret
-  // const authHeader = request.headers.get("authorization");
-  // if (authHeader !== `Bearer ${process.env.AUTH_SECRET}`) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
-
-  await sendTaskReminders();
-  return NextResponse.json({ success: true });
+  const result = await sendTaskReminders();
+  return NextResponse.json({ success: true, ...result });
 }

@@ -1,214 +1,152 @@
 "use server";
 
-import { prisma } from "./prisma";
-import { auth } from "@/auth";
-import { revalidatePath } from "next/cache";
-import { notifyTaskComment } from "./notify-task-comment";
+/**
+ * Wrappers Server Actions — commentaires sur tâches.
+ * Délègue à tasks.addComment / listComments + update/delete via prisma.
+ */
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+import { tasks as tasksCore, prisma } from "@/lib/core";
+import { currentActor } from "@/lib/server/with-auth";
+import { revalidatePath } from "next/cache";
 
 export type TaskComment = {
-  id: number;
-  task_id: number;
-  team_id: number;
+  id: string;
+  task_id: string;
+  team_id: string;
   content: string;
   created_at: string;
   author_name: string;
   author_role: string | null;
 };
 
-// ── GET COMMENTS ──────────────────────────────────────────────────────────────
+// ── getTaskComments ──────────────────────────────────────────────────────
 
-export async function getTaskComments(taskId: number): Promise<{
+export async function getTaskComments(taskId: string): Promise<{
   success: boolean;
   comments?: TaskComment[];
   error?: string;
 }> {
   try {
-    const comments = await prisma.task_comments.findMany({
-      where: { task_id: taskId },
-      include: {
-        team: {
-          select: {
-            first_name: true,
-            last_name: true,
-            users: { select: { role: true }, take: 1 },
-          },
-        },
-      },
-      orderBy: { created_at: "asc" },
-    });
+    const actor = await currentActor();
+    const res = await tasksCore.listComments(actor, taskId);
+    if (!res.ok) return { success: false, error: res.message };
+
+    // On enrichit avec author_role en récupérant les Members en une requête
+    const memberIds = [...new Set(res.data.map((c) => c.memberId))];
+    const roles = memberIds.length
+      ? await prisma.member.findMany({
+          where: { id: { in: memberIds } },
+          select: { id: true, role: true },
+        })
+      : [];
+    const roleById = new Map(roles.map((m) => [m.id, m.role]));
 
     return {
       success: true,
-      comments: comments.map((c) => ({
+      comments: res.data.map((c) => ({
         id: c.id,
-        task_id: c.task_id,
-        team_id: c.team_id,
+        task_id: c.taskId,
+        team_id: c.memberId,
         content: c.content,
-        created_at: c.created_at.toISOString(),
-        author_name: `${c.team.first_name ?? ""} ${c.team.last_name ?? ""}`.trim(),
-        author_role: c.team.users[0]?.role ?? null,
+        created_at: c.createdAt.toISOString(),
+        author_name: c.authorName,
+        author_role: roleById.get(c.memberId) ?? null,
       })),
     };
-  } catch (err: unknown) {
-    console.error("[getTaskComments]", err instanceof Error ? err.message : String(err));
+  } catch (e) {
+    console.error("[getTaskComments]", e);
     return { success: false, error: "Erreur lors de la récupération des commentaires." };
   }
 }
 
-// ── ADD COMMENT ───────────────────────────────────────────────────────────────
+// ── addTaskComment ───────────────────────────────────────────────────────
 
 export async function addTaskComment(
-  taskId: number,
+  taskId: string,
   content: string
 ): Promise<{ success: boolean; comment?: TaskComment; error?: string }> {
   try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Non authentifié." };
+    const actor = await currentActor();
+    const res = await tasksCore.addComment(actor, { taskId, content });
+    if (!res.ok) return { success: false, error: res.message };
 
-    const teamId = parseInt((session.user as { team_id?: string }).team_id ?? "0");
-    if (!teamId) return { success: false, error: "Membre non trouvé." };
-
-    if (!content.trim()) return { success: false, error: "Le commentaire ne peut pas être vide." };
-
-    const comment = await prisma.task_comments.create({
-      data: {
-        task_id: taskId,
-        team_id: teamId,
-        content: content.trim(),
-      },
-      include: {
-        team: {
-          select: {
-            first_name: true,
-            last_name: true,
-            users: { select: { role: true }, take: 1 },
-          },
-        },
-      },
+    const member = await prisma.member.findUnique({
+      where: { id: res.data.memberId },
+      select: { role: true },
     });
 
-    revalidatePath("/dashboard/tasks");
-
-    //Notifier les membres liés à la tâche omis le propriétaire du commentaire
-    await notifyTaskComment({
-      taskId,
-      authorId: comment.team_id,
-      authorName: `${comment.team.first_name ?? ""} ${comment.team.last_name ?? ""}`.trim(),
-      content: comment.content,
-    });
-
-    console.log("Après notifyTaskComment");
-
+    revalidatePath(`/dashboard/tasks/${taskId}`);
     return {
       success: true,
       comment: {
-        id: comment.id,
-        task_id: comment.task_id,
-        team_id: comment.team_id,
-        content: comment.content,
-        created_at: comment.created_at.toISOString(),
-        author_name: `${comment.team.first_name ?? ""} ${comment.team.last_name ?? ""}`.trim(),
-        author_role: comment.team.users[0]?.role ?? null,
+        id: res.data.id,
+        task_id: res.data.taskId,
+        team_id: res.data.memberId,
+        content: res.data.content,
+        created_at: res.data.createdAt.toISOString(),
+        author_name: res.data.authorName,
+        author_role: member?.role ?? null,
       },
     };
-  } catch (err: unknown) {
-    console.error("[addTaskComment]", err instanceof Error ? err.message : String(err));
+  } catch (e) {
+    console.error("[addTaskComment]", e);
     return { success: false, error: "Erreur lors de l'ajout du commentaire." };
   }
 }
 
-// ── UPDATE COMMENT ─────────────────────────────────────────────────────────────
+// ── updateTaskComment ───────────────────────────────────────────────────
 
 export async function updateTaskComment(
-  commentId: number,
+  commentId: string,
   content: string
-): Promise<{ success: boolean; comment?: TaskComment; error?: string }> {
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Non authentifié." };
-
-    const teamId = parseInt((session.user as { team_id?: string }).team_id ?? "0");
-
-    const comment = await prisma.task_comments.findUnique({
-      where: { id: commentId },
-    });
-
-    if (!comment) return { success: false, error: "Commentaire non trouvé." };
-
-    // Seul l'auteur peut modifier
-    if (comment.team_id !== teamId) {
+    const actor = await currentActor();
+    if (actor.type !== "HUMAN") {
       return { success: false, error: "Non autorisé." };
     }
 
-    if (!content.trim()) return { success: false, error: "Le commentaire ne peut pas être vide." };
+    const existing = await prisma.taskComment.findUnique({ where: { id: commentId } });
+    if (!existing) return { success: false, error: "Commentaire introuvable." };
+    // Seul l'auteur ou un SA peut éditer
+    if (existing.memberId !== actor.memberId && actor.role !== "SUPER_ADMIN") {
+      return { success: false, error: "Vous ne pouvez éditer que vos propres commentaires." };
+    }
 
-    const updated = await prisma.task_comments.update({
+    await prisma.taskComment.update({
       where: { id: commentId },
       data: { content: content.trim() },
-      include: {
-        team: {
-          select: {
-            first_name: true,
-            last_name: true,
-            users: { select: { role: true }, take: 1 },
-          },
-        },
-      },
     });
-
-    revalidatePath("/dashboard/tasks");
-
-    return {
-      success: true,
-      comment: {
-        id: updated.id,
-        task_id: updated.task_id,
-        team_id: updated.team_id,
-        content: updated.content,
-        created_at: updated.created_at.toISOString(),
-        author_name: `${updated.team.first_name ?? ""} ${updated.team.last_name ?? ""}`.trim(),
-        author_role: updated.team.users[0]?.role ?? null,
-      },
-    };
-  } catch (err: unknown) {
-    console.error("[updateTaskComment]", err instanceof Error ? err.message : String(err));
+    revalidatePath(`/dashboard/tasks/${existing.taskId}`);
+    return { success: true };
+  } catch (e) {
+    console.error("[updateTaskComment]", e);
     return { success: false, error: "Erreur lors de la modification du commentaire." };
   }
 }
 
-// ── DELETE COMMENT ────────────────────────────────────────────────────────────
+// ── deleteTaskComment ───────────────────────────────────────────────────
 
 export async function deleteTaskComment(
-  commentId: number
+  commentId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Non authentifié." };
-
-    const teamId = parseInt((session.user as { team_id?: string }).team_id ?? "0");
-    const userRole = (session.user as { role?: string }).role ?? null;
-
-    const comment = await prisma.task_comments.findUnique({
-      where: { id: commentId },
-    });
-
-    if (!comment) return { success: false, error: "Commentaire non trouvé." };
-
-    // Seul l'auteur ou un SA peut supprimer
-    const isSA = userRole === "SA";
-    const isAuthor = comment.team_id === teamId;
-    if (!isSA && !isAuthor) {
+    const actor = await currentActor();
+    if (actor.type !== "HUMAN") {
       return { success: false, error: "Non autorisé." };
     }
 
-    await prisma.task_comments.delete({ where: { id: commentId } });
+    const existing = await prisma.taskComment.findUnique({ where: { id: commentId } });
+    if (!existing) return { success: false, error: "Commentaire introuvable." };
+    if (existing.memberId !== actor.memberId && actor.role !== "SUPER_ADMIN") {
+      return { success: false, error: "Vous ne pouvez supprimer que vos propres commentaires." };
+    }
 
-    revalidatePath("/dashboard/tasks");
+    await prisma.taskComment.delete({ where: { id: commentId } });
+    revalidatePath(`/dashboard/tasks/${existing.taskId}`);
     return { success: true };
-  } catch (err: unknown) {
-    console.error("[deleteTaskComment]", err instanceof Error ? err.message : String(err));
+  } catch (e) {
+    console.error("[deleteTaskComment]", e);
     return { success: false, error: "Erreur lors de la suppression du commentaire." };
   }
 }

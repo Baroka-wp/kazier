@@ -1,40 +1,25 @@
 "use server";
 
-import { prisma } from "./prisma";
-import { notifyTaskAssigned } from "./notify-task";
+/**
+ * Wrappers Server Actions — pages Tasks.
+ * Délègue à lib/core/tasks. Mapping FR↔EN aux frontières (l'UI utilise
+ * "à faire/en cours/review/terminée" et "low/medium/high").
+ */
+
+import { tasks as tasksCore, projects as projectsCore, members as membersCore } from "@/lib/core";
+import { currentActor } from "@/lib/server/with-auth";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
-import { getPermissions } from "@/lib/permissions";
 
-// ── Helper: Vérifier authentification et permissions ─────────────────────────
-
-async function requireTeamManagement() {
-  const session = await auth();
-
-  if (!session?.user) {
-    throw new Error("Non authentifié");
-  }
-
-  const userRole = (session.user as { role?: string }).role;
-  const permissions = getPermissions(userRole ?? null);
-
-  if (!permissions.canManageTasks) {
-    throw new Error("Non autorisé: permissions insuffisantes");
-  }
-
-  return session.user;
-}
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types historiques préservés ──────────────────────────────────────────
 
 export type Task = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   status: "à faire" | "en cours" | "review" | "terminée";
   priority: "low" | "medium" | "high";
-  project_id: number | null;
-  assigned_to: number[] | null;
+  project_id: string | null;
+  assigned_to: string[] | null;
   start_date: string | null;
   due_date: string | null;
   created_at: string;
@@ -47,8 +32,8 @@ export type CreateTaskData = {
   description?: string;
   status?: "à faire" | "en cours" | "review" | "terminée";
   priority?: "low" | "medium" | "high";
-  project_id?: number | null;
-  assigned_to?: number[] | null;
+  project_id?: string | null;
+  assigned_to?: string[] | null;
   start_date?: string | null;
   due_date?: string | null;
 };
@@ -63,9 +48,9 @@ export type PaginationParams = {
   search?: string;
   status?: string;
   priority?: string;
-  projectId?: number;
-  assignedTo?: number;
-  allowedProjectIds?: number[];
+  projectId?: string;
+  assignedTo?: string;
+  allowedProjectIds?: string[];
 };
 
 export type PaginatedResult<T> = {
@@ -76,603 +61,284 @@ export type PaginatedResult<T> = {
   totalPages: number;
 };
 
-// ── Helper: normaliser assigned_to ───────────────────────────────────────────
+// ── Mappings FR↔EN ───────────────────────────────────────────────────────
 
-function parseAssignedTo(raw: unknown): number[] | null {
-  if (!raw) return null;
-  if (Array.isArray(raw)) {
-    const arr = raw.map(Number).filter(Boolean);
-    return arr.length ? arr : null;
-  }
-  if (typeof raw === "string") {
-    const cleaned = raw.replace(/[{}]/g, "").trim();
-    if (!cleaned) return null;
-    const arr = cleaned.split(",").map(Number).filter(Boolean);
-    return arr.length ? arr : null;
-  }
-  return null;
+const STATUS_FR_TO_EN: Record<NonNullable<Task["status"]>, "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE"> = {
+  "à faire": "TODO",
+  "en cours": "IN_PROGRESS",
+  review: "REVIEW",
+  terminée: "DONE",
+};
+const STATUS_EN_TO_FR: Record<string, Task["status"]> = {
+  TODO: "à faire",
+  IN_PROGRESS: "en cours",
+  REVIEW: "review",
+  DONE: "terminée",
+  CANCELLED: "terminée",
+};
+
+function toUiTask(t: {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  projectId: string | null;
+  projectName: string | null;
+  assigneeIds: string[];
+  assigneeNames: string[];
+  startDate: Date | null;
+  dueDate: Date | null;
+  createdAt: Date;
+}): Task {
+  const fmt = (d: Date | null) => {
+    if (!d) return null;
+    const y = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const da = String(d.getUTCDate()).padStart(2, "0");
+    const h = String(d.getUTCHours()).padStart(2, "0");
+    const mi = String(d.getUTCMinutes()).padStart(2, "0");
+    return `${y}-${mo}-${da} ${h}:${mi}`;
+  };
+  return {
+    id: t.id,
+    title: t.title,
+    description: t.description ?? "",
+    status: STATUS_EN_TO_FR[t.status] ?? "à faire",
+    priority: (t.priority.toLowerCase() as Task["priority"]) ?? "medium",
+    project_id: t.projectId,
+    assigned_to: t.assigneeIds.length ? t.assigneeIds : null,
+    start_date: fmt(t.startDate),
+    due_date: fmt(t.dueDate),
+    created_at: t.createdAt.toISOString(),
+    assigned_to_names: t.assigneeNames,
+    project_name: t.projectName ?? undefined,
+  };
 }
 
-// ── Helper: sérialiser due_date ───────────────────────────────────────────────
+// ── notifyTaskReview — préservé pour compat (no-op : géré par events) ──
 
-function serializeDueDate(raw: unknown): string | null {
-  if (!raw) return null;
-  if (typeof raw === "string") {
-    const match = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
-    if (match) return `${match[1]} ${match[2]}`;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return `${raw} 00:00`;
-    return null;
-  }
-  if (raw instanceof Date) {
-    const y = raw.getUTCFullYear();
-    const mo = String(raw.getUTCMonth() + 1).padStart(2, "0");
-    const d = String(raw.getUTCDate()).padStart(2, "0");
-    const h = String(raw.getUTCHours()).padStart(2, "0");
-    const mi = String(raw.getUTCMinutes()).padStart(2, "0");
-    return `${y}-${mo}-${d} ${h}:${mi}`;
-  }
-  return null;
+export async function notifyTaskReview(_task: Task): Promise<void> {
+  // Le notifier Slack écoute désormais l'event task.status_changed → REVIEW
+  // émis par tasks.changeStatus. Cette fonction reste exportée pour ne pas
+  // casser d'éventuels imports résiduels mais ne fait plus rien.
+  void _task;
 }
 
-// ── Validation ────────────────────────────────────────────────────────────────
-
-function validateTask(data: CreateTaskData): { valid: true } | { valid: false; error: string } {
-  const title = data.title?.trim();
-  if (!title || title.length < 2)
-    return { valid: false, error: "Le titre doit contenir au moins 2 caractères." };
-  if (title.length > 100)
-    return { valid: false, error: "Le titre est trop long (100 caractères max)." };
-  return { valid: true };
-}
-
-// ── Slack : notifier tâche en review ─────────────────────────────────────────
-
-export async function notifyTaskReview(task: Task) {
-  try {
-    if (!task.project_id) return;
-
-    const project = await prisma.project.findUnique({
-      where: { id: task.project_id },
-      select: { team_ids: true, name: true },
-    });
-
-    if (!project) return;
-
-    const allTeamIds = project.team_ids ?? [];
-
-    // Récupérer les TM du projet
-    const tmMembers =
-      allTeamIds.length > 0
-        ? await prisma.teams.findMany({
-            where: {
-              id: { in: allTeamIds },
-              slack_id: { not: null },
-              users: { some: { role: "TM" } },
-            },
-            select: { slack_id: true },
-          })
-        : [];
-
-    // Récupérer les SA
-    const saMembers = await prisma.teams.findMany({
-      where: {
-        slack_id: { not: null },
-        users: { some: { role: "SA" } },
-      },
-      select: { slack_id: true },
-    });
-
-    // Destinataires : SA + TM uniques
-    const recipients = [
-      ...new Set([
-        ...saMembers.map((m) => m.slack_id).filter((id): id is string => id !== null),
-        ...tmMembers.map((m) => m.slack_id).filter((id): id is string => id !== null),
-      ]),
-    ];
-
-    if (!recipients.length) return;
-
-    const message = {
-      username: "Groot_Bot",
-      icon_emoji: ":eyes:",
-      blocks: [
-        {
-          type: "header",
-          text: { type: "plain_text", text: "👀 Tâche en attente de review" },
-        },
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `La tâche suivante vient d'être marquée en *review* :`,
-          },
-        },
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `📌 *${task.title}*\n📁 Projet : *${task.project_name ?? "Non défini"}*\n👤 Assigné à : *${task.assigned_to_names?.join(", ") ?? "Non assigné"}*`,
-          },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: { type: "plain_text", text: "📋 Voir les tâches" },
-              url: `${process.env.NEXTAUTH_URL}/dashboard/tasks`,
-              style: "primary",
-            },
-          ],
-        },
-      ],
-    };
-
-    await Promise.all(
-      recipients.map((channel) =>
-        fetch("https://slack.com/api/chat.postMessage", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-          },
-          body: JSON.stringify({ ...message, channel }),
-        })
-      )
-    );
-  } catch (err) {
-    console.error("[notifyTaskReview]", err);
-  }
-}
-
-// ── CREATE ────────────────────────────────────────────────────────────────────
+// ── createTask ───────────────────────────────────────────────────────────
 
 export async function createTask(data: CreateTaskData): Promise<TaskResult> {
   try {
-    await requireTeamManagement();
-
-    const validation = validateTask(data);
-    if (!validation.valid) return { success: false, error: validation.error };
-
-    let startDate: Date | null = null;
-    if (data.start_date) {
-      const match = data.start_date.match(/^(\d{4}-\d{2}-\d{2})[\sT](\d{2}:\d{2})/);
-      if (match) {
-        const [, datePart, timePart] = match;
-        const [year, month, day] = datePart.split("-").map(Number);
-        const [hour, minute] = timePart.split(":").map(Number);
-        startDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
-      } else {
-        startDate = new Date(data.start_date);
-      }
-      if (isNaN(startDate.getTime())) startDate = null;
-    }
-
-    let dueDate: Date | null = null;
-    if (data.due_date) {
-      const match = data.due_date.match(/^(\d{4}-\d{2}-\d{2})[\sT](\d{2}:\d{2})/);
-      if (match) {
-        const [, datePart, timePart] = match;
-        const [year, month, day] = datePart.split("-").map(Number);
-        const [hour, minute] = timePart.split(":").map(Number);
-        dueDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
-      } else {
-        dueDate = new Date(data.due_date);
-      }
-      if (isNaN(dueDate.getTime())) dueDate = null;
-    }
-
-    const task = await prisma.tasks.create({
-      data: {
-        title: data.title.trim(),
-        description: data.description?.trim() || "",
-        status: data.status || "à faire",
-        priority: data.priority || "medium",
-        project_id: data.project_id || null,
-        assigned_to: data.assigned_to || [],
-        start_date: startDate,
-        due_date: dueDate,
-      },
+    const actor = await currentActor();
+    const res = await tasksCore.create(actor, {
+      title: data.title,
+      description: data.description,
+      projectId: data.project_id ?? undefined,
+      status: data.status ? STATUS_FR_TO_EN[data.status] : undefined,
+      priority: data.priority ? (data.priority.toUpperCase() as "LOW" | "MEDIUM" | "HIGH") : undefined,
+      startDate: data.start_date ?? undefined,
+      dueDate: data.due_date ?? undefined,
+      assigneeIds: data.assigned_to ?? [],
     });
+    if (!res.ok) return { success: false, error: res.message };
 
-    const enriched = await enrichTask(task);
     revalidatePath("/dashboard/tasks");
     revalidatePath("/dashboard");
-
-    if (enriched.assigned_to?.length) {
-      notifyTaskAssigned({
-        assignedIds: enriched.assigned_to,
-        taskTitle: enriched.title,
-        taskDescription: enriched.description,
-        projectName: enriched.project_name,
-        dueDate: enriched.due_date,
-      }).catch((err) => console.error("[createTask] Slack notify error:", err));
-    }
-
-    return { success: true, task: enriched };
-  } catch (err: unknown) {
-    console.error("[createTask]", err instanceof Error ? err.message : String(err));
+    return { success: true, task: toUiTask(res.data) };
+  } catch (e) {
+    console.error("[createTask]", e);
     return { success: false, error: "Erreur lors de la création de la tâche." };
   }
 }
 
-// ── READ (GET ONE) ────────────────────────────────────────────────────────────
+// ── getTask ──────────────────────────────────────────────────────────────
 
-export async function getTask(id: number): Promise<TaskResult> {
+export async function getTask(id: string): Promise<TaskResult> {
   try {
-    const task = await prisma.tasks.findUnique({ where: { id } });
-    if (!task) return { success: false, error: "Tâche non trouvée." };
-    return { success: true, task: await enrichTask(task) };
-  } catch (err: unknown) {
-    console.error("[getTask]", err instanceof Error ? err.message : String(err));
+    const actor = await currentActor();
+    const res = await tasksCore.get(actor, id);
+    if (!res.ok) return { success: false, error: res.message };
+    return { success: true, task: toUiTask(res.data) };
+  } catch (e) {
+    console.error("[getTask]", e);
     return { success: false, error: "Erreur lors de la récupération de la tâche." };
   }
 }
 
-// ── READ (GET ALL) ────────────────────────────────────────────────────────────
+// ── getTasks ─────────────────────────────────────────────────────────────
 
 export async function getTasks(
   params?: PaginationParams
 ): Promise<PaginatedResult<Task> | { success: boolean; tasks?: Task[]; error?: string }> {
-  if (!params) {
-    const tasks = await prisma.tasks.findMany({ orderBy: { created_at: "desc" } });
-    const enriched = await Promise.all(tasks.map((t) => enrichTask(t)));
-    return { success: true, tasks: enriched };
+  try {
+    const actor = await currentActor();
+    const res = await tasksCore.list(actor, {
+      page: params?.page,
+      limit: params?.limit,
+      search: params?.search,
+      status: params?.status
+        ? (STATUS_FR_TO_EN[params.status as Task["status"]] ?? undefined)
+        : undefined,
+      priority: params?.priority
+        ? (params.priority.toUpperCase() as "LOW" | "MEDIUM" | "HIGH")
+        : undefined,
+      projectId: params?.projectId,
+      assigneeId: params?.assignedTo,
+    });
+    if (!res.ok) return { success: false, error: res.message };
+
+    // allowedProjectIds : filtre côté wrapper si fourni
+    let rows = res.data.data;
+    if (params?.allowedProjectIds && params.allowedProjectIds.length > 0) {
+      const allowed = new Set(params.allowedProjectIds);
+      rows = rows.filter((t) => !t.projectId || allowed.has(t.projectId));
+    }
+
+    if (!params) {
+      return { success: true, tasks: rows.map(toUiTask) };
+    }
+    return {
+      data: rows.map(toUiTask),
+      total: res.data.total,
+      page: res.data.page,
+      limit: res.data.limit,
+      totalPages: res.data.totalPages,
+    };
+  } catch (e) {
+    console.error("[getTasks]", e);
+    return { success: false, error: "Erreur lors de la récupération des tâches." };
   }
-
-  const page = params.page ?? 1;
-  const limit = params.limit ?? 10;
-
-  type WhereClause = {
-    OR?: Array<{
-      title?: { contains: string; mode: "insensitive" };
-      description?: { contains: string; mode: "insensitive" };
-    }>;
-    status?: string;
-    priority?: string;
-    project_id?: number | { in: number[] };
-    assigned_to?: { has: number };
-  };
-  const where: WhereClause = {};
-
-  if (params.search) {
-    where.OR = [
-      { title: { contains: params.search, mode: "insensitive" as const } },
-      { description: { contains: params.search, mode: "insensitive" as const } },
-    ];
-  }
-  if (params.status) where.status = params.status;
-  if (params.priority) where.priority = params.priority;
-  if (params.projectId) {
-    where.project_id = params.projectId;
-  } else if (params.allowedProjectIds) {
-    // 👇 seulement si pas de projectId spécifique
-    where.project_id = { in: params.allowedProjectIds };
-  }
-  if (params.assignedTo) where.assigned_to = { has: params.assignedTo };
-
-  const total = await prisma.tasks.count({ where });
-  const tasks = await prisma.tasks.findMany({
-    where,
-    orderBy: { created_at: "desc" },
-    skip: (page - 1) * limit,
-    take: limit,
-  });
-
-  const enriched = await Promise.all(tasks.map((t) => enrichTask(t)));
-
-  return {
-    data: enriched,
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
-  };
 }
 
-// ── UPDATE ────────────────────────────────────────────────────────────────────
+// ── updateTask ───────────────────────────────────────────────────────────
 
-export async function updateTask(id: number, data: UpdateTaskData): Promise<TaskResult> {
+export async function updateTask(id: string, data: UpdateTaskData): Promise<TaskResult> {
   try {
-    await requireTeamManagement();
-
-    const existing = await prisma.tasks.findUnique({ where: { id } });
-    if (!existing) return { success: false, error: "Tâche non trouvée." };
-
-    const mergedData: CreateTaskData = {
-      title: data.title ?? existing.title ?? "Sans titre",
-      description: data.description ?? existing.description ?? undefined,
-      status:
-        data.status ??
-        (existing.status as "à faire" | "en cours" | "review" | "terminée" | null) ??
-        undefined,
-      priority:
-        data.priority ?? (existing.priority as "low" | "medium" | "high" | null) ?? undefined,
-      project_id: data.project_id !== undefined ? data.project_id : existing.project_id,
-      assigned_to:
-        data.assigned_to !== undefined ? data.assigned_to : parseAssignedTo(existing.assigned_to),
-      start_date:
-        data.start_date !== undefined
-          ? data.start_date
-          : existing.start_date
-            ? serializeDueDate(existing.start_date)
-            : null,
-      due_date:
-        data.due_date !== undefined
-          ? data.due_date
-          : existing.due_date
-            ? serializeDueDate(existing.due_date)
-            : null,
-    };
-
-    const validation = validateTask(mergedData);
-    if (!validation.valid) return { success: false, error: validation.error };
-
-    let startDate: Date | null = null;
-    if (mergedData.start_date) {
-      const match = mergedData.start_date.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/);
-      if (match) {
-        const [, datePart, timePart] = match;
-        const [year, month, day] = datePart.split("-").map(Number);
-        const [hour, minute] = timePart.split(":").map(Number);
-        startDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
-      } else {
-        startDate = new Date(mergedData.start_date);
-      }
-      if (isNaN(startDate.getTime())) startDate = null;
-    }
-
-    let dueDate: Date | null = null;
-    if (mergedData.due_date) {
-      const match = mergedData.due_date.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/);
-      if (match) {
-        const [, datePart, timePart] = match;
-        const [year, month, day] = datePart.split("-").map(Number);
-        const [hour, minute] = timePart.split(":").map(Number);
-        dueDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
-      } else {
-        dueDate = new Date(mergedData.due_date);
-      }
-      if (isNaN(dueDate.getTime())) dueDate = null;
-    }
-
-    const updated = await prisma.tasks.update({
-      where: { id },
-      data: {
-        title: mergedData.title!.trim(),
-        description: mergedData.description?.trim() || "",
-        status: mergedData.status!,
-        priority: mergedData.priority!,
-        project: mergedData.project_id
-          ? { connect: { id: mergedData.project_id } }
-          : { disconnect: true },
-        assigned_to: mergedData.assigned_to || [],
-        start_date: startDate,
-        due_date: dueDate,
-      },
+    const actor = await currentActor();
+    const res = await tasksCore.update(actor, id, {
+      title: data.title,
+      description: data.description,
+      projectId: data.project_id ?? undefined,
+      status: data.status ? STATUS_FR_TO_EN[data.status] : undefined,
+      priority: data.priority ? (data.priority.toUpperCase() as "LOW" | "MEDIUM" | "HIGH") : undefined,
+      startDate: data.start_date ?? undefined,
+      dueDate: data.due_date ?? undefined,
+      assigneeIds: data.assigned_to ?? undefined,
     });
+    if (!res.ok) return { success: false, error: res.message };
 
-    const enriched = await enrichTask(updated);
     revalidatePath("/dashboard/tasks");
     revalidatePath("/dashboard");
-
-    // ✅ Notifier SA + TM si tâche passée en "review"
-    const wasNotReview = existing.status !== "review";
-    const isNowReview = enriched.status === "review";
-    if (wasNotReview && isNowReview) {
-      notifyTaskReview(enriched).catch((err) =>
-        console.error("[updateTask] notifyTaskReview error:", err)
-      );
-    }
-
-    // Notifier uniquement les membres nouvellement assignés
-    const prevIds = parseAssignedTo(existing.assigned_to) ?? [];
-    const newIds = enriched.assigned_to ?? [];
-    const addedIds = newIds.filter((id) => !prevIds.includes(id));
-    if (addedIds.length) {
-      notifyTaskAssigned({
-        assignedIds: addedIds,
-        taskTitle: enriched.title,
-        taskDescription: enriched.description,
-        projectName: enriched.project_name,
-        dueDate: enriched.due_date,
-      }).catch((err) => console.error("[updateTask] Slack notify error:", err));
-    }
-
-    return { success: true, task: enriched };
-  } catch (err: unknown) {
-    console.error("[updateTask]", err instanceof Error ? err.message : String(err));
+    return { success: true, task: toUiTask(res.data) };
+  } catch (e) {
+    console.error("[updateTask]", e);
     return { success: false, error: "Erreur lors de la modification de la tâche." };
   }
 }
 
-// ── DELETE ────────────────────────────────────────────────────────────────────
+// ── deleteTask ───────────────────────────────────────────────────────────
 
-export async function deleteTask(id: number): Promise<{ success: boolean; error?: string }> {
+export async function deleteTask(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireTeamManagement();
-    await prisma.tasks.delete({ where: { id } });
+    const actor = await currentActor();
+    const res = await tasksCore.remove(actor, id);
+    if (!res.ok) return { success: false, error: res.message };
     revalidatePath("/dashboard/tasks");
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (err: unknown) {
-    console.error("[deleteTask]", err instanceof Error ? err.message : String(err));
+  } catch (e) {
+    console.error("[deleteTask]", e);
     return { success: false, error: "Erreur lors de la suppression de la tâche." };
   }
 }
 
-// ── Helper: Enrichir une tâche ────────────────────────────────────────────────
-
-type PrismaTask = {
-  id: number;
-  title: string | null;
-  description: string | null;
-  status: string | null;
-  priority: string | null;
-  project_id: number | null;
-  assigned_to: unknown;
-  start_date: Date | null;
-  due_date: Date | null;
-  created_at: Date;
-};
-
-async function enrichTask(task: PrismaTask): Promise<Task> {
-  let assigned_to_names: string[] | undefined;
-  let project_name: string | undefined;
-
-  const assignedIds = parseAssignedTo(task.assigned_to);
-
-  if (assignedIds?.length) {
-    try {
-      const members = await prisma.teams.findMany({
-        where: { id: { in: assignedIds } },
-        select: { first_name: true, last_name: true },
-        orderBy: { first_name: "asc" },
-      });
-      if (members.length) {
-        assigned_to_names = members.map((m) => `${m.first_name} ${m.last_name}`);
-      }
-    } catch (err) {
-      console.error("[enrichTask] Error fetching assigned members", err);
-    }
-  }
-
-  if (task.project_id) {
-    try {
-      const project = await prisma.project.findUnique({
-        where: { id: task.project_id },
-        select: { name: true },
-      });
-      if (project) project_name = project.name || undefined;
-    } catch (err) {
-      console.error("[enrichTask] Error fetching project", err);
-    }
-  }
-
-  return {
-    id: task.id,
-    title: task.title ?? "",
-    description: task.description ?? "",
-    status: (task.status as "à faire" | "en cours" | "review" | "terminée") ?? "à faire",
-    priority: (task.priority as "low" | "medium" | "high") ?? "medium",
-    project_id: task.project_id,
-    assigned_to: assignedIds,
-    start_date: serializeDueDate(task.start_date),
-    due_date: serializeDueDate(task.due_date),
-    created_at:
-      typeof task.created_at === "string" ? task.created_at : task.created_at.toISOString(),
-    assigned_to_names,
-    project_name,
-  };
-}
-
-// ── GET TEAMS ─────────────────────────────────────────────────────────────────
+// ── getTeamsForAssignment ────────────────────────────────────────────────
 
 export async function getTeamsForAssignment(): Promise<{
   success: boolean;
-  teams?: Array<{ id: number; full_name: string }>;
+  teams?: Array<{ id: string; full_name: string }>;
   error?: string;
 }> {
   try {
-    const teams = await prisma.teams.findMany({
-      select: { id: true, first_name: true, last_name: true },
-      orderBy: { first_name: "asc" },
-    });
+    const actor = await currentActor();
+    const res = await membersCore.list(actor, { limit: 100 });
+    if (!res.ok) return { success: false, error: res.message };
     return {
       success: true,
-      teams: teams.map((t) => ({ id: t.id, full_name: `${t.first_name} ${t.last_name}` })),
+      teams: res.data.data.map((m) => ({ id: m.id, full_name: m.fullName })),
     };
-  } catch (err: unknown) {
-    console.error("[getTeamsForAssignment]", err instanceof Error ? err.message : String(err));
+  } catch (e) {
+    console.error("[getTeamsForAssignment]", e);
     return { success: false, error: "Erreur lors de la récupération des équipes." };
   }
 }
 
-// ── GET PROJECTS ──────────────────────────────────────────────────────────────
+// ── getProjectsForTasks ──────────────────────────────────────────────────
 
 export async function getProjectsForTasks(): Promise<{
   success: boolean;
-  projects?: Array<{ id: number; name: string }>;
+  projects?: Array<{ id: string; name: string }>;
   error?: string;
 }> {
   try {
-    const projectsResult = await prisma.project.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    });
+    const actor = await currentActor();
+    const res = await projectsCore.list(actor, { limit: 100 });
+    if (!res.ok) return { success: false, error: res.message };
     return {
       success: true,
-      projects: projectsResult.map((p) => ({ id: p.id, name: p.name || "Sans nom" })),
+      projects: res.data.data.map((p) => ({ id: p.id, name: p.name })),
     };
-  } catch (err: unknown) {
-    console.error("[getProjectsForTasks]", err instanceof Error ? err.message : String(err));
+  } catch (e) {
+    console.error("[getProjectsForTasks]", e);
     return { success: false, error: "Erreur lors de la récupération des projets." };
   }
 }
 
-// ── GET TEAM MEMBERS BY PROJECT ───────────────────────────────────────────────
+// ── getTeamMembersByProject ──────────────────────────────────────────────
 
-export async function getTeamMembersByProject(projectId: number): Promise<{
+export async function getTeamMembersByProject(projectId: string): Promise<{
   success: boolean;
-  members?: Array<{ id: number; first_name: string; last_name: string; full_name: string }>;
+  members?: Array<{ id: string; first_name: string; last_name: string; full_name: string }>;
   error?: string;
 }> {
   try {
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { team_ids: true },
-    });
-
-    if (!project) return { success: true, members: [] };
-
-    const teamIds = parseAssignedTo(project.team_ids);
-    if (!teamIds?.length) return { success: true, members: [] };
-
-    const result = await prisma.teams.findMany({
-      where: { id: { in: teamIds } },
-      select: { id: true, first_name: true, last_name: true },
-      orderBy: { first_name: "asc" },
-    });
-
+    const actor = await currentActor();
+    const res = await projectsCore.get(actor, projectId);
+    if (!res.ok) return { success: false, error: res.message };
     return {
       success: true,
-      members: result.map((t) => ({
-        id: t.id,
-        first_name: t.first_name || "",
-        last_name: t.last_name || "",
-        full_name: `${t.first_name || ""} ${t.last_name || ""}`.trim(),
-      })),
+      members: res.data.members.map((m) => {
+        const [first, ...rest] = m.fullName.split(" ");
+        return {
+          id: m.memberId,
+          first_name: first || "",
+          last_name: rest.join(" "),
+          full_name: m.fullName,
+        };
+      }),
     };
-  } catch (err: unknown) {
-    console.error("[getTeamMembersByProject]", err instanceof Error ? err.message : String(err));
+  } catch (e) {
+    console.error("[getTeamMembersByProject]", e);
     return { success: false, error: "Erreur lors de la récupération des membres." };
   }
 }
 
-// ── GET OPEN TASKS FOR MEMBER (dashboard view) ────────────────────────────────
-// Renommée pour éviter la collision avec lib/actions.ts::getTasksByMember
-// (qui retourne un format brut différent, consommé par DailyForm).
+// ── getOpenTasksForMember ────────────────────────────────────────────────
 
-export async function getOpenTasksForMember(memberId: number): Promise<{
+export async function getOpenTasksForMember(memberId: string): Promise<{
   success: boolean;
   tasks?: Task[];
   error?: string;
 }> {
   try {
-    const result = await prisma.tasks.findMany({
-      where: {
-        assigned_to: { has: memberId },
-        status: { not: "done" },
-      },
-      include: {
-        project: { select: { name: true } },
-      },
-      orderBy: [{ due_date: "asc" }],
-    });
-    const enriched = await Promise.all(result.map((t) => enrichTask(t)));
-    return { success: true, tasks: enriched };
-  } catch (err: unknown) {
-    console.error("[getOpenTasksForMember]", err instanceof Error ? err.message : String(err));
+    const actor = await currentActor();
+    const res = await tasksCore.list(actor, { assigneeId: memberId, limit: 100 });
+    if (!res.ok) return { success: false, error: res.message };
+    // Filtrer : exclure DONE et CANCELLED
+    const open = res.data.data.filter((t) => t.status !== "DONE" && t.status !== "CANCELLED");
+    return { success: true, tasks: open.map(toUiTask) };
+  } catch (e) {
+    console.error("[getOpenTasksForMember]", e);
     return { success: false, error: "Erreur lors de la récupération des tâches." };
   }
 }
