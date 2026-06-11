@@ -1,3 +1,24 @@
+// ═════════════════════════════════════════════════════════════════════════════
+// SCHEMA INTERMÉDIAIRE — Phase 1 de la migration V1 → V2
+//
+// Contient :
+//   - Anciens modèles V1 renommés Legacy* (mappés vers tables snake_case en DB)
+//     → permettent au script de migration de LIRE l'existant
+//   - Nouveaux modèles V2 (members, auths, projects, tasks…)
+//     → créés en parallèle par `prisma db push`
+//
+// Workflow :
+//   1. `prisma db push`              → crée les nouvelles tables, conserve les anciennes
+//   2. `tsx scripts/migrate-to-v2.ts --commit`  → transfère les données
+//   3. `tsx scripts/migrate-to-v2.ts --verify`  → vérifie l'intégrité
+//   4. (plus tard, après réécriture du code applicatif) : retirer les Legacy*
+//      et `prisma db push` à nouveau pour drop les anciennes tables.
+//
+// IMPORTANT : tant que ce schéma est en place, le client Prisma expose les
+// deux jeux de tables. Le code applicatif existant continue de fonctionner
+// via les modèles Legacy* (il faut ajuster les imports → prochaine étape).
+// ═════════════════════════════════════════════════════════════════════════════
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,8 +28,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model teams {
-  id                   Int             @id @default(autoincrement())
+// ╔═══════════════════════════════════════════════════════════════════════════╗
+// ║                          LEGACY V1 (en lecture seule)                     ║
+// ║                  Renommés pour cohabiter avec les V2.                     ║
+// ╚═══════════════════════════════════════════════════════════════════════════╝
+
+model LegacyTeam {
+  id                   Int                  @id @default(autoincrement())
   first_name           String?
   last_name            String?
   role                 String?
@@ -16,81 +42,92 @@ model teams {
   phone                String?
   age                  Int?
   slack_id             String?
-  is_boss              Boolean         @default(false)
-  created_at           DateTime        @default(now())
-  evaluations_received Evaluation[]    @relation("EvaluatedRelation")
-  evaluations_given    Evaluation[]    @relation("EvaluatorRelation")
-  rapports             rapports[]
-  task_comments        task_comments[]
-  users                users[]
+  is_boss              Boolean              @default(false)
+  created_at           DateTime             @default(now())
+  evaluations_received LegacyEvaluation[]   @relation("LegacyEvaluatedRelation")
+  evaluations_given    LegacyEvaluation[]   @relation("LegacyEvaluatorRelation")
+  rapports             LegacyRapport[]
+  task_comments        LegacyTaskComment[]
+  users                LegacyUser[]
+
+  @@map("teams")
 }
 
-model users {
-  id                  Int       @id @default(autoincrement())
-  email               String    @unique
+model LegacyUser {
+  id                  Int         @id @default(autoincrement())
+  email               String      @unique
   password            String
   role                String?
   team_id             Int?
-  reset_token         String?   @unique
+  reset_token         String?     @unique
   reset_token_expires DateTime?
-  team                teams?    @relation(fields: [team_id], references: [id])
+  team                LegacyTeam? @relation(fields: [team_id], references: [id])
+
+  @@map("users")
 }
 
-model project {
-  id                 Int        @id @default(autoincrement())
-  name               String?
-  description        String?
-  icon               String?
-  team_ids           Int[]
-  objectives         String?    @db.Text
-  stakeholders       String?    @db.Text
-  start_date         DateTime?  @db.Date
-  end_date           DateTime?  @db.Date
-  created_at         DateTime   @default(now())
-  // Relations
-  tasks              tasks[]
-  rapports           rapports[]
-  milestones         milestones[]
+model LegacyProject {
+  id           Int                @id @default(autoincrement())
+  name         String?
+  description  String?
+  icon         String?
+  team_ids     Int[]
+  objectives   String?            @db.Text
+  stakeholders String?            @db.Text
+  start_date   DateTime?          @db.Date
+  end_date     DateTime?          @db.Date
+  created_at   DateTime           @default(now())
+  tasks        LegacyTask[]
+  rapports     LegacyRapport[]
+  milestones   LegacyMilestone[]
+
+  @@map("project")
 }
 
-model tasks {
-  id            Int             @id @default(autoincrement())
+model LegacyTask {
+  id            Int                 @id @default(autoincrement())
   title         String?
   description   String?
   status        String?
   priority      String?
   project_id    Int?
   assigned_to   Int[]
-  start_date    DateTime?       @db.Timestamptz(6)
-  due_date      DateTime?       @db.Timestamptz(6)
-  created_at    DateTime        @default(now())
-  reminder_sent Boolean         @default(false)
-  comments      task_comments[]
-  project       project?        @relation(fields: [project_id], references: [id])
+  start_date    DateTime?           @db.Timestamptz(6)
+  due_date      DateTime?           @db.Timestamptz(6)
+  created_at    DateTime            @default(now())
+  reminder_sent Boolean             @default(false)
+  comments      LegacyTaskComment[]
+  project       LegacyProject?      @relation(fields: [project_id], references: [id])
+
+  @@map("tasks")
 }
 
-model task_comments {
-  id         Int      @id @default(autoincrement())
+model LegacyTaskComment {
+  id         Int        @id @default(autoincrement())
   task_id    Int
   team_id    Int
   content    String
-  created_at DateTime @default(now())
-  task       tasks    @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  team       teams    @relation(fields: [team_id], references: [id])
+  created_at DateTime   @default(now())
+  task       LegacyTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  team       LegacyTeam @relation(fields: [team_id], references: [id])
+
+  @@map("task_comments")
 }
 
-model milestones {
-  id           Int       @id @default(autoincrement())
+model LegacyMilestone {
+  id           Int           @id @default(autoincrement())
   project_id   Int
   title        String
-  due_date     DateTime  @db.Date
-  deliverables String?   @db.Text
-  created_at   DateTime  @default(now())
-  project      project   @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  due_date     DateTime      @db.Date
+  deliverables String?       @db.Text
+  created_at   DateTime      @default(now())
+  project      LegacyProject @relation(fields: [project_id], references: [id], onDelete: Cascade)
+
+  @@map("milestones")
 }
 
-model rapports {
-  id                 Int      @id @default(autoincrement())
+model LegacyRapport {
+  id                 Int            @id @default(autoincrement())
   team_id            Int?
   project_id         Int?
   work_built         String?
@@ -99,34 +136,361 @@ model rapports {
   broken_features    String?
   needed_learning    String?
   tomorrow_build     String?
-  created_at         DateTime @default(now())
+  created_at         DateTime       @default(now())
   extra_message      String?
-  project            project? @relation(fields: [project_id], references: [id])
-  team               teams?   @relation(fields: [team_id], references: [id])
+  project            LegacyProject? @relation(fields: [project_id], references: [id])
+  team               LegacyTeam?    @relation(fields: [team_id], references: [id])
+
+  @@map("rapports")
 }
 
-model Evaluation {
-  id            Int      @id @default(autoincrement())
+model LegacyEvaluation {
+  id            Int        @id @default(autoincrement())
   evaluator_id  Int
   evaluated_id  Int
-  report_date   DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
+  report_date   DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
   communication Int
   collaboration Int
   punctuality   Int
   comment       String?
-  created_at    DateTime @default(now())
-  evaluated     teams    @relation("EvaluatedRelation", fields: [evaluated_id], references: [id])
-  evaluator     teams    @relation("EvaluatorRelation", fields: [evaluator_id], references: [id])
+  created_at    DateTime   @default(now())
+  evaluated     LegacyTeam @relation("LegacyEvaluatedRelation", fields: [evaluated_id], references: [id])
+  evaluator     LegacyTeam @relation("LegacyEvaluatorRelation", fields: [evaluator_id], references: [id])
 
   @@unique([evaluator_id, evaluated_id, report_date])
   @@map("evaluations")
 }
 
-model api_keys {
+model LegacyApiKey {
   id         Int       @id @default(autoincrement())
   key        String    @unique
   label      String?
   is_active  Boolean   @default(true)
   created_at DateTime  @default(now())
   last_used  DateTime?
+
+  @@map("api_keys")
+}
+
+// ╔═══════════════════════════════════════════════════════════════════════════╗
+// ║                              V2 (cible)                                   ║
+// ║              Nouvelles tables créées par `prisma db push`.                ║
+// ╚═══════════════════════════════════════════════════════════════════════════╝
+
+enum Role {
+  SUPER_ADMIN
+  PROJECT_MANAGER
+  MEMBER
+}
+
+model Member {
+  id        String   @id @default(cuid())
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  email     String?  @unique
+  phone     String?
+  age       Int?
+  slackId   String?  @map("slack_id")
+  role      Role     @default(MEMBER)
+  isBoss    Boolean  @default(false) @map("is_boss")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  auth                Auth?
+  projectMemberships  ProjectMember[]
+  taskAssignments     TaskAssignment[]
+  taskComments        TaskComment[]
+  reports             Report[]
+  expensesCreated     Expense[]        @relation("ExpenseCreator")
+  evaluationsGiven    Evaluation[]     @relation("Evaluator")
+  evaluationsReceived Evaluation[]     @relation("Evaluated")
+  auditLogs           AuditLog[]
+
+  @@map("members")
+}
+
+model Auth {
+  id           String    @id @default(cuid())
+  memberId     String    @unique @map("member_id")
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  resetToken   String?   @unique @map("reset_token")
+  resetExpires DateTime? @map("reset_expires")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@map("auths")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  name           String
+  description    String?       @db.Text
+  icon           String?
+  status         ProjectStatus @default(ACTIVE)
+  startDate      DateTime?     @db.Date @map("start_date")
+  endDate        DateTime?     @db.Date @map("end_date")
+  budgetAmount   Decimal?      @db.Decimal(14, 2) @map("budget_amount")
+  budgetCurrency String        @default("XOF") @map("budget_currency")
+  contractValue  Decimal?      @db.Decimal(14, 2) @map("contract_value")
+  objectives     String?       @db.Text
+  stakeholders   String?       @db.Text
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  members      ProjectMember[]
+  deliverables Deliverable[]
+  tasks        Task[]
+  reports      Report[]
+  expenses     Expense[]
+  notes        ProjectNote[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  projectId String   @map("project_id")
+  memberId  String   @map("member_id")
+  roleLabel String?  @map("role_label")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  Member  @relation(fields: [memberId],  references: [id], onDelete: Cascade)
+
+  @@id([projectId, memberId])
+  @@map("project_members")
+}
+
+enum Cadence {
+  DAILY
+  WEEKLY
+  MONTHLY
+  MILESTONE
+}
+
+enum DeliverableStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+  MISSED
+}
+
+model Deliverable {
+  id          String            @id @default(cuid())
+  projectId   String            @map("project_id")
+  parentId    String?           @map("parent_id")
+  title       String
+  description String?           @db.Text
+  cadence     Cadence
+  dueDate     DateTime          @db.Date @map("due_date")
+  status      DeliverableStatus @default(PLANNED)
+  completedAt DateTime?         @map("completed_at")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent   Deliverable?  @relation("DeliverableHierarchy", fields: [parentId], references: [id])
+  children Deliverable[] @relation("DeliverableHierarchy")
+  tasks    Task[]
+
+  @@index([projectId, dueDate])
+  @@map("deliverables")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  projectId      String?    @map("project_id")
+  deliverableId  String?    @map("deliverable_id")
+  title          String
+  description    String?    @db.Text
+  status         TaskStatus @default(TODO)
+  priority       Priority   @default(MEDIUM)
+  startDate      DateTime?  @db.Timestamptz @map("start_date")
+  dueDate        DateTime?  @db.Timestamptz @map("due_date")
+  estimatedHours Decimal?   @db.Decimal(6, 2) @map("estimated_hours")
+  actualHours    Decimal?   @db.Decimal(6, 2) @map("actual_hours")
+  reminderSent   Boolean    @default(false) @map("reminder_sent")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  project     Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  deliverable Deliverable?     @relation(fields: [deliverableId], references: [id], onDelete: SetNull)
+  assignments TaskAssignment[]
+  comments    TaskComment[]
+
+  @@index([projectId])
+  @@index([status, dueDate])
+  @@map("tasks_v2")
+}
+
+model TaskAssignment {
+  taskId     String   @map("task_id")
+  memberId   String   @map("member_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, memberId])
+  @@map("task_assignments")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String   @map("task_id")
+  memberId  String   @map("member_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("task_comments_v2")
+}
+
+model Report {
+  id             String   @id @default(cuid())
+  memberId       String   @map("member_id")
+  projectId      String?  @map("project_id")
+  reportDate     DateTime @db.Date @map("report_date")
+  workCompleted  String?  @db.Text @map("work_completed")
+  inProgress     String?  @db.Text @map("in_progress")
+  blockers       String?  @db.Text
+  learnings      String?  @db.Text
+  learningNeeded String?  @db.Text @map("learning_needed")
+  tomorrowPlan   String?  @db.Text @map("tomorrow_plan")
+  extraMessage   String?  @db.Text @map("extra_message")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  member  Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@unique([memberId, reportDate, projectId])
+  @@index([reportDate])
+  @@index([projectId])
+  @@map("reports")
+}
+
+model Evaluation {
+  id            String   @id @default(cuid())
+  evaluatorId   String   @map("evaluator_id")
+  evaluatedId   String   @map("evaluated_id")
+  reportDate    DateTime @db.Date @map("report_date")
+  communication Int
+  collaboration Int
+  punctuality   Int
+  comment       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  evaluator Member @relation("Evaluator", fields: [evaluatorId], references: [id], onDelete: Cascade)
+  evaluated Member @relation("Evaluated", fields: [evaluatedId], references: [id], onDelete: Cascade)
+
+  @@unique([evaluatorId, evaluatedId, reportDate])
+  @@map("evaluations_v2")
+}
+
+enum ExpenseCategory {
+  SALARY
+  PURCHASE
+  SUBCONTRACT
+  TRAVEL
+  SOFTWARE
+  OTHER
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  projectId   String          @map("project_id")
+  amount      Decimal         @db.Decimal(14, 2)
+  currency    String          @default("XOF")
+  category    ExpenseCategory
+  description String?
+  incurredAt  DateTime        @db.Date @map("incurred_at")
+  createdById String          @map("created_by_id")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy Member  @relation("ExpenseCreator", fields: [createdById], references: [id])
+
+  @@index([projectId, incurredAt])
+  @@map("expenses")
+}
+
+model ProjectNote {
+  id        String   @id @default(cuid())
+  projectId String   @map("project_id")
+  title     String
+  body      Json
+  tags      String[]
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, pinned, updatedAt])
+  @@map("project_notes")
+}
+
+enum ActorType {
+  HUMAN
+  IA
+  SYSTEM
+}
+
+model AuditLog {
+  id        String    @id @default(cuid())
+  actorId   String?   @map("actor_id")
+  actorType ActorType @map("actor_type")
+  action    String
+  entity    String
+  entityId  String    @map("entity_id")
+  diff      Json?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  actor Member? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  keyHash    String    @unique @map("key_hash")
+  prefix     String
+  label      String?
+  scopes     String[]
+  isActive   Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  expiresAt  DateTime? @map("expires_at")
+
+  @@map("api_keys_v2")
 }
