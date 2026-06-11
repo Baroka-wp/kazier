@@ -24,4 +24,7 @@ import * as members from "./members";
 import * as projects from "./projects";
 import * as tasks from "./tasks";
 import * as deliverables from "./deliverables";
-export { members, projects, tasks, deliverables };
+import * as reports from "./reports";
+import * as expenses from "./expenses";
+import * as notes from "./notes";
+export { members, projects, tasks, deliverables, reports, expenses, notes };
