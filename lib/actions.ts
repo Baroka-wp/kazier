@@ -1,90 +1,111 @@
 "use server";
 
-import { prisma } from "./prisma";
+/**
+ * Server Actions du formulaire public DailyForm.
+ *
+ * Ces fonctions sont appelées SANS session NextAuth (public). On utilise
+ * donc un Actor synthétique :
+ *   - HUMAN(memberId, MEMBER) pour les writes du membre lui-même (submit
+ *     report, save evaluations) → respecte la perm reports.write
+ *   - SYSTEM pour les lectures publiques (projets/tâches dispo, autocomplete)
+ */
 
-function stripHtml(html: string) {
-  if (!html) return "";
-  return html.replace(/<[^>]*>/g, "").trim();
-}
+import {
+  prisma,
+  members as membersCore,
+  reports as reportsCore,
+  systemActor,
+  type Actor,
+} from "@/lib/core";
+import { postMessage, header, section, divider, actionButton, stripHtml } from "@/lib/server/integrations/slack/client";
 
-export async function getProjectsByMember(team_id: number) {
-  const result = await prisma.project.findMany({
-    where: { team_ids: { has: team_id } },
-    select: { id: true, name: true, description: true, icon: true },
-    orderBy: { name: "asc" },
+const SYSTEM: Actor = systemActor("daily-form");
+const formMember = (memberId: string): Actor => ({
+  type: "HUMAN",
+  memberId,
+  role: "MEMBER",
+});
+
+// ── getProjectsByMember ──────────────────────────────────────────────────
+
+export async function getProjectsByMember(team_id: string) {
+  const memberships = await prisma.projectMember.findMany({
+    where: { memberId: team_id },
+    include: {
+      project: { select: { id: true, name: true, description: true, icon: true } },
+    },
+    orderBy: { project: { name: "asc" } },
   });
-  return result.map((r) => ({
-    id: r.id,
-    name: r.name || "",
-    description: r.description || "",
-    icon: r.icon || "",
+  return memberships.map((m) => ({
+    id: m.project.id,
+    name: m.project.name,
+    description: m.project.description ?? "",
+    icon: m.project.icon ?? "",
   }));
 }
 
-export async function getTasksByMember(team_id: number) {
-  const result = await prisma.tasks.findMany({
+// ── getTasksByMember (variante shape brut pour DailyForm) ───────────────
+
+export async function getTasksByMember(team_id: string) {
+  const rows = await prisma.task.findMany({
     where: {
-      assigned_to: { has: team_id },
-      status: { not: "terminée" },
+      assignments: { some: { memberId: team_id } },
+      status: { not: "DONE" },
     },
     include: {
       project: { select: { name: true, icon: true } },
     },
-    orderBy: { due_date: "asc" },
+    orderBy: { dueDate: "asc" },
   });
-  return result.map((t) => ({
+  return rows.map((t) => ({
     id: t.id,
-    title: t.title || "",
-    description: t.description || "",
-    status: t.status || "",
-    priority: t.priority || "",
-    due_date: t.due_date ? t.due_date.toISOString().split("T")[0] : null,
-    project_id: t.project_id || 0,
-    project_name: t.project?.name || "",
-    project_icon: t.project?.icon || "",
+    title: t.title,
+    description: t.description ?? "",
+    status: t.status,
+    priority: t.priority,
+    due_date: t.dueDate ? t.dueDate.toISOString().split("T")[0] : null,
+    project_id: t.projectId ?? "",
+    project_name: t.project?.name ?? "",
+    project_icon: t.project?.icon ?? "",
   }));
 }
 
-// ── Nouveauté : récupérer les coéquipiers des projets sélectionnés ─────────────
+// ── getTeammatesByProjects ──────────────────────────────────────────────
+
 export async function getTeammatesByProjects(
-  project_ids: number[],
-  current_team_id: number
-): Promise<{ id: number; full_name: string }[]> {
+  project_ids: string[],
+  current_team_id: string
+): Promise<{ id: string; full_name: string }[]> {
   if (project_ids.length === 0) return [];
 
-  // Les projets ont un champ team_ids (array d'ids)
-  const projects = await prisma.project.findMany({
-    where: { id: { in: project_ids } },
-    select: { team_ids: true },
+  const memberships = await prisma.projectMember.findMany({
+    where: { projectId: { in: project_ids } },
+    select: { memberId: true },
   });
 
-  // Collecter tous les ids uniques, sauf le membre courant
-  const allIds = new Set<number>();
-  for (const p of projects) {
-    for (const id of p.team_ids ?? []) {
-      if (id !== current_team_id) allIds.add(id);
-    }
-  }
+  const allIds = [...new Set(memberships.map((m) => m.memberId))].filter(
+    (id) => id !== current_team_id
+  );
+  if (allIds.length === 0) return [];
 
-  if (allIds.size === 0) return [];
-
-  const members = await prisma.teams.findMany({
-    where: { id: { in: Array.from(allIds) }, is_boss: false },
-    select: { id: true, first_name: true, last_name: true },
-    orderBy: { first_name: "asc" },
+  const teammates = await prisma.member.findMany({
+    where: { id: { in: allIds }, isBoss: false },
+    select: { id: true, firstName: true, lastName: true },
+    orderBy: { firstName: "asc" },
   });
 
-  return members.map((m) => ({
+  return teammates.map((m) => ({
     id: m.id,
-    full_name: `${m.first_name || ""} ${m.last_name || ""}`.trim(),
+    full_name: `${m.firstName} ${m.lastName}`.trim(),
   }));
 }
 
-// ── Nouveauté : sauvegarder les évaluations ────────────────────────────────────
+// ── saveEvaluations ─────────────────────────────────────────────────────
+
 export async function saveEvaluations(
-  evaluator_id: number,
+  evaluator_id: string,
   evaluations: {
-    evaluated_id: number;
+    evaluated_id: string;
     communication: number;
     collaboration: number;
     punctuality: number;
@@ -93,17 +114,16 @@ export async function saveEvaluations(
 ) {
   if (evaluations.length === 0) return;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
 
   await Promise.all(
     evaluations.map((e) =>
       prisma.evaluation.upsert({
         where: {
-          evaluator_id_evaluated_id_report_date: {
-            evaluator_id,
-            evaluated_id: e.evaluated_id,
-            report_date: today,
+          evaluatorId_evaluatedId_reportDate: {
+            evaluatorId: evaluator_id,
+            evaluatedId: e.evaluated_id,
+            reportDate: today,
           },
         },
         update: {
@@ -113,9 +133,9 @@ export async function saveEvaluations(
           comment: stripHtml(e.comment) || null,
         },
         create: {
-          evaluator_id,
-          evaluated_id: e.evaluated_id,
-          report_date: today,
+          evaluatorId: evaluator_id,
+          evaluatedId: e.evaluated_id,
+          reportDate: today,
           communication: e.communication,
           collaboration: e.collaboration,
           punctuality: e.punctuality,
@@ -126,11 +146,13 @@ export async function saveEvaluations(
   );
 }
 
+// ── sendToSlack — soumission rapport quotidien ──────────────────────────
+
 export async function sendToSlack(data: {
-  team_id: number;
+  team_id: string;
   full_name: string;
   projects: string[];
-  validated_tasks: number[];
+  validated_tasks: string[];
   challenges: string;
   needed_learning: string;
   tomorrow_build: string;
@@ -147,226 +169,133 @@ export async function sendToSlack(data: {
     extra_message,
   } = data;
 
-  const taskRows =
-    validated_tasks.length > 0
-      ? await prisma.tasks.findMany({
-          where: { id: { in: validated_tasks } },
-          select: { id: true, title: true, project_id: true },
-        })
-      : [];
-
-  const taskTitles = taskRows.map((r) => r.title || "");
-
-  const projectRows =
-    projects.length > 0
-      ? await prisma.project.findMany({
-          where: { name: { in: projects } },
-          select: { id: true, name: true },
-        })
-      : [];
-
-  const slackPayload = {
-    username: "Groot_Bot",
-    icon_emoji: ":robot_face:",
-    blocks: [
-      {
-        type: "header",
-        text: { type: "plain_text", text: "📅 Rapport Quotidien d'Activité" },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*👤 Nom :* ${full_name}\n*📁 Projets :* ${projects.join(", ")}`,
-        },
-      },
-      { type: "divider" },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*✅ Tâches validées :*\n${
-            taskTitles.length > 0 ? taskTitles.map((t) => `• ${t}`).join("\n") : "_Aucune_"
-          }`,
-        },
-      },
-      ...(extra_message && stripHtml(extra_message).length > 0
-        ? [
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `*💬 Message :*\n${stripHtml(extra_message)}`,
-              },
-            },
-          ]
-        : []),
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*🚧 Challenges :*\n${stripHtml(challenges) || "_Non renseigné_"}`,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*🎯 À apprendre :*\n${stripHtml(needed_learning) || "_Non renseigné_"}`,
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*🚀 Objectif demain :*\n${stripHtml(tomorrow_build) || "_Non renseigné_"}`,
-        },
-      },
-      { type: "divider" },
-      {
-        type: "actions",
-        elements: [
-          {
-            type: "button",
-            text: { type: "plain_text", text: "📊 Voir le dashboard" },
-            url: `${process.env.NEXTAUTH_URL}/dashboard`,
-            style: "primary",
-          },
-        ],
-      },
-    ],
-  };
-
   try {
-    const inserts = projectRows.map((p) => {
-      const projectTaskTitles = taskRows
-        .filter((t) => t.project_id === p.id)
-        .map((t) => `• ${t.title}`)
-        .join("\n");
+    // 1. Récupérer projets et tâches choisis
+    const [taskRows, projectRows] = await Promise.all([
+      validated_tasks.length > 0
+        ? prisma.task.findMany({
+            where: { id: { in: validated_tasks } },
+            select: { id: true, title: true, projectId: true },
+          })
+        : Promise.resolve([] as { id: string; title: string; projectId: string | null }[]),
+      projects.length > 0
+        ? prisma.project.findMany({
+            where: { name: { in: projects } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([] as { id: string; name: string }[]),
+    ]);
 
-      return prisma.rapports.create({
-        data: {
-          team: { connect: { id: team_id } },
-          project: { connect: { id: p.id } },
-          working_built: projectTaskTitles,
-          validated_learning: "",
-          broken_features: challenges ?? "",
-          needed_learning: needed_learning ?? "",
-          tomorrow_build: tomorrow_build ?? "",
-          extra_message: extra_message ? stripHtml(extra_message) : "",
-        },
+    // 2. Soumettre un rapport par projet (ou un seul sans projet)
+    const actor = formMember(team_id);
+    if (projectRows.length === 0) {
+      const r = await reportsCore.submit(actor, {
+        memberId: team_id,
+        blockers: challenges,
+        learningNeeded: needed_learning,
+        tomorrowPlan: tomorrow_build,
+        extraMessage: extra_message ? stripHtml(extra_message) : undefined,
       });
-    });
-
-    if (inserts.length === 0) {
-      await prisma.rapports.create({
-        data: {
-          team: { connect: { id: team_id } },
-          project: undefined,
-          working_built: "",
-          validated_learning: "",
-          broken_features: challenges ?? "",
-          needed_learning: needed_learning ?? "",
-          tomorrow_build: tomorrow_build ?? "",
-          extra_message: extra_message ? stripHtml(extra_message) : "",
-        },
-      });
+      // CONFLICT si déjà soumis aujourd'hui — c'est OK, on continue le Slack
+      if (!r.ok && r.code !== "CONFLICT") {
+        return { success: false };
+      }
     } else {
-      await Promise.all(inserts);
+      await Promise.all(
+        projectRows.map(async (p) => {
+          const tasksForProject = taskRows
+            .filter((t) => t.projectId === p.id)
+            .map((t) => `• ${t.title}`)
+            .join("\n");
+          const r = await reportsCore.submit(actor, {
+            memberId: team_id,
+            projectId: p.id,
+            inProgress: tasksForProject,
+            blockers: challenges,
+            learningNeeded: needed_learning,
+            tomorrowPlan: tomorrow_build,
+            extraMessage: extra_message ? stripHtml(extra_message) : undefined,
+          });
+          if (!r.ok && r.code !== "CONFLICT") {
+            throw new Error(r.message);
+          }
+        })
+      );
     }
 
-    const response = await fetch("https://slack.com/api/chat.postMessage", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-      },
-      body: JSON.stringify({
-        ...slackPayload,
-        channel: process.env.SLACK_BOSS_USER_ID,
-      }),
-    });
-
-    const result = await response.json();
-    if (!result.ok) throw new Error(`Slack DM failed: ${result.error}`);
+    // 3. DM au boss
+    const taskTitles = taskRows.map((r) => r.title);
+    const bossChannel = process.env.SLACK_BOSS_USER_ID;
+    if (bossChannel) {
+      await postMessage({
+        channel: bossChannel,
+        iconEmoji: ":robot_face:",
+        username: "Groot_Bot",
+        blocks: [
+          header("📅 Rapport Quotidien d'Activité"),
+          section(`*👤 Nom :* ${full_name}\n*📁 Projets :* ${projects.join(", ")}`),
+          divider,
+          section(
+            `*✅ Tâches validées :*\n${
+              taskTitles.length > 0 ? taskTitles.map((t) => `• ${t}`).join("\n") : "_Aucune_"
+            }`
+          ),
+          ...(extra_message && stripHtml(extra_message).length > 0
+            ? [section(`*💬 Message :*\n${stripHtml(extra_message)}`)]
+            : []),
+          section(`*🚧 Challenges :*\n${stripHtml(challenges) || "_Non renseigné_"}`),
+          section(`*🎯 À apprendre :*\n${stripHtml(needed_learning) || "_Non renseigné_"}`),
+          section(`*🚀 Objectif demain :*\n${stripHtml(tomorrow_build) || "_Non renseigné_"}`),
+          divider,
+          actionButton(
+            "📊 Voir le dashboard",
+            `${process.env.NEXTAUTH_URL ?? ""}/dashboard`
+          ),
+        ],
+      });
+    }
 
     return { success: true };
-  } catch (error) {
-    console.error("Erreur détaillée :", error);
+  } catch (e) {
+    console.error("[sendToSlack]", e);
     return { success: false };
   }
 }
 
-export async function checkAlreadySubmitted(team_id: number) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+// ── checkAlreadySubmitted ───────────────────────────────────────────────
 
-  const result = await prisma.rapports.findFirst({
-    where: {
-      team_id,
-      created_at: { gte: today, lt: tomorrow },
-    },
-    select: { id: true },
+export async function checkAlreadySubmitted(team_id: string) {
+  const res = await reportsCore.hasSubmittedOn(formMember(team_id), {
+    memberId: team_id,
   });
-
-  return result !== null;
+  return res.ok && res.data.submitted;
 }
+
+// ── searchNames ─────────────────────────────────────────────────────────
 
 export async function searchNames(query: string) {
-  if (!query || query.trim().length < 2) return [];
-
-  const result = await prisma.teams.findMany({
-    where: {
-      OR: [
-        { first_name: { contains: query, mode: "insensitive" } },
-        { last_name: { contains: query, mode: "insensitive" } },
-      ],
-    },
-    select: { id: true, first_name: true, last_name: true },
-    orderBy: { first_name: "asc" },
-    take: 5,
-  });
-
-  return result.map((r) => ({
-    id: r.id,
-    full_name: `${r.first_name || ""} ${r.last_name || ""}`.trim(),
-  }));
+  const res = await membersCore.search(SYSTEM, query, 5);
+  if (!res.ok) return [];
+  return res.data.map((r) => ({ id: r.id, full_name: r.fullName }));
 }
 
-export async function isNameInTeam(team_id: number) {
-  const result = await prisma.teams.findFirst({
-    where: { id: team_id, is_boss: false },
+// ── isNameInTeam ────────────────────────────────────────────────────────
+
+export async function isNameInTeam(team_id: string) {
+  const found = await prisma.member.findFirst({
+    where: { id: team_id, isBoss: false, isActive: true },
     select: { id: true },
   });
-  return result !== null;
+  return found !== null;
 }
 
+// ── getMissingMembers ───────────────────────────────────────────────────
+
 export async function getMissingMembers() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const allMembers = await prisma.teams.findMany({
-    where: { is_boss: false },
-    select: { id: true, first_name: true, last_name: true, slack_id: true },
-    orderBy: { first_name: "asc" },
-  });
-
-  const submittedToday = await prisma.rapports.findMany({
-    where: { created_at: { gte: today, lt: tomorrow } },
-    select: { team_id: true },
-    distinct: ["team_id"],
-  });
-
-  const submittedIds = new Set(submittedToday.map((r) => r.team_id).filter(Boolean));
-
-  return allMembers
-    .filter((m) => !submittedIds.has(m.id))
-    .map((r) => ({
-      full_name: `${r.first_name || ""} ${r.last_name || ""}`.trim(),
-      slack_id: r.slack_id || "",
-    }));
+  const res = await reportsCore.missingMembers(SYSTEM, {});
+  if (!res.ok) return [];
+  return res.data.map((m) => ({
+    full_name: m.fullName,
+    slack_id: m.slackId ?? "",
+  }));
 }

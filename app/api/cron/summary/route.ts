@@ -1,48 +1,23 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, reports, systemActor, isOk } from "@/lib/core";
+import { postMessage } from "@/lib/server/integrations/slack/client";
 
 export async function GET() {
-  // Date du jour
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const SYSTEM = systemActor("cron-summary");
 
-  // Membres ayant soumis aujourd'hui
-  const submitted = await prisma.rapports.findMany({
-    where: {
-      created_at: {
-        gte: today,
-        lt: tomorrow,
-      },
-    },
-    include: {
-      team: {
-        select: {
-          first_name: true,
-          last_name: true,
-        },
-      },
-    },
-    orderBy: [{ team: { first_name: "asc" } }, { team: { last_name: "asc" } }],
+  const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
+
+  // Membres qui ont soumis aujourd'hui (raw query — pas besoin de tout le pipeline reports.list)
+  const submittedReports = await prisma.report.findMany({
+    where: { reportDate: today },
+    include: { member: { select: { firstName: true, lastName: true } } },
+    orderBy: { member: { firstName: "asc" } },
+    distinct: ["memberId"],
   });
 
-  // IDs des membres ayant soumis
-  const submittedIds = submitted.map((r) => r.team_id).filter((id): id is number => id !== null);
+  const missingRes = await reports.missingMembers(SYSTEM, {});
+  const missing = isOk(missingRes) ? missingRes.data : [];
 
-  // Membres qui n'ont pas soumis
-  const missing = await prisma.teams.findMany({
-    where: {
-      is_boss: false,
-      ...(submittedIds.length > 0 ? { id: { notIn: submittedIds } } : {}),
-    },
-    select: {
-      first_name: true,
-      last_name: true,
-    },
-    orderBy: [{ first_name: "asc" }, { last_name: "asc" }],
-  });
-
-  const date = new Date().toLocaleDateString("fr-FR", {
+  const dateLabel = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -51,22 +26,18 @@ export async function GET() {
 
   const message =
     missing.length === 0
-      ? `✅ *Bilan du ${date}*\n\nTout le monde a soumis son rapport aujourd'hui ! 🎉`
-      : `📊 *Bilan du ${date}*\n\n✅ *Ont soumis (${submitted.length}) :*\n${submitted.map((m) => `• ${m.team?.first_name} ${m.team?.last_name}`).join("\n")}\n\n❌ *N'ont pas soumis (${missing.length}) :*\n${missing.map((m) => `• ${m.first_name} ${m.last_name}`).join("\n")}`;
+      ? `✅ *Bilan du ${dateLabel}*\n\nTout le monde a soumis son rapport aujourd'hui ! 🎉`
+      : `📊 *Bilan du ${dateLabel}*\n\n✅ *Ont soumis (${submittedReports.length}) :*\n${submittedReports
+          .map((r) => `• ${r.member.firstName} ${r.member.lastName}`)
+          .join("\n")}\n\n❌ *N'ont pas soumis (${missing.length}) :*\n${missing
+          .map((m) => `• ${m.fullName}`)
+          .join("\n")}`;
 
-  const res = await fetch("https://slack.com/api/chat.postMessage", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-    },
-    body: JSON.stringify({
-      channel: process.env.SLACK_BOSS_USER_ID,
-      text: message,
-    }),
-  });
+  const boss = process.env.SLACK_BOSS_USER_ID;
+  if (!boss) {
+    return Response.json({ error: "SLACK_BOSS_USER_ID not set" }, { status: 500 });
+  }
 
-  const data = await res.json();
-  if (!data.ok) return Response.json({ error: data.error }, { status: 500 });
+  await postMessage({ channel: boss, text: message });
   return Response.json({ success: true });
 }

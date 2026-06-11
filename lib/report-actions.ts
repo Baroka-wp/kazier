@@ -1,31 +1,17 @@
 "use server";
 
-import { prisma } from "./prisma";
+/**
+ * Wrappers Server Actions — édition/suppression d'un rapport.
+ * Délègue à lib/core/reports + un update via prisma direct (le core n'expose
+ * pas d'update : on garde le comportement historique pour ne pas casser l'UI).
+ */
+
+import { prisma, reports as reportsCore } from "@/lib/core";
+import { currentActor } from "@/lib/server/with-auth";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
-import { getPermissions } from "@/lib/permissions";
-
-// ── Helper: Vérifier authentification et permissions ─────────────────────────
-
-async function requireReportPermission(permission: "canEditReports" | "canDeleteReports") {
-  const session = await auth();
-
-  if (!session?.user) {
-    throw new Error("Non authentifié");
-  }
-
-  const userRole = (session.user as { role?: string }).role;
-  const permissions = getPermissions(userRole ?? null);
-
-  if (!permissions[permission]) {
-    throw new Error("Non autorisé: permissions insuffisantes");
-  }
-
-  return session.user;
-}
 
 export type Report = {
-  id: number;
+  id: string;
   work_built: string | null;
   working_built: string | null;
   broken_features: string | null;
@@ -35,32 +21,29 @@ export type Report = {
   extra_message: string | null;
   created_at: string;
   submitted_at?: string;
-  team_id: number | null;
-  project_id: number | null;
+  team_id: string | null;
+  project_id: string | null;
   full_name: string;
   role: string;
   project_name: string;
 };
 
-export async function deleteReport(id: number): Promise<{ success: boolean; error?: string }> {
+export async function deleteReport(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    // ✅ Vérifier authentification et permissions
-    await requireReportPermission("canDeleteReports");
-
-    await prisma.rapports.delete({
-      where: { id },
-    });
+    const actor = await currentActor();
+    const res = await reportsCore.remove(actor, id);
+    if (!res.ok) return { success: false, error: res.message };
     revalidatePath("/dashboard/rapports");
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (err) {
-    console.error("[deleteReport]", err);
+  } catch (e) {
+    console.error("[deleteReport]", e);
     return { success: false, error: "Erreur lors de la suppression." };
   }
 }
 
 export async function updateReport(
-  id: number,
+  id: string,
   data: {
     work_built?: string;
     working_built?: string;
@@ -72,119 +55,89 @@ export async function updateReport(
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // ✅ Vérifier authentification et permissions
-    await requireReportPermission("canEditReports");
-
-    // Filtrer les champs définis
-    type UpdateData = {
-      work_built?: string;
-      working_built?: string;
-      broken_features?: string;
-      validated_learning?: string;
-      needed_learning?: string;
-      tomorrow_build?: string;
-      extra_message?: string;
-    };
-    const updateData: UpdateData = {};
-    if (data.work_built !== undefined) updateData.work_built = data.work_built;
-    if (data.working_built !== undefined) updateData.working_built = data.working_built;
-    if (data.broken_features !== undefined) updateData.broken_features = data.broken_features;
-    if (data.validated_learning !== undefined)
-      updateData.validated_learning = data.validated_learning;
-    if (data.needed_learning !== undefined) updateData.needed_learning = data.needed_learning;
-    if (data.tomorrow_build !== undefined) updateData.tomorrow_build = data.tomorrow_build;
-    if (data.extra_message !== undefined) updateData.extra_message = data.extra_message;
-
-    if (Object.keys(updateData).length === 0) {
-      return { success: true };
+    const actor = await currentActor();
+    if (actor.type !== "HUMAN" || actor.role !== "SUPER_ADMIN") {
+      return { success: false, error: "Permission refusée." };
     }
 
-    await prisma.rapports.update({
-      where: { id },
-      data: updateData,
-    });
+    const mapped: {
+      workCompleted?: string;
+      inProgress?: string;
+      blockers?: string;
+      learnings?: string;
+      learningNeeded?: string;
+      tomorrowPlan?: string;
+      extraMessage?: string;
+    } = {};
+    if (data.work_built !== undefined) mapped.workCompleted = data.work_built;
+    if (data.working_built !== undefined) mapped.inProgress = data.working_built;
+    if (data.broken_features !== undefined) mapped.blockers = data.broken_features;
+    if (data.validated_learning !== undefined) mapped.learnings = data.validated_learning;
+    if (data.needed_learning !== undefined) mapped.learningNeeded = data.needed_learning;
+    if (data.tomorrow_build !== undefined) mapped.tomorrowPlan = data.tomorrow_build;
+    if (data.extra_message !== undefined) mapped.extraMessage = data.extra_message;
 
+    if (Object.keys(mapped).length === 0) return { success: true };
+
+    await prisma.report.update({ where: { id }, data: mapped });
     revalidatePath("/dashboard/rapports");
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (err) {
-    console.error("[updateReport]", err);
+  } catch (e) {
+    console.error("[updateReport]", e);
     return { success: false, error: "Erreur lors de la modification." };
   }
 }
 
-// ── GET REPORTS WITH PROJECT NAMES ────────────────────────────────────────────
-
 export async function getReportsWithProjects(): Promise<{
   success: boolean;
   reports?: Report[];
-  projects?: Array<{ id: number; name: string }>;
+  projects?: Array<{ id: string; name: string }>;
   error?: string;
 }> {
   try {
-    // Récupérer les rapports avec les infos utilisateur et projet
-    const reportsResult = await prisma.rapports.findMany({
-      include: {
-        team: true,
-        project: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-    });
+    const actor = await currentActor();
+    const res = await reportsCore.list(actor, { limit: 1000 });
+    if (!res.ok) return { success: false, error: res.message };
 
-    // Récupérer les utilisateurs pour avoir les rôles
-    const usersByTeamId = new Map();
-    const users = await prisma.users.findMany({
-      select: {
-        team_id: true,
-        role: true,
-      },
-    });
-    users.forEach((u) => {
-      if (u.team_id) usersByTeamId.set(u.team_id, u.role);
-    });
+    const memberIds = [...new Set(res.data.data.map((r) => r.memberId))];
+    const roles = memberIds.length
+      ? await prisma.member.findMany({
+          where: { id: { in: memberIds } },
+          select: { id: true, role: true },
+        })
+      : [];
+    const roleById = new Map(roles.map((m) => [m.id, m.role]));
 
-    // Récupérer la liste des projets pour le filtre
-    const projectsResult = await prisma.project.findMany({
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    const reports = reportsResult.map((r) => ({
+    const reports: Report[] = res.data.data.map((r) => ({
       id: r.id,
-      work_built: r.work_built,
-      working_built: r.working_built,
-      broken_features: r.broken_features,
-      validated_learning: r.validated_learning,
-      needed_learning: r.needed_learning,
-      tomorrow_build: r.tomorrow_build,
-      extra_message: r.extra_message,
-      created_at: r.created_at.toISOString(),
-      team_id: r.team_id,
-      project_id: r.project_id,
-      full_name: r.team ? `${r.team.first_name} ${r.team.last_name}` : "Unknown",
-      role: usersByTeamId.get(r.team_id) || "T",
-      project_name: r.project?.name || "Sans projet",
+      work_built: r.workCompleted,
+      working_built: r.inProgress,
+      broken_features: r.blockers,
+      validated_learning: r.learnings,
+      needed_learning: r.learningNeeded,
+      tomorrow_build: r.tomorrowPlan,
+      extra_message: r.extraMessage,
+      created_at: r.createdAt.toISOString(),
+      team_id: r.memberId,
+      project_id: r.projectId,
+      full_name: r.memberName,
+      role: roleById.get(r.memberId) ?? "MEMBER",
+      project_name: r.projectName ?? "Sans projet",
     }));
 
-    const projects = projectsResult.map((p) => ({
-      id: p.id,
-      name: p.name || "Sans nom",
-    }));
+    const projects = await prisma.project.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
 
-    return { success: true, reports, projects };
-  } catch (err: unknown) {
-    console.error("[getReportsWithProjects]", err instanceof Error ? err.message : String(err));
+    return {
+      success: true,
+      reports,
+      projects: projects.map((p) => ({ id: p.id, name: p.name })),
+    };
+  } catch (e) {
+    console.error("[getReportsWithProjects]", e);
     return { success: false, error: "Erreur lors de la récupération des rapports." };
   }
 }
