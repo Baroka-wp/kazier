@@ -18,3 +18,8 @@ export { logAction, entityTimeline } from "./audit";
 export { events } from "./events";
 export type { DomainEventMap, DomainEventName } from "./events";
 export { prisma } from "./prisma";
+
+// ── Namespaces métier ────────────────────────────────────────────────────
+import * as members from "./members";
+import * as projects from "./projects";
+export { members, projects };
