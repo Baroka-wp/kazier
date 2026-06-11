@@ -22,4 +22,6 @@ export { prisma } from "./prisma";
 // ── Namespaces métier ────────────────────────────────────────────────────
 import * as members from "./members";
 import * as projects from "./projects";
-export { members, projects };
+import * as tasks from "./tasks";
+import * as deliverables from "./deliverables";
+export { members, projects, tasks, deliverables };
