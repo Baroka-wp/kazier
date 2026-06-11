@@ -3,6 +3,9 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./lib/prisma";
 import bcrypt from "bcryptjs";
 
+// Branche les listeners Slack/intégrations dès qu'auth est chargé côté serveur.
+import "./lib/server/integrations";
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET,
   trustHost: true,
@@ -24,39 +27,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Mot de passe", type: "password" },
       },
       async authorize(credentials) {
-        // Récupérer l'utilisateur avec son équipe
-        const user = await prisma.users.findFirst({
-          where: {
-            email: {
-              equals: (credentials.email as string).trim(),
-              mode: "insensitive",
-            },
-          },
+        const email = (credentials.email as string).trim().toLowerCase();
+        const password = credentials.password as string;
+
+        const auth = await prisma.auth.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
           include: {
-            team: {
-              select: {
-                first_name: true,
-                last_name: true,
-              },
+            member: {
+              select: { id: true, firstName: true, lastName: true, role: true, isActive: true },
             },
           },
         });
 
-        if (!user) return null;
+        if (!auth || !auth.member.isActive) return null;
+        const valid = await bcrypt.compare(password, auth.passwordHash);
+        if (!valid) return null;
 
-        const isValid = await bcrypt.compare(credentials.password as string, user.password);
-        if (!isValid) return null;
-
-        const fullName = `${user.team?.first_name ?? ""} ${user.team?.last_name ?? ""}`.trim();
+        const fullName = `${auth.member.firstName} ${auth.member.lastName}`.trim();
 
         return {
-          id: String(user.id),
-          email: user.email,
-          name: fullName || user.email,
-          role: user.role,
-          team_id: user.team_id,
-          first_name: user.team?.first_name,
-          last_name: user.team?.last_name,
+          id: auth.member.id,             // cuid Member
+          email: auth.email,
+          name: fullName,
+          role: auth.member.role,
+          first_name: auth.member.firstName,
+          last_name: auth.member.lastName,
         };
       },
     }),
@@ -64,19 +59,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        const customUser = user as {
+        const u = user as {
           id?: string;
           role?: string;
-          team_id?: number;
           first_name?: string;
           last_name?: string;
           name?: string;
         };
-        token.id = customUser.id;
-        token.role = customUser.role;
-        token.team_id = customUser.team_id;
-        token.first_name = customUser.first_name;
-        token.last_name = customUser.last_name;
+        token.id = u.id;
+        token.role = u.role;
+        token.first_name = u.first_name;
+        token.last_name = u.last_name;
         token.name = user.name;
       }
       return token;
@@ -86,13 +79,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         type ExtendedUser = {
           id?: string;
           role?: string;
-          team_id?: number;
           first_name?: string;
           last_name?: string;
         };
         (session.user as ExtendedUser).id = token.id as string;
         (session.user as ExtendedUser).role = token.role as string;
-        (session.user as ExtendedUser).team_id = token.team_id as number;
         (session.user as ExtendedUser).first_name = token.first_name as string;
         (session.user as ExtendedUser).last_name = token.last_name as string;
         session.user.name = token.name as string;

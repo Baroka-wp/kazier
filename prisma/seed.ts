@@ -1,4 +1,8 @@
 // prisma/seed.ts
+//
+// Crée un compte SUPER_ADMIN initial. Utilisé seulement pour une DB neuve.
+// Sur une DB existante, no-op si l'admin existe déjà.
+
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -6,45 +10,39 @@ const prisma = new PrismaClient();
 
 async function main() {
   try {
-    const password = await bcrypt.hash("motdepasse123", 10);
     const email = "birotori@gmail.com";
+    const password = await bcrypt.hash("motdepasse123", 10);
 
-    // Vérifier si l'utilisateur existe déjà
-    const existingUser = await prisma.users.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      console.log("⚠️  L'utilisateur existe déjà !");
+    const existing = await prisma.auth.findUnique({ where: { email } });
+    if (existing) {
+      console.log("⚠️  Compte admin déjà présent — seed ignoré.");
       return;
     }
 
-    // Créer d'abord l'entrée dans teams
-    const team = await prisma.teams.create({
+    const member = await prisma.member.create({
       data: {
-        first_name: "Djoni",
-        last_name: "OUEDANOU",
-        is_boss: true,
-        email: email,
+        firstName: "Djoni",
+        lastName: "OUEDANOU",
+        email,
+        isBoss: true,
+        role: "SUPER_ADMIN",
       },
     });
 
-    // Créer ensuite l'utilisateur avec le team_id
-    await prisma.users.create({
+    await prisma.auth.create({
       data: {
-        email: email,
-        password: password,
-        role: "SA",
-        team_id: team.id,
+        memberId: member.id,
+        email,
+        passwordHash: password,
       },
     });
 
-    console.log("✅ Admin créé avec succès !");
-    console.log(`   Email: ${email}`);
-    console.log(`   Mot de passe: Djonny2022@`);
-    console.log(`   Team ID: ${team.id}`);
+    console.log("✅ Admin créé !");
+    console.log(`   Email     : ${email}`);
+    console.log(`   Mot de passe : motdepasse123 (à changer immédiatement)`);
+    console.log(`   Member ID : ${member.id}`);
   } catch (error) {
-    console.error("❌ Erreur lors de la création de l'admin:", error);
+    console.error("❌ Erreur lors du seed:", error);
     throw error;
   } finally {
     await prisma.$disconnect();

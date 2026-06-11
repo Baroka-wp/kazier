@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     if (!email) return NextResponse.json({ ok: true });
 
-    const user = await prisma.users.findFirst({
+    const authRecord = await prisma.auth.findFirst({
       where: {
         email: {
           equals: email.trim(),
@@ -102,11 +102,11 @@ export async function POST(req: NextRequest) {
         },
       },
       include: {
-        team: true,
+        member: true,
       },
     });
 
-    if (!user || !user.team) {
+    if (!authRecord || !authRecord.member) {
       await sendDM(
         slackId,
         [
@@ -124,10 +124,10 @@ export async function POST(req: NextRequest) {
     }
 
     const member = {
-      id: user.team.id,
-      first_name: user.team.first_name ?? "",
-      last_name: user.team.last_name ?? "",
-      slack_id: user.team.slack_id,
+      id: authRecord.member.id,
+      first_name: authRecord.member.firstName,
+      last_name: authRecord.member.lastName,
+      slack_id: authRecord.member.slackId,
     };
 
     // Déjà un slack_id → simple message de bienvenue
@@ -202,9 +202,9 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ ok: true });
         }
 
-        await prisma.teams.update({
+        await prisma.member.update({
           where: { id: teamId },
-          data: { slack_id: slackId },
+          data: { slackId: slackId },
         });
 
         await sendDM(

@@ -9,20 +9,22 @@ export default auth((req) => {
   const isDashboard = pathname.startsWith("/dashboard");
   const isApi = pathname.startsWith("/api");
 
-  // 1. Gérer les appels API non authentifiés
+  // 1. API non authentifié
   if (!isLoggedIn && isApi) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  // 2. Non authentifié tente d'accéder au dashboard
+  // 2. Dashboard non authentifié
   if (!isLoggedIn && isDashboard) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return Response.redirect(loginUrl);
   }
 
-  // 3. Protection TEAM (Rapports)
-  if (isLoggedIn && userRole === "T") {
+  // 3. MEMBER ne peut pas voir rapports / dashboard root
+  // (back-compat: anciens tokens "T" continueront de fonctionner via fallback)
+  const isMember = userRole === "MEMBER" || userRole === "T";
+  if (isLoggedIn && isMember) {
     if (pathname.startsWith("/dashboard/rapports") || pathname === "/dashboard") {
       return NextResponse.redirect(new URL("/dashboard/teams", req.nextUrl.origin));
     }
@@ -34,8 +36,6 @@ export default auth((req) => {
 export const config = {
   matcher: [
     "/dashboard/:path*",
-    // Lister uniquement les routes API à protéger
-    // api/auth, api/cron, api/citation, api/teams, api/upload = libres d'accès
     "/api/rapports/:path*",
     "/api/teams/:path*",
     "/api/projects/:path*",
