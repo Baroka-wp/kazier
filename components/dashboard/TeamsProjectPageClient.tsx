@@ -17,7 +17,7 @@ const TeamsKanbanWrapper = dynamic(() => import("@/components/dashboard/TeamsKan
 
 type Props = {
   tasks: Task[];
-  teamMemberId: number;
+  teamMemberId: string;
   projectName: string;
 };
 

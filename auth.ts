@@ -3,8 +3,8 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./lib/prisma";
 import bcrypt from "bcryptjs";
 
-// Branche les listeners Slack/intégrations dès qu'auth est chargé côté serveur.
-import "./lib/server/integrations";
+// Note: les listeners Slack/intégrations sont chargés via lib/server/with-auth
+// (côté Node, jamais Edge) pour ne pas casser le middleware Edge Runtime.
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET,

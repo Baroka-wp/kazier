@@ -12,11 +12,11 @@ export default async function TeamProjectsPage() {
     redirect("/login");
   }
 
-  const user = session.user as { team_id?: string };
+  const user = session.user as { id?: string };
 
-  const teamMemberId = parseInt(user.team_id ?? "0");
+  const teamMemberId = user.id ?? "";
 
-  if (!teamMemberId || isNaN(teamMemberId)) {
+  if (!teamMemberId) {
     redirect("/login");
   }
 

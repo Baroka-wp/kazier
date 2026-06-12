@@ -1,12 +1,12 @@
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type Task = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   status: "à faire" | "en cours" | "review" | "terminée";
   priority: "low" | "medium" | "high";
   project_id: number | null;
-  assigned_to: number[] | null; // ✅ tableau, pas un scalaire
+  assigned_to: string[] | null; // ✅ tableau, pas un scalaire
   start_date: string | null;
   due_date: string | null;
   created_at: string;
@@ -14,7 +14,7 @@ export type Task = {
   project_name?: string;
 };
 export type Toast = {
-  id: number;
+  id: string;
   type: "success" | "error";
   message: string;
 };
@@ -24,8 +24,8 @@ export type Action = {
   label: string;
   onClick: (t: Task) => void;
 };
-export type TeamMember = { id: number; full_name: string };
-export type Project = { id: number; name: string };
+export type TeamMember = { id: string; full_name: string };
+export type Project = { id: string; name: string };
 // ── Composants Badge ──────────────────────────────────────────────────────────
 export function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; color: string; label: string }> = {

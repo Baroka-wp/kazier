@@ -12,9 +12,9 @@ import { getTeamMembersByProject } from "@/lib/task-actions";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-type Project = { id: number; name: string };
+type Project = { id: string; name: string };
 type ProjectsResponse = { data: Project[] };
-type TeamMember = { id: number; first_name: string; last_name: string };
+type TeamMember = { id: string; first_name: string; last_name: string };
 
 export default function TasksPage() {
   const { mutate: globalMutate } = useSWRConfig();
@@ -24,7 +24,7 @@ export default function TasksPage() {
   const { isSuperAdmin } = usePermissions();
   const showKanban = isTM || isSuperAdmin;
 
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 

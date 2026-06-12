@@ -17,11 +17,11 @@ import ReviewScreen from "./ReviewScreen";
 import SuccessScreen from "./SuccessScreen";
 import { QUESTIONS_GLOBAL } from "./questions";
 
-type Suggestion = { id: number; full_name: string };
+type Suggestion = { id: string; full_name: string };
 type Citation = { quote: string; author: string };
 
 export type Project = {
-  id: number;
+  id: string;
   name: string;
   description: string;
   icon: string;
@@ -39,7 +39,7 @@ export type Evaluation = {
 // Regroupe teammates + evaluations dans un seul state pour éviter
 // les appels setState multiples dans le useEffect (react-hooks/set-state-in-effect)
 
-type Teammate = { id: number; full_name: string };
+type Teammate = { id: string; full_name: string };
 
 type EvalState = {
   teammates: Teammate[];
@@ -98,7 +98,7 @@ export default function DailyForm() {
   const [reviewing, setReviewing] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [editingFromReview, setEditingFromReview] = useState(false);
-  const [teamId, setTeamId] = useState<number | null>(null);
+  const [teamId, setTeamId] = useState<string | null>(null);
   const [blockReason, setBlockReason] = useState<"not_found" | "already_submitted" | null>(null);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [citations, setCitations] = useState<Citation[]>([]);
@@ -107,7 +107,7 @@ export default function DailyForm() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Awaited<ReturnType<typeof getTasksByMember>>>([]);
-  const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
   // ── Évaluations — un seul dispatch pour teammates + evaluations ────────────
   const [evalState, dispatch] = useReducer(evalReducer, evalInitial);

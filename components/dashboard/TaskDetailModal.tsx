@@ -132,7 +132,7 @@ function PriorityBadge({ priority }: { priority: string }) {
 // ── Types Toast ───────────────────────────────────────────────────────────────
 
 type Toast = {
-  id: number;
+  id: string;
   type: "success" | "error";
   message: string;
 };
@@ -311,12 +311,12 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [loadingComments, setLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const toastCounterRef = useRef(0); // ✅ Utilisation d'un ref pour générer des IDs uniques sans impureté

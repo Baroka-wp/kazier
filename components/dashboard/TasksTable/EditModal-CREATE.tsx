@@ -19,7 +19,7 @@ function CreateTaskForm({
 }) {
   const [values, setValues] = useState({
     project_id: defaultProjectId ?? (null as number | null),
-    assigned_to: [] as number[], // ✅ Tableau de plusieurs IDs
+    assigned_to: [] as string[], // ✅ Tableau de plusieurs IDs
     title: "",
     description: "",
     priority: "medium" as const,

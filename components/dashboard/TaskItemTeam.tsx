@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CheckCircle2, Circle, Lock } from "lucide-react";
 
 type Props = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   status: "à faire" | "en cours" | "review" | "terminée";

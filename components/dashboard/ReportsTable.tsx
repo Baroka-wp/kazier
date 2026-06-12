@@ -95,7 +95,7 @@ function StatusBadge({ status }: { status: "done" | "pending" }) {
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 type Report = {
-  id: number;
+  id: string;
   full_name: string;
   role?: string;
   built?: string | null;

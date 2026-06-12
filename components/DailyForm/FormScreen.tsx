@@ -5,7 +5,7 @@ import RichTextArea from "./RichTextArea";
 import type { Project, Evaluation } from "./index";
 
 type Task = {
-  id: number;
+  id: string;
   title: string;
   project_id: number;
   priority: string;
@@ -18,11 +18,11 @@ type Props = {
   answers: Record<string, string>;
   fading: boolean;
   blockReason: "not_found" | "already_submitted" | null;
-  suggestions: { id: number; full_name: string }[];
+  suggestions: { id: string; full_name: string }[];
   isValid: boolean;
   onGo: (next: number) => void;
   onAnswer: (id: string, value: string) => void;
-  onSuggestionPick: (suggestion: { id: number; full_name: string }) => void;
+  onSuggestionPick: (suggestion: { id: string; full_name: string }) => void;
   onReview: () => void;
   loadingSearch: boolean;
   projects?: Project[];
@@ -32,7 +32,7 @@ type Props = {
   selectedTaskIds?: number[];
   onTaskToggle?: (taskId: number) => void;
   // ── Évaluations ────────────────────────────────────────────────────────────
-  teammates?: { id: number; full_name: string }[];
+  teammates?: { id: string; full_name: string }[];
   evaluations?: Record<number, Evaluation>;
   onEvaluationChange?: (
     evaluated_id: number,
@@ -643,7 +643,7 @@ function EvalAccordion({
   onChange,
   isComplete,
 }: {
-  member: { id: number; full_name: string };
+  member: { id: string; full_name: string };
   evaluation: Evaluation | undefined;
   onChange: (field: keyof Omit<Evaluation, "evaluated_id">, value: number | string) => void;
   isComplete: boolean;
@@ -807,7 +807,7 @@ function EvaluationsStep({
   evaluations,
   onEvaluationChange,
 }: {
-  teammates: { id: number; full_name: string }[];
+  teammates: { id: string; full_name: string }[];
   evaluations: Record<number, Evaluation>;
   onEvaluationChange: (
     id: number,

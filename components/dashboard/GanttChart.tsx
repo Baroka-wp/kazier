@@ -12,7 +12,7 @@ type Props = {
   projectStart: Date | null;
   projectEnd: Date | null;
   projectId: number;
-  teamMembers?: Array<{ id: number; first_name: string; last_name: string }>;
+  teamMembers?: Array<{ id: string; first_name: string; last_name: string }>;
   onAddMilestone?: () => void;
   onEditMilestone?: (milestone: Milestone) => void;
   onDeleteMilestone?: (id: number) => void;

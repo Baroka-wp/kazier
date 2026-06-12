@@ -9,7 +9,7 @@ type Props = {
   mode: "create" | "edit";
   task?: Task | null;
   projectId: number;
-  teamMembers?: Array<{ id: number; first_name: string; last_name: string }>;
+  teamMembers?: Array<{ id: string; first_name: string; last_name: string }>;
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -19,7 +19,7 @@ type TaskFormData = {
   description: string;
   status: "à faire" | "en cours" | "review" | "terminée";
   priority: "low" | "medium" | "high";
-  assigned_to: number[];
+  assigned_to: string[];
   start_date: string;
   due_date: string;
 };

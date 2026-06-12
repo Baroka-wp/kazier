@@ -18,7 +18,7 @@ import TaskColumn from "./TaskColumn";
 import TaskCard from "./TaskCard";
 import TaskDetailPage from "./TaskDetailPage";
 
-type Project = { id: number; name: string };
+type Project = { id: string; name: string };
 
 type Props = {
   tasks: Task[];
@@ -29,7 +29,7 @@ type Props = {
   onAddTask?: () => void;
   onBack?: () => void;
   isTM?: boolean;
-  teamMemberId?: number;
+  teamMemberId?: string;
 };
 
 export default function TMKanbanWrapper({

@@ -8,7 +8,7 @@ import SubmitButton from "./SubmitButton";
 import type { Project, Evaluation } from "./index";
 
 type Task = {
-  id: number;
+  id: string;
   title: string;
   project_id: number;
   priority: string;
@@ -23,7 +23,7 @@ type Props = {
   selectedProjects: Project[];
   selectedTaskIds: number[];
   tasks: Task[];
-  teammates: { id: number; full_name: string }[];
+  teammates: { id: string; full_name: string }[];
   evaluations: Record<number, Evaluation>;
   onEdit: (questionIndex: number) => void;
   onBack: () => void;

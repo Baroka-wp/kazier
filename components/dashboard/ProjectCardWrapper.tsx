@@ -5,7 +5,7 @@ import { type ProjectWithTasks } from "@/lib/team-actions";
 
 type Props = {
   project: ProjectWithTasks;
-  teamMemberId: number;
+  teamMemberId: string;
 };
 
 export default function ProjectCardWrapper({ project, teamMemberId }: Props) {

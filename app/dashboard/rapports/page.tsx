@@ -5,7 +5,7 @@ import { useState } from "react";
 import RapportsTable from "@/components/dashboard/RapportsTable";
 
 type Report = {
-  id: number;
+  id: string;
   full_name: string;
   role: string;
   built: string;
@@ -28,7 +28,7 @@ type ApiResponse = {
   limit: number;
   totalPages: number;
   roles: string[];
-  projects: Array<{ id: number; name: string }>;
+  projects: Array<{ id: string; name: string }>;
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());

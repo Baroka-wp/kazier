@@ -31,7 +31,7 @@ type ProjectExtended = Project & {
 };
 
 type Report = {
-  id: number;
+  id: string;
   full_name: string;
   role?: string;
   work_built?: string;
@@ -56,7 +56,7 @@ function AddMemberModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>(project.team_ids || []);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>(project.team_ids || []);
   const [teams, setTeams] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");

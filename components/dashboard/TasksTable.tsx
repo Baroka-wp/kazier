@@ -16,7 +16,7 @@ type Action = {
   label: string;
   onClick: (t: Task) => void;
 };
-type Project = { id: number; name: string };
+type Project = { id: string; name: string };
 
 function formatDateTime(dateStr: string | null): string {
   if (!dateStr) return "—";

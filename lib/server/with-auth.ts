@@ -8,6 +8,11 @@
 import { auth } from "@/auth";
 import { type Actor } from "@/lib/core";
 
+// Side-effect import — branche les listeners Slack une fois pour tout le
+// runtime Node. Placé ici plutôt que dans auth.ts pour éviter d'introduire
+// `node:events` dans l'Edge Runtime (middleware).
+import "./integrations";
+
 export type SessionMember = {
   memberId: string;
   role: "SUPER_ADMIN" | "PROJECT_MANAGER" | "MEMBER";

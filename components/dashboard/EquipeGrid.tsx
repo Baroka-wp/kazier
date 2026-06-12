@@ -20,7 +20,7 @@ import {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type TeamMember = {
-  id: number;
+  id: string;
   first_name: string | null;
   last_name: string | null;
   full_name: string;
@@ -29,7 +29,7 @@ export type TeamMember = {
   is_boss: boolean;
   slack_id: string | null;
   created_at: string;
-  user_id: number | null;
+  user_id: string | null;
   email: string | null;
   role: string | null;
 };

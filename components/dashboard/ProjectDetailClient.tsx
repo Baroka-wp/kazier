@@ -25,7 +25,7 @@ import type { Task } from "@/lib/task-actions";
 type Props = {
   project: ProjectWithTasks;
   initialTasks: Task[];
-  teamMemberId: number;
+  teamMemberId: string;
 };
 
 type StatusType = "à faire" | "en cours" | "review" | "terminée";

@@ -9,7 +9,7 @@ import { Task } from "@/lib/task-actions";
 type Props = {
   status: "à faire" | "en cours" | "review" | "terminée";
   tasks: Task[];
-  teamMemberId: number;
+  teamMemberId: string;
   onTaskUpdated: (task: Task) => void;
   onCardClick?: (task: Task) => void;
   onAddTask?: () => void;

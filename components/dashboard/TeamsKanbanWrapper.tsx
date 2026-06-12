@@ -20,7 +20,7 @@ import TaskDetailPage from "./TaskDetailPage";
 
 type Props = {
   tasks: Task[];
-  teamMemberId: number;
+  teamMemberId: string;
 };
 
 export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {

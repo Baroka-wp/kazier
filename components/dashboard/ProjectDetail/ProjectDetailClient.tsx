@@ -47,7 +47,7 @@ type TaskWithStatus = Task & {
 };
 
 type TeamMember = {
-  id: number;
+  id: string;
   first_name: string | null;
   last_name: string | null;
   full_name: string;
@@ -56,13 +56,13 @@ type TeamMember = {
   is_boss: boolean;
   slack_id: string | null;
   created_at: string;
-  user_id: number | null;
+  user_id: string | null;
   email: string | null;
   role: string | null;
 };
 
 type Report = {
-  id: number;
+  id: string;
   full_name: string;
   role: string;
   built: string;
@@ -311,7 +311,7 @@ export default function ProjectDetailClient({ project }: Props) {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
-  const [projects, setProjects] = useState<Array<{ id: number; name: string }>>([]);
+  const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingReports, setLoadingReports] = useState(false);
 
   const completedTasks = tasks.filter((t) => t.status === "terminée" || t.completed).length;

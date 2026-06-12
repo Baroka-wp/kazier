@@ -184,7 +184,7 @@ function CreateModal({
     name: "",
     description: "",
     icon: "",
-    team_ids: [] as number[],
+    team_ids: [] as string[],
     start_date: "",
     end_date: "",
   });

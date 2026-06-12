@@ -46,7 +46,7 @@ const RichTextArea = dynamic(() => import("@/components/DailyForm/RichTextArea")
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Toast = {
-  id: number;
+  id: string;
   type: "success" | "error";
   message: string;
 };
@@ -55,7 +55,7 @@ type Props = {
   task: Task;
   onBack: () => void;
   onUpdated?: (updated: Task) => void;
-  teamMemberId?: number;
+  teamMemberId?: string;
   isTM?: boolean;
   projects?: Project[];
   teams?: TeamMember[];
@@ -428,17 +428,17 @@ export default function TaskDetailPage({
   const [submitting, setSubmitting] = useState(false);
   const [commentsExpanded, setCommentsExpanded] = useState(false);
 
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [editTaskOpen, setEditTaskOpen] = useState(false);
   const [deleteTaskOpen, setDeleteTaskOpen] = useState(false);
   const [projectTeamMembers, setProjectTeamMembers] = useState<
-    Array<{ id: number; first_name: string; last_name: string }>
+    Array<{ id: string; first_name: string; last_name: string }>
   >([]);
 
   const [toasts, setToasts] = useState<Toast[]>([]);

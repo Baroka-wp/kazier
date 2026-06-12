@@ -7,14 +7,14 @@ import { assignTaskToSelf, unassignTaskFromSelf, type ProjectWithTasks } from "@
 import type { Task } from "@/lib/task-actions";
 type Props = {
   project: ProjectWithTasks;
-  teamMemberId: number;
+  teamMemberId: string;
   onTasksUpdated: (updatedTasks: Task[]) => void;
 };
 
 export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState(project.tasks);
-  const [loadingTaskId, setLoadingTaskId] = useState<number | null>(null);
+  const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
 
   // Compter les tâches
   const assignedToMe = tasks.filter(

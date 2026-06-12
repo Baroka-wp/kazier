@@ -27,9 +27,9 @@ import {
 import Confetti from "./Confetti";
 import { type Language, useTranslation } from "./translations";
 
-type Suggestion = { id: number; full_name: string };
-type Project = { id: number; name: string; description: string; icon: string };
-type Teammate = { id: number; full_name: string };
+type Suggestion = { id: string; full_name: string };
+type Project = { id: string; name: string; description: string; icon: string };
+type Teammate = { id: string; full_name: string };
 type Evaluation = {
   evaluated_id: number;
   communication: number;
@@ -88,13 +88,13 @@ export default function DailyFormLong() {
   const t = useTranslation(lang);
 
   const [fullName, setFullName] = useState("");
-  const [teamId, setTeamId] = useState<number | null>(null);
+  const [teamId, setTeamId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Awaited<ReturnType<typeof getTasksByMember>>>([]);
-  const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [challenges, setChallenges] = useState("");
   const [neededLearning, setNeededLearning] = useState("");
   const [tomorrowBuild, setTomorrowBuild] = useState("");

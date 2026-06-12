@@ -15,7 +15,7 @@ const RichTextArea = dynamic(() => import("@/components/DailyForm/RichTextArea")
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Report = {
-  id: number;
+  id: string;
   full_name: string;
   role: string;
   built: string;
@@ -44,7 +44,7 @@ type ReportGroup = {
 type Props = {
   reports: Report[];
   roles: string[];
-  projects: Array<{ id: number; name: string }>;
+  projects: Array<{ id: string; name: string }>;
   loading?: boolean;
   isEmpty?: boolean;
   // Pagination serveur

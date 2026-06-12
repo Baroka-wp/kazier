@@ -14,7 +14,7 @@ type Props = {
   index: number;
   isAssignedToMe: boolean;
   isFree: boolean;
-  teamMemberId: number;
+  teamMemberId: string;
   onTaskUpdated: (updated: Task) => void;
   onCardClick?: (task: Task) => void;
   isDragging?: boolean;
@@ -186,7 +186,7 @@ function AvatarStack({
 }: {
   names: string[];
   assignedTo: number[];
-  teamMemberId: number;
+  teamMemberId: string;
   isTM: boolean;
 }) {
   const MAX_VISIBLE = 2;
