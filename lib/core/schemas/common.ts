@@ -15,10 +15,11 @@ export const DateOnly = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
   .transform((s) => new Date(s + "T00:00:00.000Z"));
 
-/** Datetime ISO ou objet Date. */
-export const DateTimeLike = z.union([z.date(), z.string().datetime()]).transform((v) =>
-  typeof v === "string" ? new Date(v) : v
-);
+/** Datetime ISO ou objet Date.
+ *  Note : sur le wire MCP (JSON), c'est toujours un string. z.date() est
+ *  toléré pour les appels internes node-to-node mais le JSON Schema généré
+ *  pour MCP ne montre que la branche string. */
+export const DateTimeLike = z.string().datetime().transform((v) => new Date(v));
 
 export const Money = z
   .union([z.number(), z.string()])
