@@ -1,38 +1,59 @@
 // app/api/teams/route.ts
 //
-// Endpoint public-with-key — utilisé par des intégrations externes (Zapier,
-// scripts internes, etc.) pour lister les membres.
-//
-// Pour l'instant l'auth se fait via la table legacy `api_keys` (clé en clair).
-// Migration vers ApiKey hashée + scopes prévue en Phase 3 (MCP).
+// Endpoint public-with-key — utilisé par des intégrations externes pour
+// lister les membres. Auth via ApiKey V2 (Bearer ou ?api_key=).
+// Préserve le shape externe historique (snake_case).
 
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/core";
 
+export const runtime = "nodejs";
+
+async function verifyApiKey(token: string): Promise<boolean> {
+  if (!/^kz_[a-f0-9]+$/i.test(token) || token.length < 16) return false;
+  const prefix = token.slice(0, 8);
+  const candidates = await prisma.apiKey.findMany({
+    where: {
+      prefix,
+      isActive: true,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+    },
+    select: { id: true, keyHash: true, scopes: true },
+  });
+  for (const c of candidates) {
+    if (await bcrypt.compare(token, c.keyHash)) {
+      // Ne donne accès qu'aux clés qui ont le scope members:read ou *
+      if (c.scopes.includes("*") || c.scopes.includes("members:read")) {
+        prisma.apiKey
+          .update({ where: { id: c.id }, data: { lastUsedAt: new Date() } })
+          .catch(() => {});
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export async function GET(req: NextRequest) {
-  const apiKey = req.nextUrl.searchParams.get("api_key");
-  if (!apiKey) {
+  // Accept token in Authorization: Bearer or ?api_key=
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearerMatch = /^Bearer\s+(.+)$/i.exec(authHeader);
+  const token = bearerMatch?.[1] ?? req.nextUrl.searchParams.get("api_key");
+
+  if (!token) {
     return NextResponse.json(
-      { error: "API key manquante. Ajoute ?api_key=... à l'URL." },
+      { error: "API key manquante (Bearer or ?api_key=)" },
       { status: 401 }
     );
   }
-
-  // Lookup dans la table legacy via SQL brut (la table existe encore en DB)
-  const keyRecords = await prisma.$queryRaw<
-    Array<{ id: number; key: string; is_active: boolean }>
-  >`SELECT id, key, is_active FROM api_keys WHERE key = ${apiKey} LIMIT 1`;
-
-  const keyRecord = keyRecords[0];
-  if (!keyRecord || !keyRecord.is_active) {
-    return NextResponse.json({ error: "API key invalide ou désactivée." }, { status: 403 });
+  const ok = await verifyApiKey(token);
+  if (!ok) {
+    return NextResponse.json(
+      { error: "API key invalide ou scope insuffisant (members:read requis)" },
+      { status: 403 }
+    );
   }
-
-  // last_used non-bloquant
-  prisma
-    .$executeRaw`UPDATE api_keys SET last_used = NOW() WHERE id = ${keyRecord.id}`.catch(
-    () => {}
-  );
 
   const members = await prisma.member.findMany({
     select: {
@@ -50,7 +71,6 @@ export async function GET(req: NextRequest) {
     orderBy: { firstName: "asc" },
   });
 
-  // Préserver le shape historique (snake_case) pour les consommateurs externes
   const data = members.map((m) => ({
     id: m.id,
     first_name: m.firstName,

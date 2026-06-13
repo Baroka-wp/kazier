@@ -1,22 +1,19 @@
 // ═════════════════════════════════════════════════════════════════════════════
-// SCHEMA INTERMÉDIAIRE — Phase 1 de la migration V1 → V2
+// SCHEMA V2 (final)
+// ═════════════════════════════════════════════════════════════════════════════
 //
-// Contient :
-//   - Anciens modèles V1 renommés Legacy* (mappés vers tables snake_case en DB)
-//     → permettent au script de migration de LIRE l'existant
-//   - Nouveaux modèles V2 (members, auths, projects, tasks…)
-//     → créés en parallèle par `prisma db push`
+// Conventions :
+//   - PascalCase pour les modèles
+//   - camelCase pour les champs (mappés en snake_case en DB via @map)
+//   - cuid() au lieu d'autoincrement Int
+//   - Énums DB-typés pour status/priority/role/etc.
+//   - FK partout (fini les Int[] non-référencés)
+//   - Audit log et notes pour la "mémoire projet"
+//   - Une seule clé API table (ApiKey) avec hash bcrypt + scopes
 //
-// Workflow :
-//   1. `prisma db push`              → crée les nouvelles tables, conserve les anciennes
-//   2. `tsx scripts/migrate-to-v2.ts --commit`  → transfère les données
-//   3. `tsx scripts/migrate-to-v2.ts --verify`  → vérifie l'intégrité
-//   4. (plus tard, après réécriture du code applicatif) : retirer les Legacy*
-//      et `prisma db push` à nouveau pour drop les anciennes tables.
-//
-// IMPORTANT : tant que ce schéma est en place, le client Prisma expose les
-// deux jeux de tables. Le code applicatif existant continue de fonctionner
-// via les modèles Legacy* (il faut ajuster les imports → prochaine étape).
+// Historique : la migration V1 → V2 a été effectuée via le script
+// `scripts/migrate-to-v2.ts` (commit b01bff0). Les modèles Legacy* qui
+// cohabitaient pendant la transition ont été supprimés en Phase 2.F.
 // ═════════════════════════════════════════════════════════════════════════════
 
 generator client {
@@ -28,154 +25,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// ║                          LEGACY V1 (en lecture seule)                     ║
-// ║                  Renommés pour cohabiter avec les V2.                     ║
-// ╚═══════════════════════════════════════════════════════════════════════════╝
-
-model LegacyTeam {
-  id                   Int                  @id @default(autoincrement())
-  first_name           String?
-  last_name            String?
-  role                 String?
-  email                String?
-  phone                String?
-  age                  Int?
-  slack_id             String?
-  is_boss              Boolean              @default(false)
-  created_at           DateTime             @default(now())
-  evaluations_received LegacyEvaluation[]   @relation("LegacyEvaluatedRelation")
-  evaluations_given    LegacyEvaluation[]   @relation("LegacyEvaluatorRelation")
-  rapports             LegacyRapport[]
-  task_comments        LegacyTaskComment[]
-  users                LegacyUser[]
-
-  @@map("teams")
-}
-
-model LegacyUser {
-  id                  Int         @id @default(autoincrement())
-  email               String      @unique
-  password            String
-  role                String?
-  team_id             Int?
-  reset_token         String?     @unique
-  reset_token_expires DateTime?
-  team                LegacyTeam? @relation(fields: [team_id], references: [id])
-
-  @@map("users")
-}
-
-model LegacyProject {
-  id           Int                @id @default(autoincrement())
-  name         String?
-  description  String?
-  icon         String?
-  team_ids     Int[]
-  objectives   String?            @db.Text
-  stakeholders String?            @db.Text
-  start_date   DateTime?          @db.Date
-  end_date     DateTime?          @db.Date
-  created_at   DateTime           @default(now())
-  tasks        LegacyTask[]
-  rapports     LegacyRapport[]
-  milestones   LegacyMilestone[]
-
-  @@map("project")
-}
-
-model LegacyTask {
-  id            Int                 @id @default(autoincrement())
-  title         String?
-  description   String?
-  status        String?
-  priority      String?
-  project_id    Int?
-  assigned_to   Int[]
-  start_date    DateTime?           @db.Timestamptz(6)
-  due_date      DateTime?           @db.Timestamptz(6)
-  created_at    DateTime            @default(now())
-  reminder_sent Boolean             @default(false)
-  comments      LegacyTaskComment[]
-  project       LegacyProject?      @relation(fields: [project_id], references: [id])
-
-  @@map("tasks")
-}
-
-model LegacyTaskComment {
-  id         Int        @id @default(autoincrement())
-  task_id    Int
-  team_id    Int
-  content    String
-  created_at DateTime   @default(now())
-  task       LegacyTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  team       LegacyTeam @relation(fields: [team_id], references: [id])
-
-  @@map("task_comments")
-}
-
-model LegacyMilestone {
-  id           Int           @id @default(autoincrement())
-  project_id   Int
-  title        String
-  due_date     DateTime      @db.Date
-  deliverables String?       @db.Text
-  created_at   DateTime      @default(now())
-  project      LegacyProject @relation(fields: [project_id], references: [id], onDelete: Cascade)
-
-  @@map("milestones")
-}
-
-model LegacyRapport {
-  id                 Int            @id @default(autoincrement())
-  team_id            Int?
-  project_id         Int?
-  work_built         String?
-  working_built      String?
-  validated_learning String?
-  broken_features    String?
-  needed_learning    String?
-  tomorrow_build     String?
-  created_at         DateTime       @default(now())
-  extra_message      String?
-  project            LegacyProject? @relation(fields: [project_id], references: [id])
-  team               LegacyTeam?    @relation(fields: [team_id], references: [id])
-
-  @@map("rapports")
-}
-
-model LegacyEvaluation {
-  id            Int        @id @default(autoincrement())
-  evaluator_id  Int
-  evaluated_id  Int
-  report_date   DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
-  communication Int
-  collaboration Int
-  punctuality   Int
-  comment       String?
-  created_at    DateTime   @default(now())
-  evaluated     LegacyTeam @relation("LegacyEvaluatedRelation", fields: [evaluated_id], references: [id])
-  evaluator     LegacyTeam @relation("LegacyEvaluatorRelation", fields: [evaluator_id], references: [id])
-
-  @@unique([evaluator_id, evaluated_id, report_date])
-  @@map("evaluations")
-}
-
-model LegacyApiKey {
-  id         Int       @id @default(autoincrement())
-  key        String    @unique
-  label      String?
-  is_active  Boolean   @default(true)
-  created_at DateTime  @default(now())
-  last_used  DateTime?
-
-  @@map("api_keys")
-}
-
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// ║                              V2 (cible)                                   ║
-// ║              Nouvelles tables créées par `prisma db push`.                ║
-// ╚═══════════════════════════════════════════════════════════════════════════╝
+// ─── Identité ────────────────────────────────────────────────────────────
 
 enum Role {
   SUPER_ADMIN
@@ -225,6 +75,8 @@ model Auth {
   @@map("auths")
 }
 
+// ─── Projet ──────────────────────────────────────────────────────────────
+
 enum ProjectStatus {
   ACTIVE
   ON_HOLD
@@ -265,7 +117,7 @@ model ProjectMember {
   joinedAt  DateTime @default(now()) @map("joined_at")
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  member  Member  @relation(fields: [memberId],  references: [id], onDelete: Cascade)
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@id([projectId, memberId])
   @@map("project_members")
@@ -345,7 +197,7 @@ model Task {
 
   @@index([projectId])
   @@index([status, dueDate])
-  @@map("tasks_v2")
+  @@map("tasks")
 }
 
 model TaskAssignment {
@@ -371,7 +223,7 @@ model TaskComment {
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
-  @@map("task_comments_v2")
+  @@map("task_comments")
 }
 
 model Report {
@@ -412,7 +264,7 @@ model Evaluation {
   evaluated Member @relation("Evaluated", fields: [evaluatedId], references: [id], onDelete: Cascade)
 
   @@unique([evaluatorId, evaluatedId, reportDate])
-  @@map("evaluations_v2")
+  @@map("evaluations")
 }
 
 enum ExpenseCategory {
@@ -492,5 +344,5 @@ model ApiKey {
   createdAt  DateTime  @default(now()) @map("created_at")
   expiresAt  DateTime? @map("expires_at")
 
-  @@map("api_keys_v2")
+  @@map("api_keys")
 }
