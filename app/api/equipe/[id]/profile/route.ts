@@ -125,8 +125,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
       .slice(0, 5)
       .map((e) => ({
         id: e.id,
-        evaluator_name:
-          `${e.evaluator.firstName} ${e.evaluator.lastName}`.trim() || "Anonyme",
+        evaluator_name: `${e.evaluator.firstName} ${e.evaluator.lastName}`.trim() || "Anonyme",
         report_date: e.reportDate.toISOString(),
         comment: e.comment as string,
       }));

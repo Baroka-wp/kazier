@@ -13,7 +13,13 @@
  */
 
 import { prisma } from "@/lib/core";
-import { postMessage, header, section, actionButton, appUrl } from "@/lib/server/integrations/slack/client";
+import {
+  postMessage,
+  header,
+  section,
+  actionButton,
+  appUrl,
+} from "@/lib/server/integrations/slack/client";
 
 export async function sendTaskReminders(): Promise<{ sent: number }> {
   const now = new Date();
@@ -54,7 +60,10 @@ export async function sendTaskReminders(): Promise<{ sent: number }> {
     const timeLeft = task.dueDate.getTime() - now.getTime();
     const daysLeft = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
     const hoursLeft = Math.round(timeLeft / (60 * 60 * 1000));
-    const label = daysLeft >= 1 ? `${daysLeft} jour${daysLeft > 1 ? "s" : ""}` : `${hoursLeft} heure${hoursLeft > 1 ? "s" : ""}`;
+    const label =
+      daysLeft >= 1
+        ? `${daysLeft} jour${daysLeft > 1 ? "s" : ""}`
+        : `${hoursLeft} heure${hoursLeft > 1 ? "s" : ""}`;
 
     await Promise.all(
       recipients.map((m) =>
@@ -63,8 +72,12 @@ export async function sendTaskReminders(): Promise<{ sent: number }> {
           iconEmoji: ":alarm_clock:",
           blocks: [
             header("⏰ Rappel de tâche"),
-            section(`Bonjour *${m.firstName}* 👋\n\nLa tâche suivante approche de sa date limite :`),
-            section(`📌 *${task.title}*\n⏳ Il vous reste *${label}* pour la compléter.\n🔔 Vous avez utilisé *80%* du temps imparti.`),
+            section(
+              `Bonjour *${m.firstName}* 👋\n\nLa tâche suivante approche de sa date limite :`
+            ),
+            section(
+              `📌 *${task.title}*\n⏳ Il vous reste *${label}* pour la compléter.\n🔔 Vous avez utilisé *80%* du temps imparti.`
+            ),
             actionButton("📋 Voir mes tâches", appUrl("/dashboard/tasks")),
           ],
         })

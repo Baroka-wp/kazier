@@ -42,10 +42,7 @@ export async function GET(req: NextRequest) {
   const token = bearerMatch?.[1] ?? req.nextUrl.searchParams.get("api_key");
 
   if (!token) {
-    return NextResponse.json(
-      { error: "API key manquante (Bearer or ?api_key=)" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "API key manquante (Bearer or ?api_key=)" }, { status: 401 });
   }
   const ok = await verifyApiKey(token);
   if (!ok) {

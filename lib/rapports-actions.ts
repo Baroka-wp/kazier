@@ -50,9 +50,7 @@ export type PaginatedResult<T> = {
   totalPages: number;
 };
 
-function periodFromFilter(
-  f: string | undefined
-): { from?: string; to?: string } {
+function periodFromFilter(f: string | undefined): { from?: string; to?: string } {
   if (!f) return {};
   const now = new Date();
   const fmt = (d: Date) => d.toISOString().slice(0, 10);

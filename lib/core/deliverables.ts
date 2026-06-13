@@ -309,10 +309,7 @@ export const GetTreeInput = z.object({ projectId: Cuid });
 
 export type DeliverableNode = DeliverableRow & { children: DeliverableNode[] };
 
-export async function tree(
-  actor: Actor,
-  rawInput: unknown
-): Promise<Result<DeliverableNode[]>> {
+export async function tree(actor: Actor, rawInput: unknown): Promise<Result<DeliverableNode[]>> {
   const perm = requirePerm(actor, "deliverables.read");
   if (!perm.ok) return perm;
 

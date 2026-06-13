@@ -24,7 +24,7 @@ export async function currentActor(): Promise<Actor> {
   if (!session?.user) throw new Error("UNAUTHENTICATED");
 
   const u = session.user as {
-    id?: string;          // memberId (cuid) — stocké dans le JWT
+    id?: string; // memberId (cuid) — stocké dans le JWT
     role?: "SUPER_ADMIN" | "PROJECT_MANAGER" | "MEMBER" | "SA" | "TM" | "T" | string;
   };
 
@@ -37,9 +37,7 @@ export async function currentActor(): Promise<Actor> {
   return { type: "HUMAN", memberId: u.id, role };
 }
 
-function normalizeRole(
-  r: string | undefined
-): "SUPER_ADMIN" | "PROJECT_MANAGER" | "MEMBER" {
+function normalizeRole(r: string | undefined): "SUPER_ADMIN" | "PROJECT_MANAGER" | "MEMBER" {
   switch (r) {
     case "SUPER_ADMIN":
     case "SA":

@@ -17,7 +17,10 @@ const prisma = new PrismaClient();
 async function main() {
   const label = process.argv[2] || "Clé sans label";
   const scopesArg = process.argv[3] || "projects:read,tasks:read,reports:read";
-  const scopes = scopesArg.split(",").map((s) => s.trim()).filter(Boolean);
+  const scopes = scopesArg
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   const key = "kz_" + crypto.randomBytes(32).toString("hex");
   const prefix = key.slice(0, 8);

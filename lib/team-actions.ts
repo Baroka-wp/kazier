@@ -98,10 +98,9 @@ export async function getProjectsWithTasksForTeamMember(teamMemberId: string): P
     const enriched = await Promise.all(
       list.data.data.map(async (p) => {
         const detail = await projects.get(actor, p.id);
-        const projectMembers =
-          detail.ok
-            ? detail.data.members.map((m) => ({ id: m.memberId, full_name: m.fullName }))
-            : [];
+        const projectMembers = detail.ok
+          ? detail.data.members.map((m) => ({ id: m.memberId, full_name: m.fullName }))
+          : [];
 
         // Toutes les tâches du projet où le membre est assigné OU non assignée
         const taskList = await tasksCore.list(actor, { projectId: p.id, limit: 100 });

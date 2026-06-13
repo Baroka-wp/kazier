@@ -3,23 +3,25 @@ import { Cuid, DateOnly, Money, NonEmptyString, OptionalText, Pagination } from 
 
 export const ProjectStatusEnum = z.enum(["ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"]);
 
-export const CreateProjectInput = z.object({
-  name: NonEmptyString.max(120),
-  description: OptionalText,
-  icon: z.string().trim().max(8).optional(),
-  status: ProjectStatusEnum.default("ACTIVE"),
-  startDate: DateOnly.optional(),
-  endDate: DateOnly.optional(),
-  budgetAmount: Money.optional(),
-  budgetCurrency: z.string().length(3).default("XOF"),
-  contractValue: Money.optional(),
-  objectives: OptionalText,
-  stakeholders: OptionalText,
-  memberIds: z.array(Cuid).default([]),
-}).refine(
-  (v) => !v.startDate || !v.endDate || v.startDate <= v.endDate,
-  { message: "startDate must be ≤ endDate", path: ["endDate"] }
-);
+export const CreateProjectInput = z
+  .object({
+    name: NonEmptyString.max(120),
+    description: OptionalText,
+    icon: z.string().trim().max(8).optional(),
+    status: ProjectStatusEnum.default("ACTIVE"),
+    startDate: DateOnly.optional(),
+    endDate: DateOnly.optional(),
+    budgetAmount: Money.optional(),
+    budgetCurrency: z.string().length(3).default("XOF"),
+    contractValue: Money.optional(),
+    objectives: OptionalText,
+    stakeholders: OptionalText,
+    memberIds: z.array(Cuid).default([]),
+  })
+  .refine((v) => !v.startDate || !v.endDate || v.startDate <= v.endDate, {
+    message: "startDate must be ≤ endDate",
+    path: ["endDate"],
+  });
 export type CreateProjectInput = z.infer<typeof CreateProjectInput>;
 
 export const UpdateProjectInput = z.object({

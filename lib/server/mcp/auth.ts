@@ -38,9 +38,7 @@ export async function verifyBearer(token: string | null): Promise<AuthenticatedA
     if (!match) continue;
 
     // Mise à jour lastUsedAt (non-bloquant)
-    prisma.apiKey
-      .update({ where: { id: c.id }, data: { lastUsedAt: new Date() } })
-      .catch(() => {});
+    prisma.apiKey.update({ where: { id: c.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
 
     const actor: Actor = {
       type: "IA",

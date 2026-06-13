@@ -46,7 +46,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const fullName = `${auth.member.firstName} ${auth.member.lastName}`.trim();
 
         return {
-          id: auth.member.id,             // cuid Member
+          id: auth.member.id, // cuid Member
           email: auth.email,
           name: fullName,
           role: auth.member.role,

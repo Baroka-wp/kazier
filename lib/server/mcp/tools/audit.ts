@@ -35,7 +35,10 @@ export function registerAuditTools(server: McpServer, actor: () => Actor): void 
         return {
           isError: true,
           content: [
-            { type: "text" as const, text: JSON.stringify({ code: perm.code, message: perm.message }) },
+            {
+              type: "text" as const,
+              text: JSON.stringify({ code: perm.code, message: perm.message }),
+            },
           ],
         };
       }
@@ -66,7 +69,10 @@ export function registerAuditTools(server: McpServer, actor: () => Actor): void 
         return {
           isError: true,
           content: [
-            { type: "text" as const, text: JSON.stringify({ code: perm.code, message: perm.message }) },
+            {
+              type: "text" as const,
+              text: JSON.stringify({ code: perm.code, message: perm.message }),
+            },
           ],
         };
       }

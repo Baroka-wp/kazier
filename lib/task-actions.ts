@@ -63,7 +63,10 @@ export type PaginatedResult<T> = {
 
 // ── Mappings FR↔EN ───────────────────────────────────────────────────────
 
-const STATUS_FR_TO_EN: Record<NonNullable<Task["status"]>, "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE"> = {
+const STATUS_FR_TO_EN: Record<
+  NonNullable<Task["status"]>,
+  "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE"
+> = {
   "à faire": "TODO",
   "en cours": "IN_PROGRESS",
   review: "REVIEW",
@@ -135,7 +138,9 @@ export async function createTask(data: CreateTaskData): Promise<TaskResult> {
       description: data.description,
       projectId: data.project_id ?? undefined,
       status: data.status ? STATUS_FR_TO_EN[data.status] : undefined,
-      priority: data.priority ? (data.priority.toUpperCase() as "LOW" | "MEDIUM" | "HIGH") : undefined,
+      priority: data.priority
+        ? (data.priority.toUpperCase() as "LOW" | "MEDIUM" | "HIGH")
+        : undefined,
       startDate: data.start_date ?? undefined,
       dueDate: data.due_date ?? undefined,
       assigneeIds: data.assigned_to ?? [],
@@ -220,7 +225,9 @@ export async function updateTask(id: string, data: UpdateTaskData): Promise<Task
       description: data.description,
       projectId: data.project_id ?? undefined,
       status: data.status ? STATUS_FR_TO_EN[data.status] : undefined,
-      priority: data.priority ? (data.priority.toUpperCase() as "LOW" | "MEDIUM" | "HIGH") : undefined,
+      priority: data.priority
+        ? (data.priority.toUpperCase() as "LOW" | "MEDIUM" | "HIGH")
+        : undefined,
       startDate: data.start_date ?? undefined,
       dueDate: data.due_date ?? undefined,
       assigneeIds: data.assigned_to ?? undefined,

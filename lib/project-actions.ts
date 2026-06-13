@@ -192,10 +192,7 @@ export async function getProjects(
 
 // ── updateProject ────────────────────────────────────────────────────────
 
-export async function updateProject(
-  id: string,
-  data: UpdateProjectData
-): Promise<ProjectResult> {
+export async function updateProject(id: string, data: UpdateProjectData): Promise<ProjectResult> {
   try {
     const actor = await currentActor();
     const res = await projects.update(actor, id, {
@@ -218,12 +215,8 @@ export async function updateProject(
         const toAdd = [...next].filter((x) => !current.has(x));
         const toRemove = [...current].filter((x) => !next.has(x));
         await Promise.all([
-          ...toAdd.map((memberId) =>
-            projects.addMember(actor, { projectId: id, memberId })
-          ),
-          ...toRemove.map((memberId) =>
-            projects.removeMember(actor, { projectId: id, memberId })
-          ),
+          ...toAdd.map((memberId) => projects.addMember(actor, { projectId: id, memberId })),
+          ...toRemove.map((memberId) => projects.removeMember(actor, { projectId: id, memberId })),
         ]);
       }
     }
@@ -242,9 +235,7 @@ export async function updateProject(
 
 // ── deleteProject ────────────────────────────────────────────────────────
 
-export async function deleteProject(
-  id: string
-): Promise<{ success: boolean; error?: string }> {
+export async function deleteProject(id: string): Promise<{ success: boolean; error?: string }> {
   try {
     const actor = await currentActor();
     const res = await projects.remove(actor, id);
@@ -275,9 +266,7 @@ export async function getTeams(): Promise<{
       first_name: m.firstName,
       last_name: m.lastName,
       full_name: m.fullName,
-      User: m.hasAuth
-        ? { id: m.id, email: m.email, role: m.role }
-        : null,
+      User: m.hasAuth ? { id: m.id, email: m.email, role: m.role } : null,
     }));
     return { success: true, teams };
   } catch (e) {

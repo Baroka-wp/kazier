@@ -37,7 +37,8 @@ export async function postMessage(input: PostMessageInput): Promise<void> {
       }),
     });
     const json = (await res.json()) as { ok: boolean; error?: string };
-    if (!json.ok) console.error("[slack.postMessage] error:", json.error, "channel:", input.channel);
+    if (!json.ok)
+      console.error("[slack.postMessage] error:", json.error, "channel:", input.channel);
   } catch (e) {
     console.error("[slack.postMessage] threw:", e);
   }
@@ -52,7 +53,11 @@ export function section(markdown: string): SlackBlock {
   return { type: "section", text: { type: "mrkdwn", text: markdown } };
 }
 export const divider: SlackBlock = { type: "divider" };
-export function actionButton(label: string, url: string, style: "primary" | "danger" = "primary"): SlackBlock {
+export function actionButton(
+  label: string,
+  url: string,
+  style: "primary" | "danger" = "primary"
+): SlackBlock {
   return {
     type: "actions",
     elements: [

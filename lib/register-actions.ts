@@ -83,10 +83,13 @@ async function sendSlackInviteEmail(params: {
 
 // ── Validation côté serveur ─────────────────────────────────────────────
 
-function validateData(data: RegisterData): {
-  valid: true;
-} | { valid: false; error: string; field: keyof RegisterData } {
-  if (!data.first_name?.trim()) return { valid: false, error: "Prénom requis.", field: "first_name" };
+function validateData(data: RegisterData):
+  | {
+      valid: true;
+    }
+  | { valid: false; error: string; field: keyof RegisterData } {
+  if (!data.first_name?.trim())
+    return { valid: false, error: "Prénom requis.", field: "first_name" };
   if (!data.last_name?.trim()) return { valid: false, error: "Nom requis.", field: "last_name" };
   if (!data.email?.trim()) return { valid: false, error: "Email requis.", field: "email" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
@@ -131,7 +134,11 @@ export async function checkDuplicate(
         select: { id: true },
       });
       if (existing) {
-        return { exists: true, blocking: true, message: "Ce numéro de téléphone est déjà utilisé." };
+        return {
+          exists: true,
+          blocking: true,
+          message: "Ce numéro de téléphone est déjà utilisé.",
+        };
       }
     } else if (field === "slack_id") {
       const existing = await prisma.member.findFirst({
@@ -142,7 +149,11 @@ export async function checkDuplicate(
         select: { id: true },
       });
       if (existing) {
-        return { exists: true, blocking: true, message: "Ce Slack ID est déjà associé à un membre." };
+        return {
+          exists: true,
+          blocking: true,
+          message: "Ce Slack ID est déjà associé à un membre.",
+        };
       }
     } else if (field === "full_name") {
       const normalized = value.trim().toLowerCase();
@@ -178,7 +189,8 @@ export async function registerUser(data: RegisterData): Promise<RegisterResult> 
     }
 
     const validation = validateData(data);
-    if (!validation.valid) return { success: false, error: validation.error, field: validation.field };
+    if (!validation.valid)
+      return { success: false, error: validation.error, field: validation.field };
 
     const email = data.email.trim().toLowerCase();
 
@@ -238,10 +250,7 @@ export async function registerUser(data: RegisterData): Promise<RegisterResult> 
 
 // ── updateUser ──────────────────────────────────────────────────────────
 
-export async function updateUser(
-  memberId: string,
-  data: RegisterData
-): Promise<RegisterResult> {
+export async function updateUser(memberId: string, data: RegisterData): Promise<RegisterResult> {
   try {
     const actor = await currentActor();
     if (actor.type !== "HUMAN" || actor.role !== "SUPER_ADMIN") {
@@ -249,7 +258,8 @@ export async function updateUser(
     }
 
     const validation = validateData(data);
-    if (!validation.valid) return { success: false, error: validation.error, field: validation.field };
+    if (!validation.valid)
+      return { success: false, error: validation.error, field: validation.field };
 
     const email = data.email.trim().toLowerCase();
 

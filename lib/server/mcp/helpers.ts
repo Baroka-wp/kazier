@@ -118,7 +118,10 @@ export function registerIdTool<O>(
         return {
           isError: true,
           content: [
-            { type: "text" as const, text: JSON.stringify({ code: result.code, message: result.message }) },
+            {
+              type: "text" as const,
+              text: JSON.stringify({ code: result.code, message: result.message }),
+            },
           ],
         };
       }

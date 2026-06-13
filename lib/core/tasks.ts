@@ -76,9 +76,7 @@ function toTaskRow(t: TaskWithRels): TaskRow {
     estimatedHours: t.estimatedHours ? Number(t.estimatedHours) : null,
     actualHours: t.actualHours ? Number(t.actualHours) : null,
     assigneeIds: t.assignments.map((a) => a.memberId),
-    assigneeNames: t.assignments.map((a) =>
-      `${a.member.firstName} ${a.member.lastName}`.trim()
-    ),
+    assigneeNames: t.assignments.map((a) => `${a.member.firstName} ${a.member.lastName}`.trim()),
     createdAt: t.createdAt,
     updatedAt: t.updatedAt,
   };
@@ -293,7 +291,9 @@ export async function update(
         ...(addedAssignees.length || removedAssignees.length
           ? { addedAssignees, removedAssignees }
           : {}),
-        ...(toStatus && toStatus !== fromStatus ? { statusFrom: fromStatus, statusTo: toStatus } : {}),
+        ...(toStatus && toStatus !== fromStatus
+          ? { statusFrom: fromStatus, statusTo: toStatus }
+          : {}),
       },
     });
 
@@ -322,10 +322,7 @@ export async function update(
 
 // ── Change status (raccourci dédié) ──────────────────────────────────────
 
-export async function changeStatus(
-  actor: Actor,
-  rawInput: unknown
-): Promise<Result<TaskRow>> {
+export async function changeStatus(actor: Actor, rawInput: unknown): Promise<Result<TaskRow>> {
   const perm = requirePerm(actor, "tasks.write");
   if (!perm.ok) return perm;
 
@@ -374,10 +371,7 @@ export async function changeStatus(
 
 // ── Assign (replace set of assignees) ────────────────────────────────────
 
-export async function assign(
-  actor: Actor,
-  rawInput: unknown
-): Promise<Result<TaskRow>> {
+export async function assign(actor: Actor, rawInput: unknown): Promise<Result<TaskRow>> {
   const perm = requirePerm(actor, "tasks.write");
   if (!perm.ok) return perm;
 
@@ -474,10 +468,7 @@ export type TaskCommentRow = {
   createdAt: Date;
 };
 
-export async function addComment(
-  actor: Actor,
-  rawInput: unknown
-): Promise<Result<TaskCommentRow>> {
+export async function addComment(actor: Actor, rawInput: unknown): Promise<Result<TaskCommentRow>> {
   const perm = requirePerm(actor, "tasks.write");
   if (!perm.ok) return perm;
 

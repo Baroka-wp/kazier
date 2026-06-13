@@ -66,8 +66,7 @@ export function registerReportTools(server: McpServer, actor: () => Actor): void
   registerIdTool(server, {
     name: "reports.delete",
     title: "Delete a report",
-    description:
-      "Hard delete a report. Requires reports.delete scope (admin-grade).",
+    description: "Hard delete a report. Requires reports.delete scope (admin-grade).",
     actor,
     call: reports.remove,
   });

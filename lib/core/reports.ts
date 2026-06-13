@@ -96,8 +96,7 @@ export async function submit(actor: Actor, rawInput: unknown): Promise<Result<Re
 
   // reportDate par défaut = today UTC (Date à 00:00 UTC)
   const reportDate =
-    data.reportDate ??
-    new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
+    data.reportDate ?? new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
 
   try {
     const created = await prisma.report.create({
@@ -132,10 +131,7 @@ export async function submit(actor: Actor, rawInput: unknown): Promise<Result<Re
     return ok(toReportRow(created));
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return err(
-        ERR.CONFLICT,
-        "Report already submitted for this member/date/project today"
-      );
+      return err(ERR.CONFLICT, "Report already submitted for this member/date/project today");
     }
     if (
       e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -228,16 +224,11 @@ export async function hasSubmittedOn(
   if (!v.ok) return v;
   const { memberId, date } = v.data;
 
-  if (
-    actor.type === "HUMAN" &&
-    actor.role === "MEMBER" &&
-    actor.memberId !== memberId
-  ) {
+  if (actor.type === "HUMAN" && actor.role === "MEMBER" && actor.memberId !== memberId) {
     return err(ERR.FORBIDDEN, "Cannot check another member's status");
   }
 
-  const target =
-    date ?? new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
+  const target = date ?? new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
 
   try {
     const count = await prisma.report.count({
@@ -276,8 +267,7 @@ export async function missingMembers(
   if (!v.ok) return v;
   const { date, excludeBoss, excludeInactive } = v.data;
 
-  const target =
-    date ?? new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
+  const target = date ?? new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
 
   try {
     const memberWhere: Prisma.MemberWhereInput = {};

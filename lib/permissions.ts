@@ -71,10 +71,12 @@ export function getPermissions(role: string | null | undefined): Permission {
 
 export const canViewReports = (r: string | null | undefined) => getPermissions(r).canViewReports;
 export const canEditReports = (r: string | null | undefined) => getPermissions(r).canEditReports;
-export const canDeleteReports = (r: string | null | undefined) => getPermissions(r).canDeleteReports;
+export const canDeleteReports = (r: string | null | undefined) =>
+  getPermissions(r).canDeleteReports;
 export const canViewTeam = (r: string | null | undefined) => getPermissions(r).canViewTeam;
 export const canManageTeam = (r: string | null | undefined) => getPermissions(r).canManageTeam;
-export const canAccessDashboard = (r: string | null | undefined) => getPermissions(r).canAccessDashboard;
+export const canAccessDashboard = (r: string | null | undefined) =>
+  getPermissions(r).canAccessDashboard;
 export const canManageTasks = (r: string | null | undefined) => getPermissions(r).canManageTasks;
 
 export const isSuperAdmin = (r: string | null | undefined) => normalize(r) === "SUPER_ADMIN";

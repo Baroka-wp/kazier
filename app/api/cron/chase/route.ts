@@ -1,9 +1,5 @@
 import { reports, systemActor, isOk } from "@/lib/core";
-import {
-  postMessage,
-  section,
-  actionButton,
-} from "@/lib/server/integrations/slack/client";
+import { postMessage, section, actionButton } from "@/lib/server/integrations/slack/client";
 
 export async function GET() {
   const SYSTEM = systemActor("cron-chase");
@@ -25,10 +21,7 @@ export async function GET() {
           section(
             `👋 *${m.fullName}*, tu n'as pas encore soumis ton rapport du jour !\n\n_Il te reste encore un peu de temps !_ ⏰`
           ),
-          actionButton(
-            "📝 Remplir le formulaire",
-            process.env.NEXT_PUBLIC_FORM_URL ?? "/"
-          ),
+          actionButton("📝 Remplir le formulaire", process.env.NEXT_PUBLIC_FORM_URL ?? "/"),
         ],
       })
     )

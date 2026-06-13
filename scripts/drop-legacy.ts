@@ -23,15 +23,15 @@ const COMMIT = process.argv.includes("--commit");
 
 const LEGACY_TABLES = [
   // Drop enfants d'abord (FK contraintes) :
-  "task_comments",      // legacy : référençait tasks + teams
-  "evaluations",        // legacy : référençait teams
-  "rapports",           // legacy : référençait teams + project
-  "milestones",         // legacy : référençait project
-  "tasks",              // legacy : référençait project
-  "users",              // legacy : référençait teams
-  "project",            // legacy
-  "teams",              // legacy
-  "api_keys",           // legacy
+  "task_comments", // legacy : référençait tasks + teams
+  "evaluations", // legacy : référençait teams
+  "rapports", // legacy : référençait teams + project
+  "milestones", // legacy : référençait project
+  "tasks", // legacy : référençait project
+  "users", // legacy : référençait teams
+  "project", // legacy
+  "teams", // legacy
+  "api_keys", // legacy
 ];
 
 const RENAMES: Array<[string, string]> = [

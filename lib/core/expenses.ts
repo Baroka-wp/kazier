@@ -224,15 +224,12 @@ export type BudgetStatus = {
   currency: string;
   spent: number;
   remaining: number | null;
-  ratio: number | null;          // spent / budgetAmount
+  ratio: number | null; // spent / budgetAmount
   marginEstimate: number | null; // contractValue - spent
   byCategory: Record<string, number>;
 };
 
-export async function budgetStatus(
-  actor: Actor,
-  rawInput: unknown
-): Promise<Result<BudgetStatus>> {
+export async function budgetStatus(actor: Actor, rawInput: unknown): Promise<Result<BudgetStatus>> {
   // Donnée sensible — exige projects.finance
   const perm = requirePerm(actor, "projects.finance");
   if (!perm.ok) return perm;

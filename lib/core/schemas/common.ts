@@ -19,7 +19,10 @@ export const DateOnly = z
  *  Note : sur le wire MCP (JSON), c'est toujours un string. z.date() est
  *  toléré pour les appels internes node-to-node mais le JSON Schema généré
  *  pour MCP ne montre que la branche string. */
-export const DateTimeLike = z.string().datetime().transform((v) => new Date(v));
+export const DateTimeLike = z
+  .string()
+  .datetime()
+  .transform((v) => new Date(v));
 
 export const Money = z
   .union([z.number(), z.string()])

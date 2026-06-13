@@ -45,10 +45,7 @@ export async function handleMcpRequest(req: Request): Promise<Response> {
 
   // ── 3. Server + client loopback ───────────────────────────────────────
   const server = createKazierMcpServer(authed.actor);
-  const client = new Client(
-    { name: "kazier-internal", version: "0.0.0" },
-    { capabilities: {} }
-  );
+  const client = new Client({ name: "kazier-internal", version: "0.0.0" }, { capabilities: {} });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
 
@@ -84,15 +81,11 @@ async function route(client: Client, req: JsonRpcRequest): Promise<unknown> {
         break;
 
       case "tools/list":
-        result = await client.listTools(
-          (req.params as { cursor?: string } | undefined) ?? {}
-        );
+        result = await client.listTools((req.params as { cursor?: string } | undefined) ?? {});
         break;
 
       case "tools/call":
-        result = await client.callTool(
-          req.params as Parameters<Client["callTool"]>[0]
-        );
+        result = await client.callTool(req.params as Parameters<Client["callTool"]>[0]);
         break;
 
       default:

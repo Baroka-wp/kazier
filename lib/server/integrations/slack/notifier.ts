@@ -13,7 +13,6 @@ import { events, prisma } from "@/lib/core";
 import { postMessage, header, section, divider, actionButton, stripHtml, appUrl } from "./client";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __kazierSlackBound: boolean | undefined;
 }
 
@@ -26,7 +25,12 @@ if (!globalThis.__kazierSlackBound) {
       const [task, members] = await Promise.all([
         prisma.task.findUnique({
           where: { id: taskId },
-          select: { title: true, description: true, dueDate: true, project: { select: { name: true } } },
+          select: {
+            title: true,
+            description: true,
+            dueDate: true,
+            project: { select: { name: true } },
+          },
         }),
         prisma.member.findMany({
           where: { id: { in: memberIds }, slackId: { not: null } },
@@ -35,7 +39,9 @@ if (!globalThis.__kazierSlackBound) {
       ]);
       if (!task || members.length === 0) return;
 
-      const dueLabel = task.dueDate ? task.dueDate.toISOString().slice(0, 16).replace("T", " ") : null;
+      const dueLabel = task.dueDate
+        ? task.dueDate.toISOString().slice(0, 16).replace("T", " ")
+        : null;
 
       await Promise.all(
         members.map((m) =>
@@ -143,10 +149,7 @@ if (!globalThis.__kazierSlackBound) {
           section(
             `📁 Vous avez été ajouté au projet *${project.icon ?? ""} ${project.name}* !\n\nPensez à soumettre votre rapport quotidien.`
           ),
-          actionButton(
-            "📝 Soumettre mon rapport",
-            process.env.NEXT_PUBLIC_FORM_URL ?? appUrl("/")
-          ),
+          actionButton("📝 Soumettre mon rapport", process.env.NEXT_PUBLIC_FORM_URL ?? appUrl("/")),
         ],
       });
     } catch (e) {

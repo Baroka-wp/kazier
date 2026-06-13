@@ -17,11 +17,7 @@ import { logAction } from "./audit";
 import type { Actor } from "./actor";
 import { Pagination } from "./schemas/common";
 import { z } from "zod";
-import {
-  CreateMemberInput,
-  UpdateMemberInput,
-  RoleEnum,
-} from "./schemas/member";
+import { CreateMemberInput, UpdateMemberInput, RoleEnum } from "./schemas/member";
 
 // ── Types de sortie ──────────────────────────────────────────────────────
 
@@ -189,7 +185,9 @@ export async function create(actor: Actor, rawInput: unknown): Promise<Result<Me
       action: "member.create",
       entity: "member",
       entityId: created.id,
-      diff: { after: { firstName: created.firstName, lastName: created.lastName, role: created.role } },
+      diff: {
+        after: { firstName: created.firstName, lastName: created.lastName, role: created.role },
+      },
     });
 
     return ok(toMemberRow(created));
@@ -295,12 +293,9 @@ export async function search(
       orderBy: { firstName: "asc" },
       take: limit,
     });
-    return ok(
-      rows.map((r) => ({ id: r.id, fullName: `${r.firstName} ${r.lastName}`.trim() }))
-    );
+    return ok(rows.map((r) => ({ id: r.id, fullName: `${r.firstName} ${r.lastName}`.trim() })));
   } catch (e) {
     console.error("[core.members.search]", e);
     return err(ERR.DB_ERROR, "Failed to search members");
   }
 }
-

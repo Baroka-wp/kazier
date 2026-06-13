@@ -17,7 +17,14 @@ import {
   systemActor,
   type Actor,
 } from "@/lib/core";
-import { postMessage, header, section, divider, actionButton, stripHtml } from "@/lib/server/integrations/slack/client";
+import {
+  postMessage,
+  header,
+  section,
+  divider,
+  actionButton,
+  stripHtml,
+} from "@/lib/server/integrations/slack/client";
 
 const SYSTEM: Actor = systemActor("daily-form");
 const formMember = (memberId: string): Actor => ({
@@ -247,10 +254,7 @@ export async function sendToSlack(data: {
           section(`*🎯 À apprendre :*\n${stripHtml(needed_learning) || "_Non renseigné_"}`),
           section(`*🚀 Objectif demain :*\n${stripHtml(tomorrow_build) || "_Non renseigné_"}`),
           divider,
-          actionButton(
-            "📊 Voir le dashboard",
-            `${process.env.NEXTAUTH_URL ?? ""}/dashboard`
-          ),
+          actionButton("📊 Voir le dashboard", `${process.env.NEXTAUTH_URL ?? ""}/dashboard`),
         ],
       });
     }

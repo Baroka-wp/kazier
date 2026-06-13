@@ -49,8 +49,7 @@ export function registerDeliverableTools(server: McpServer, actor: () => Actor):
       "rollback). Emits deliverable.status_changed.",
     inputSchema: z.object({ id: Cuid, data: UpdateDeliverableInput }),
     actor,
-    call: (a, args: { id: string; data: unknown }) =>
-      deliverables.update(a, args.id, args.data),
+    call: (a, args: { id: string; data: unknown }) => deliverables.update(a, args.id, args.data),
   });
 
   registerIdTool(server, {
