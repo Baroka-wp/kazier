@@ -28,9 +28,9 @@ type JsonRpcRequest = {
 export async function handleMcpRequest(req: Request): Promise<Response> {
   // ── 1. Auth ───────────────────────────────────────────────────────────
   const token = extractBearer(req.headers);
-  if (!token) return jsonRpcAuthError("Missing Bearer token");
+  if (!token) return jsonRpcAuthError("Missing Bearer token", req);
   const authed = await verifyBearer(token);
-  if (!authed) return jsonRpcAuthError("Invalid or expired API key");
+  if (!authed) return jsonRpcAuthError("Invalid or expired token", req);
 
   // ── 2. Parse ───────────────────────────────────────────────────────────
   let payload: JsonRpcRequest | JsonRpcRequest[];
@@ -115,16 +115,22 @@ async function route(client: Client, req: JsonRpcRequest): Promise<unknown> {
   }
 }
 
-function jsonRpcAuthError(message: string): Response {
+function jsonRpcAuthError(message: string, req: Request): Response {
+  // RFC 9728 — pointer Claude.ai vers la métadonnée du resource server
+  const url = new URL(req.url);
+  const base = process.env.AUTH_URL ?? `${url.protocol}//${url.host}`;
+  const resourceMetadata = `${base}/.well-known/oauth-protected-resource`;
+  const wwwAuth =
+    `Bearer realm="kazier-mcp", ` +
+    `error="invalid_token", ` +
+    `error_description="${message.replace(/"/g, "")}", ` +
+    `resource_metadata="${resourceMetadata}"`;
+
   return new Response(
-    JSON.stringify({
-      jsonrpc: "2.0",
-      error: { code: -32001, message },
-      id: null,
-    }),
+    JSON.stringify({ jsonrpc: "2.0", error: { code: -32001, message }, id: null }),
     {
       status: 401,
-      headers: { "content-type": "application/json", "www-authenticate": 'Bearer realm="mcp"' },
+      headers: { "content-type": "application/json", "www-authenticate": wwwAuth },
     }
   );
 }

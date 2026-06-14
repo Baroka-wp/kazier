@@ -346,3 +346,68 @@ model ApiKey {
 
   @@map("api_keys")
 }
+
+// ─── OAuth 2.1 (pour Claude.ai web Connectors) ──────────────────────────
+//
+// Un mini-serveur OAuth interne à Kazier. Un OAuthClient = une instance
+// Claude.ai (créée par Dynamic Client Registration RFC 7591). Un Member
+// consent une connexion via /oauth/authorize, ce qui crée un OAuthAuthCode
+// éphémère ; Claude l'échange contre un OAuthToken (access + refresh) via
+// POST /oauth/token. Le MCP server accepte l'access token en Bearer.
+
+model OAuthClient {
+  id          String   @id @default(cuid())
+  clientId    String   @unique @map("client_id")
+  clientName  String?  @map("client_name")
+  redirectUris String[] @map("redirect_uris")
+  // Dynamic Client Registration : pour les clients confidentiels on stocke
+  // un hash du secret. Pour les clients publics (PKCE only) c'est null.
+  clientSecretHash String? @map("client_secret_hash")
+  isPublic    Boolean  @default(true) @map("is_public")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  authCodes OAuthAuthCode[]
+  tokens    OAuthToken[]
+
+  @@map("oauth_clients")
+}
+
+model OAuthAuthCode {
+  id                  String   @id @default(cuid())
+  code                String   @unique
+  clientId            String   @map("client_id")
+  memberId            String   @map("member_id")
+  redirectUri         String   @map("redirect_uri")
+  codeChallenge       String   @map("code_challenge")
+  codeChallengeMethod String   @map("code_challenge_method") // "S256"
+  scope               String   // espace-séparé
+  expiresAt           DateTime @map("expires_at")
+  usedAt              DateTime? @map("used_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([code])
+  @@index([expiresAt])
+  @@map("oauth_auth_codes")
+}
+
+model OAuthToken {
+  id                String   @id @default(cuid())
+  accessTokenHash   String   @unique @map("access_token_hash")
+  refreshTokenHash  String?  @unique @map("refresh_token_hash")
+  clientId          String   @map("client_id")
+  memberId          String   @map("member_id")
+  scope             String
+  accessExpiresAt   DateTime @map("access_expires_at")
+  refreshExpiresAt  DateTime? @map("refresh_expires_at")
+  revokedAt         DateTime? @map("revoked_at")
+  lastUsedAt        DateTime? @map("last_used_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([accessExpiresAt])
+  @@map("oauth_tokens")
+}
