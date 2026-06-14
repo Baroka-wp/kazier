@@ -29,7 +29,11 @@ export async function handleMcpRequest(req: Request): Promise<Response> {
   // ── 1. Auth ───────────────────────────────────────────────────────────
   const token = extractBearer(req.headers);
   if (!token) return jsonRpcAuthError("Missing Bearer token", req);
-  const authed = await verifyBearer(token);
+
+  // RFC 8707 — l'URI canonique de notre MCP server. Le token OAuth doit
+  // avoir été émis avec cette resource pour être accepté.
+  const expectedResource = canonicalMcpUri(req);
+  const authed = await verifyBearer(token, expectedResource);
   if (!authed) return jsonRpcAuthError("Invalid or expired token", req);
 
   // ── 2. Parse ───────────────────────────────────────────────────────────
@@ -113,6 +117,18 @@ async function route(client: Client, req: JsonRpcRequest): Promise<unknown> {
       },
     };
   }
+}
+
+/**
+ * URI canonique du MCP server, telle qu'utilisée pour le `resource` RFC 8707.
+ * Format : "<scheme>://<host>/api/mcp" sans trailing slash, sans fragment.
+ */
+function canonicalMcpUri(req: Request): string {
+  const proto =
+    req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
+  const host =
+    req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? new URL(req.url).host;
+  return `${proto}://${host}/api/mcp`;
 }
 
 function jsonRpcAuthError(message: string, req: Request): Response {

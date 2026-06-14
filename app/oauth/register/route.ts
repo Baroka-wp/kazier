@@ -54,10 +54,16 @@ export async function POST(req: Request) {
     tokenEndpointAuthMethod: body.token_endpoint_auth_method,
   });
 
+  // RFC 7591 §3.2.1 — timestamps obligatoires pour la conformité
+  const now = Math.floor(Date.now() / 1000);
+
   return NextResponse.json(
     {
       client_id: registered.clientId,
-      ...(registered.clientSecret ? { client_secret: registered.clientSecret } : {}),
+      client_id_issued_at: now,
+      ...(registered.clientSecret
+        ? { client_secret: registered.clientSecret, client_secret_expires_at: 0 }
+        : {}),
       client_name: registered.clientName,
       redirect_uris: registered.redirectUris,
       token_endpoint_auth_method: registered.isPublic ? "none" : "client_secret_post",

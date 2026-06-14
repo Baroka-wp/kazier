@@ -16,6 +16,7 @@ export async function issueAuthCode(params: {
   codeChallenge: string;
   codeChallengeMethod: string;
   scope: string;
+  resource?: string; // RFC 8707
 }): Promise<string> {
   const code = `kzc_${crypto.randomBytes(32).toString("hex")}`;
   const expiresAt = new Date(Date.now() + CODE_TTL_SEC * 1000);
@@ -28,6 +29,7 @@ export async function issueAuthCode(params: {
       codeChallenge: params.codeChallenge,
       codeChallengeMethod: params.codeChallengeMethod,
       scope: params.scope,
+      resource: params.resource,
       expiresAt,
     },
   });
@@ -40,6 +42,7 @@ export type ResolvedCode = {
   clientId: string;
   redirectUri: string;
   scope: string;
+  resource: string | null;
   codeChallenge: string;
   codeChallengeMethod: string;
 };
@@ -76,6 +79,7 @@ export async function consumeAuthCode(params: {
     clientId: found.clientId,
     redirectUri: found.redirectUri,
     scope: found.scope,
+    resource: found.resource,
     codeChallenge: found.codeChallenge,
     codeChallengeMethod: found.codeChallengeMethod,
   };

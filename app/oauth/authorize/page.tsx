@@ -36,6 +36,7 @@ export default async function AuthorizePage({
   const code_challenge_method = get("code_challenge_method") ?? "S256";
   const state = get("state");
   const scope = get("scope") ?? "";
+  const resource = get("resource") ?? ""; // RFC 8707
 
   // Validations basiques
   if (response_type !== "code") return <ErrorPage msg="response_type must be 'code'" />;
@@ -76,6 +77,7 @@ export default async function AuthorizePage({
       codeChallengeMethod={code_challenge_method}
       state={state ?? ""}
       scope={scope}
+      resource={resource}
       userName={user.name ?? user.email ?? "Vous"}
     />
   );

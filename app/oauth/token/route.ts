@@ -70,6 +70,7 @@ async function handleAuthCode(params: URLSearchParams, clientId: string) {
   const code = params.get("code");
   const redirectUri = params.get("redirect_uri");
   const codeVerifier = params.get("code_verifier");
+  const resourceParam = params.get("resource"); // RFC 8707
 
   if (!code || !redirectUri || !codeVerifier) {
     return errResp("invalid_request", "code, redirect_uri, code_verifier required");
@@ -79,6 +80,14 @@ async function handleAuthCode(params: URLSearchParams, clientId: string) {
   if (!consumed) {
     return errResp("invalid_grant", "Invalid, expired or already-used code");
   }
+
+  // RFC 8707 — si une resource était spécifiée à /authorize, elle DOIT
+  // matcher celle envoyée à /token. Si /authorize n'a pas spécifié, on
+  // accepte celle envoyée à /token.
+  if (consumed.resource && resourceParam && consumed.resource !== resourceParam) {
+    return errResp("invalid_target", "Resource mismatch between authorize and token");
+  }
+  const boundResource = resourceParam ?? consumed.resource ?? null;
 
   // Récupère le rôle du Member pour calculer les scopes
   const member = await prisma.member.findUnique({
@@ -100,6 +109,7 @@ async function handleAuthCode(params: URLSearchParams, clientId: string) {
     clientId,
     memberId: consumed.memberId,
     scope: formatScope(effectiveScopes),
+    resource: boundResource,
   });
 
   return NextResponse.json({

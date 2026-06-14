@@ -17,10 +17,13 @@ export type AuthenticatedActor = {
   sourceId: string;
 };
 
-export async function verifyBearer(token: string | null): Promise<AuthenticatedActor | null> {
+export async function verifyBearer(
+  token: string | null,
+  expectedResource?: string
+): Promise<AuthenticatedActor | null> {
   if (!token) return null;
 
-  if (token.startsWith("kzo_")) return verifyOAuthToken(token);
+  if (token.startsWith("kzo_")) return verifyOAuthToken(token, expectedResource);
   if (token.startsWith("kz_")) return verifyApiKey(token);
   return null;
 }
@@ -55,9 +58,18 @@ async function verifyApiKey(token: string): Promise<AuthenticatedActor | null> {
   return null;
 }
 
-async function verifyOAuthToken(token: string): Promise<AuthenticatedActor | null> {
+async function verifyOAuthToken(
+  token: string,
+  expectedResource?: string
+): Promise<AuthenticatedActor | null> {
   const resolved = await verifyAccessToken(token);
   if (!resolved) return null;
+
+  // RFC 8707 audience binding check : si le token a un resource bound,
+  // il DOIT matcher la requête courante (sinon token reuse cross-resource).
+  if (resolved.resource && expectedResource && resolved.resource !== expectedResource) {
+    return null;
+  }
 
   const scopes = parseScope(resolved.scope);
   const actor: Actor = {

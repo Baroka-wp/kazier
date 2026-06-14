@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     codeChallengeMethod: string;
     state: string;
     scope: string;
+    resource?: string;
   };
   try {
     body = await req.json();
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
     codeChallenge: body.codeChallenge,
     codeChallengeMethod: body.codeChallengeMethod,
     scope: body.scope,
+    resource: body.resource || undefined,
   });
 
   redirectUrl.searchParams.set("code", code);

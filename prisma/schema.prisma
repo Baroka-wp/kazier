@@ -381,6 +381,7 @@ model OAuthAuthCode {
   codeChallenge       String   @map("code_challenge")
   codeChallengeMethod String   @map("code_challenge_method") // "S256"
   scope               String   // espace-séparé
+  resource            String?  // RFC 8707 — canonical URI of the MCP server
   expiresAt           DateTime @map("expires_at")
   usedAt              DateTime? @map("used_at")
   createdAt           DateTime @default(now()) @map("created_at")
@@ -399,6 +400,7 @@ model OAuthToken {
   clientId          String   @map("client_id")
   memberId          String   @map("member_id")
   scope             String
+  resource          String?  // RFC 8707 — bound audience
   accessExpiresAt   DateTime @map("access_expires_at")
   refreshExpiresAt  DateTime? @map("refresh_expires_at")
   revokedAt         DateTime? @map("revoked_at")

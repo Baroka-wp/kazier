@@ -30,6 +30,7 @@ export async function issueTokens(params: {
   clientId: string;
   memberId: string;
   scope: string;
+  resource?: string | null; // RFC 8707 — bound audience
 }): Promise<IssuedTokens> {
   const accessToken = randomToken("kzo");
   const refreshToken = randomToken("kzr");
@@ -48,6 +49,7 @@ export async function issueTokens(params: {
       clientId: params.clientId,
       memberId: params.memberId,
       scope: params.scope,
+      resource: params.resource ?? null,
       accessExpiresAt: accessExpires,
       refreshExpiresAt: refreshExpires,
     },
@@ -66,6 +68,7 @@ export type ResolvedToken = {
   memberId: string;
   clientId: string;
   scope: string;
+  resource: string | null;
 };
 
 /**
@@ -82,7 +85,14 @@ export async function verifyAccessToken(token: string): Promise<ResolvedToken | 
       revokedAt: null,
       accessExpiresAt: { gt: new Date() },
     },
-    select: { id: true, accessTokenHash: true, memberId: true, clientId: true, scope: true },
+    select: {
+      id: true,
+      accessTokenHash: true,
+      memberId: true,
+      clientId: true,
+      scope: true,
+      resource: true,
+    },
   });
 
   for (const c of candidates) {
@@ -96,6 +106,7 @@ export async function verifyAccessToken(token: string): Promise<ResolvedToken | 
         memberId: c.memberId,
         clientId: c.clientId,
         scope: c.scope,
+        resource: c.resource,
       };
     }
   }
@@ -121,6 +132,7 @@ export async function rotateRefreshToken(refreshToken: string): Promise<IssuedTo
       memberId: true,
       clientId: true,
       scope: true,
+      resource: true,
     },
   });
 
@@ -132,11 +144,12 @@ export async function rotateRefreshToken(refreshToken: string): Promise<IssuedTo
         where: { id: c.id },
         data: { revokedAt: new Date() },
       });
-      // Émet une nouvelle paire
+      // Émet une nouvelle paire avec la même resource binding
       return issueTokens({
         clientId: c.clientId,
         memberId: c.memberId,
         scope: c.scope,
+        resource: c.resource,
       });
     }
   }

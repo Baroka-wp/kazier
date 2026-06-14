@@ -10,6 +10,7 @@ type Props = {
   codeChallengeMethod: string;
   state: string;
   scope: string;
+  resource: string;
   userName: string;
 };
 
