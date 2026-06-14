@@ -62,7 +62,7 @@ export default function ProjectDetailClient({ project, initialTasks, teamMemberI
 
     if (!over) return;
 
-    const taskId = parseInt(active.id.toString().replace("task-", ""), 10);
+    const taskId = active.id.toString().replace("task-", "");
     const newStatus = over.id.toString().replace("column-", "") as StatusType;
 
     if (active.id === over.id) return;

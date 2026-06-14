@@ -77,7 +77,7 @@ export default function TMKanbanWrapper({
     setActiveTask(null);
     if (!over) return;
 
-    const taskId = parseInt(String(active.id).replace("task-", ""));
+    const taskId = String(active.id).replace("task-", "");
     const currentTask = localTasks.find((t) => t.id === taskId);
     if (!currentTask) return;
 

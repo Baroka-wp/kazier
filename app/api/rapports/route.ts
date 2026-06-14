@@ -14,9 +14,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || undefined;
     const role = searchParams.get("role") || undefined;
-    const projectId = searchParams.get("projectId")
-      ? parseInt(searchParams.get("projectId")!)
-      : undefined;
+    const projectId = searchParams.get("projectId") || undefined;
     const dateFilter = searchParams.get("dateFilter") || undefined;
 
     const result = await getRapportsData({

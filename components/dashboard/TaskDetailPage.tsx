@@ -420,7 +420,7 @@ export default function TaskDetailPage({
   canManageTasks = false,
 }: Props) {
   const { data: session } = useSession();
-  const teamId = parseInt((session?.user as { team_id?: string })?.team_id ?? "0");
+  const teamId = (session?.user as { id?: string })?.id ?? "";
 
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(true);
@@ -493,7 +493,7 @@ export default function TaskDetailPage({
   const dueDate = task.due_date ? formatDate(task.due_date) : "—";
 
   async function handleAssign() {
-    const memberId = parseInt((session?.user as { id?: string })?.id ?? "0");
+    const memberId = (session?.user as { id?: string })?.id ?? "";
     if (!memberId) return;
     const res = await assignTaskToSelf(task.id, memberId);
     if (res.success && res.task) {

@@ -304,7 +304,7 @@ type Props = {
 
 export default function TaskDetailModal({ task, onClose }: Props) {
   const { data: session } = useSession();
-  const teamId = parseInt((session?.user as { team_id?: string })?.team_id ?? "0");
+  const teamId = (session?.user as { id?: string })?.id ?? "";
   const userRole = (session?.user as { role?: string })?.role ?? null;
 
   const [comments, setComments] = useState<TaskComment[]>([]);

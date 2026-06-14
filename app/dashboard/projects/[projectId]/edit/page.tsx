@@ -9,9 +9,7 @@ type Params = {
 
 export default async function ProjectEditPage(props: { params: Promise<Params> }) {
   const params = await props.params;
-  const projectId = parseInt(params.projectId, 10);
-
-  const result = await getProject(projectId);
+  const result = await getProject(params.projectId);
 
   if (!result.success) {
     return (
