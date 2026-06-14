@@ -25,7 +25,29 @@ type JsonRpcRequest = {
   params?: Record<string, unknown>;
 };
 
+// Liste des versions MCP qu'on supporte (la plus récente d'abord).
+const SUPPORTED_MCP_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
+const DEFAULT_MCP_PROTOCOL_VERSION = "2025-06-18";
+
 export async function handleMcpRequest(req: Request): Promise<Response> {
+  // ── 0. Validation MCP-Protocol-Version (spec 2025-06-18) ──────────────
+  // Si le header est présent et qu'on ne supporte pas cette version, 400.
+  // S'il est absent, on assume 2025-03-26 (rétrocompat).
+  const protocolHeader = req.headers.get("mcp-protocol-version");
+  if (protocolHeader && !SUPPORTED_MCP_PROTOCOL_VERSIONS.includes(protocolHeader)) {
+    return new Response(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        error: {
+          code: -32602,
+          message: `Unsupported MCP-Protocol-Version: ${protocolHeader}. Supported: ${SUPPORTED_MCP_PROTOCOL_VERSIONS.join(", ")}`,
+        },
+        id: null,
+      }),
+      { status: 400, headers: { "content-type": "application/json" } }
+    );
+  }
+
   // ── 1. Auth ───────────────────────────────────────────────────────────
   const token = extractBearer(req.headers);
   if (!token) return jsonRpcAuthError("Missing Bearer token", req);
@@ -69,16 +91,23 @@ async function route(client: Client, req: JsonRpcRequest): Promise<unknown> {
   try {
     let result: unknown;
     switch (req.method) {
-      case "initialize":
-        // L'initialize a déjà été faite par client.connect() ; on renvoie une
-        // réponse standard. Le client externe doit ensuite envoyer
-        // notifications/initialized — qu'on no-op.
+      case "initialize": {
+        // Négociation de version : on prend la version demandée par le client
+        // si on la supporte, sinon la nôtre par défaut (le client peut alors
+        // décider de continuer ou abandonner).
+        const requested = (req.params as { protocolVersion?: string } | undefined)
+          ?.protocolVersion;
+        const negotiated =
+          requested && SUPPORTED_MCP_PROTOCOL_VERSIONS.includes(requested)
+            ? requested
+            : DEFAULT_MCP_PROTOCOL_VERSION;
         result = {
-          protocolVersion: "2025-06-18",
+          protocolVersion: negotiated,
           capabilities: { tools: {} },
           serverInfo: KAZIER_MCP_SERVER_INFO,
         };
         break;
+      }
 
       case "ping":
         result = await client.ping();
