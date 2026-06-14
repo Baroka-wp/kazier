@@ -7,8 +7,11 @@
 export const runtime = "nodejs";
 
 function origin(req: Request): string {
-  const url = new URL(req.url);
-  return process.env.AUTH_URL ?? `${url.protocol}//${url.host}`;
+  const proto =
+    req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (host) return `${proto}://${host}`;
+  return process.env.AUTH_URL ?? new URL(req.url).origin;
 }
 
 export async function GET(req: Request) {

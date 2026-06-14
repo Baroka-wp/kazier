@@ -116,9 +116,14 @@ async function route(client: Client, req: JsonRpcRequest): Promise<unknown> {
 }
 
 function jsonRpcAuthError(message: string, req: Request): Response {
-  // RFC 9728 — pointer Claude.ai vers la métadonnée du resource server
-  const url = new URL(req.url);
-  const base = process.env.AUTH_URL ?? `${url.protocol}//${url.host}`;
+  // RFC 9728 — pointer Claude.ai vers la métadonnée du resource server.
+  // Derrière Coolify, on doit reconstruire l'URL externe via les headers
+  // x-forwarded-* (le url.host est l'IP interne du container).
+  const proto =
+    req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
+  const host =
+    req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? new URL(req.url).host;
+  const base = `${proto}://${host}`;
   const resourceMetadata = `${base}/.well-known/oauth-protected-resource`;
   const wwwAuth =
     `Bearer realm="kazier-mcp", ` +
