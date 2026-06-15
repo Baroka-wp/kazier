@@ -71,7 +71,7 @@ function AddMemberModal({
     loadTeams();
   }, []);
 
-  function toggleTeam(id: number) {
+  function toggleTeam(id: string) {
     setSelectedTeamIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );

@@ -21,7 +21,7 @@ export function EditModal({
   teams: TeamMember[];
   onClose: () => void;
   onSaved: (updated: Task, created: boolean) => void;
-  defaultProjectId?: number;
+  defaultProjectId?: string;
 }) {
   return (
     <div

@@ -24,8 +24,8 @@ type Props = {
   tasks: Task[];
   isLoading?: boolean;
   projects?: Project[];
-  selectedProjectId?: number | null;
-  onProjectChange?: (id: number | null) => void;
+  selectedProjectId?: string | null;
+  onProjectChange?: (id: string | null) => void;
   onAddTask?: () => void;
   onBack?: () => void;
   isTM?: boolean;
@@ -41,7 +41,7 @@ export default function TMKanbanWrapper({
   onAddTask,
   onBack,
   isTM = true,
-  teamMemberId = 0,
+  teamMemberId = "",
 }: Props) {
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);

@@ -42,7 +42,7 @@ function UpdateTaskForm({
   projects: Project[];
   onSaved: (task: Task, created: boolean) => void;
   onClose: () => void;
-  defaultProjectId?: number;
+  defaultProjectId?: string;
 }) {
   const initialAssignedTo = Array.isArray(task.assigned_to) ? task.assigned_to : [];
 
@@ -51,8 +51,8 @@ function UpdateTaskForm({
     description: task.description || "",
     status: task.status || ("à faire" as const),
     priority: task.priority || ("medium" as const),
-    project_id: task.project_id || (null as number | null),
-    assigned_to: initialAssignedTo as number[],
+    project_id: task.project_id || (null as string | null),
+    assigned_to: initialAssignedTo as string[],
     due_date: formatDateForPicker(task.due_date),
   });
 
@@ -110,17 +110,17 @@ function UpdateTaskForm({
     };
   }, [values.project_id]);
 
-  function setField(key: string, value: string | number | string[] | null) {
+  function setField(key: string, value: string | string[] | null) {
     setValues((v) => ({ ...v, [key]: value }));
     setServerError("");
   }
 
-  function handleProjectChange(projectId: number | null) {
+  function handleProjectChange(projectId: string | null) {
     setValues((v) => ({ ...v, project_id: projectId, assigned_to: [] }));
     setServerError("");
   }
 
-  function toggleMember(id: number) {
+  function toggleMember(id: string) {
     setValues((v) => ({
       ...v,
       assigned_to: v.assigned_to.includes(id)
@@ -274,7 +274,7 @@ function UpdateTaskForm({
         ) : (
           <select
             value={values.project_id || ""}
-            onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
+            onChange={(e) => handleProjectChange(e.target.value || null)}
             style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}
           >
             <option value="">Sélectionner un projet</option>

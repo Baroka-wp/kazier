@@ -185,7 +185,7 @@ function AvatarStack({
   isTM,
 }: {
   names: string[];
-  assignedTo: number[];
+  assignedTo: string[];
   teamMemberId: string;
   isTM: boolean;
 }) {

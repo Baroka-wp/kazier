@@ -34,7 +34,7 @@ export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: P
       !t.assigned_to.includes(teamMemberId)
   );
 
-  async function handleAssign(taskId: number) {
+  async function handleAssign(taskId: string) {
     setLoadingTaskId(taskId);
     const res = await assignTaskToSelf(taskId, teamMemberId);
     setLoadingTaskId(null);
@@ -46,7 +46,7 @@ export default function ProjectCard({ project, teamMemberId, onTasksUpdated }: P
     }
   }
 
-  async function handleUnassign(taskId: number) {
+  async function handleUnassign(taskId: string) {
     setLoadingTaskId(taskId);
     const res = await unassignTaskFromSelf(taskId, teamMemberId);
     setLoadingTaskId(null);

@@ -85,7 +85,7 @@ export default function TasksPage() {
         show={showAddTask && !!selectedProjectId}
         mode="create"
         task={null}
-        projectId={selectedProjectId || 0}
+        projectId={selectedProjectId || ""}
         teamMembers={teamMembers}
         onClose={() => setShowAddTask(false)}
         onSuccess={async () => {

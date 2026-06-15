@@ -30,7 +30,7 @@ type Props = {
   loading?: boolean;
   isEmpty?: boolean;
   onRefresh?: () => void;
-  defaultProjectId?: number;
+  defaultProjectId?: string;
   // Pagination serveur
   onPageChange?: (page: number) => void;
   onSearch?: (search: string) => void;
@@ -414,7 +414,7 @@ export default function TasksTable({
   // Le filtrage est géré côté serveur via les params API
 
   function addToast(type: Toast["type"], message: string) {
-    const id = Date.now();
+    const id = String(Date.now());
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }

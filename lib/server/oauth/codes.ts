@@ -88,10 +88,7 @@ export async function consumeAuthCode(params: {
 function verifyPkce(verifier: string, challenge: string, method: string): boolean {
   if (method === "plain") return verifier === challenge;
   if (method === "S256") {
-    const computed = crypto
-      .createHash("sha256")
-      .update(verifier)
-      .digest("base64url");
+    const computed = crypto.createHash("sha256").update(verifier).digest("base64url");
     return computed === challenge;
   }
   return false;

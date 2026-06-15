@@ -15,10 +15,10 @@ function CreateTaskForm({
   projects: Project[];
   onSaved: (task: Task, created: boolean) => void;
   onClose: () => void;
-  defaultProjectId?: number;
+  defaultProjectId?: string;
 }) {
   const [values, setValues] = useState({
-    project_id: defaultProjectId ?? (null as number | null),
+    project_id: defaultProjectId ?? (null as string | null),
     assigned_to: [] as string[], // ✅ Tableau de plusieurs IDs
     title: "",
     description: "",
@@ -51,17 +51,17 @@ function CreateTaskForm({
     };
   }, [values.project_id]);
 
-  function setField(key: string, value: string | number | string[] | null) {
+  function setField(key: string, value: string | string[] | null) {
     setValues((v) => ({ ...v, [key]: value }));
     setServerError("");
   }
 
-  function handleProjectChange(projectId: number | null) {
+  function handleProjectChange(projectId: string | null) {
     setValues((v) => ({ ...v, project_id: projectId, assigned_to: [] }));
     setServerError("");
   }
 
-  function toggleMember(id: number) {
+  function toggleMember(id: string) {
     setValues((v) => ({
       ...v,
       assigned_to: v.assigned_to.includes(id)
@@ -181,7 +181,7 @@ function CreateTaskForm({
         ) : (
           <select
             value={values.project_id || ""}
-            onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
+            onChange={(e) => handleProjectChange(e.target.value || null)}
             style={{ ...inputStyle, appearance: "none", cursor: "pointer" }}
           >
             <option value="">Sélectionner un projet</option>

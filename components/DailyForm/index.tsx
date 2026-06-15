@@ -28,7 +28,7 @@ export type Project = {
 };
 
 export type Evaluation = {
-  evaluated_id: number;
+  evaluated_id: string;
   communication: number;
   collaboration: number;
   punctuality: number;
@@ -43,7 +43,7 @@ type Teammate = { id: string; full_name: string };
 
 type EvalState = {
   teammates: Teammate[];
-  evaluations: Record<number, Evaluation>;
+  evaluations: Record<string, Evaluation>;
 };
 
 type EvalAction =
@@ -51,7 +51,7 @@ type EvalAction =
   | { type: "RESET" }
   | {
       type: "UPDATE_EVAL";
-      evaluated_id: number;
+      evaluated_id: string;
       field: keyof Omit<Evaluation, "evaluated_id">;
       value: number | string;
     };
@@ -139,7 +139,7 @@ export default function DailyForm() {
 
   // ── Projets ────────────────────────────────────────────────────────────────
 
-  async function loadProjects(team_id: number) {
+  async function loadProjects(team_id: string) {
     const [projectsResult, tasksResult] = await Promise.all([
       getProjectsByMember(team_id),
       getTasksByMember(team_id),
@@ -160,14 +160,14 @@ export default function DailyForm() {
     });
   }
 
-  function handleTaskToggle(taskId: number) {
+  function handleTaskToggle(taskId: string) {
     setSelectedTaskIds((prev) =>
       prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
     );
   }
 
   function handleEvaluationChange(
-    evaluated_id: number,
+    evaluated_id: string,
     field: keyof Omit<Evaluation, "evaluated_id">,
     value: number | string
   ) {

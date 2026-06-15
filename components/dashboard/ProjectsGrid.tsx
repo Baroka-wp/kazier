@@ -191,11 +191,11 @@ function CreateModal({
   const [serverError, setServerError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  function setField(key: string, value: string | number[]) {
+  function setField(key: string, value: string | string[]) {
     setValues((v) => ({ ...v, [key]: value }));
     setServerError("");
   }
-  function toggleTeam(id: number) {
+  function toggleTeam(id: string) {
     setValues((v) => ({
       ...v,
       team_ids: v.team_ids.includes(id) ? v.team_ids.filter((x) => x !== id) : [...v.team_ids, id],
@@ -678,7 +678,7 @@ export default function ProjectsGrid() {
   }, []);
 
   // Calculate time progress percentage (same as ProjectDashboard)
-  const getProjectTimeProgress = (projectId: number): number => {
+  const getProjectTimeProgress = (projectId: string): number => {
     const project = projects.find((p) => p.id === projectId);
     if (!project?.start_date || !project?.end_date) return 0;
 
@@ -695,7 +695,7 @@ export default function ProjectsGrid() {
   };
 
   // Get remaining time info
-  const getRemainingTimeInfo = (projectId: number): { days: number; isUrgent: boolean } => {
+  const getRemainingTimeInfo = (projectId: string): { days: number; isUrgent: boolean } => {
     const project = projects.find((p) => p.id === projectId);
     if (!project?.end_date) return { days: 0, isUrgent: false };
 
@@ -708,7 +708,7 @@ export default function ProjectsGrid() {
 
   const getGlobalKPIs = () => {
     const tasksEnCours = allTasks.filter((t) => t.status === "en cours").length;
-    const activeProjectIds = new Set<number>();
+    const activeProjectIds = new Set<string>();
     allTasks.forEach((task) => {
       if ((task.status === "en cours" || task.status === "à faire") && task.project_id) {
         activeProjectIds.add(task.project_id);

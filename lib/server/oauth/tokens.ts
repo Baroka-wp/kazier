@@ -12,8 +12,8 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/core";
 
-const ACCESS_TTL_SEC = 60 * 60;             // 1h
-const REFRESH_TTL_SEC = 60 * 60 * 24 * 30;  // 30j
+const ACCESS_TTL_SEC = 60 * 60; // 1h
+const REFRESH_TTL_SEC = 60 * 60 * 24 * 30; // 30j
 
 export type IssuedTokens = {
   accessToken: string;
@@ -163,8 +163,7 @@ export async function revokeToken(token: string): Promise<boolean> {
   });
   for (const c of candidates) {
     const matchAccess = await bcrypt.compare(token, c.accessTokenHash);
-    const matchRefresh =
-      c.refreshTokenHash && (await bcrypt.compare(token, c.refreshTokenHash));
+    const matchRefresh = c.refreshTokenHash && (await bcrypt.compare(token, c.refreshTokenHash));
     if (matchAccess || matchRefresh) {
       await prisma.oAuthToken.update({
         where: { id: c.id },

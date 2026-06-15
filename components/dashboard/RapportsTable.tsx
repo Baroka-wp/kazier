@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { FileDown, X, ChevronDown, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { FileDown, X, ChevronDown, AlertTriangle, CheckCircle2, XCircle, Plus } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Folder } from "lucide-react";
 import { useSWRConfig } from "swr";
+import Link from "next/link";
 import DataTable from "@/components/dashboard/DataTable";
 import { deleteReport, updateReport } from "@/lib/report-actions";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -62,7 +63,7 @@ type Props = {
   onDateFilter?: (dateFilter: string) => void;
 };
 
-type Toast = { id: number; type: "success" | "error"; message: string };
+type Toast = { id: string; type: "success" | "error"; message: string };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -272,14 +273,14 @@ function DeleteModal({
   loading,
 }: {
   group: ReportGroup;
-  onConfirm: (reportIds: number[]) => void;
+  onConfirm: (reportIds: string[]) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
   // Par défaut tous les projets sont sélectionnés
-  const [selected, setSelected] = useState<Set<number>>(new Set(group.reports.map((r) => r.id)));
+  const [selected, setSelected] = useState<Set<string>>(new Set(group.reports.map((r) => r.id)));
 
-  function toggle(id: number) {
+  function toggle(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -1072,7 +1073,7 @@ export default function RapportsTable({
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const { mutate } = useSWRConfig();
-  const { canEditReports, canDeleteReports } = usePermissions();
+  const { canEditReports, canDeleteReports, isSuperAdmin, isTeamManager } = usePermissions();
 
   // Utiliser les filtres externes (serveur) ou locaux
   const roleFilter = roleFilterProp ?? "";
@@ -1080,12 +1081,12 @@ export default function RapportsTable({
   const dateFilter = dateFilterProp ?? "";
 
   function addToast(type: Toast["type"], message: string) {
-    const id = Date.now();
+    const id = String(Date.now());
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }
 
-  async function handleDelete(reportIds: number[]) {
+  async function handleDelete(reportIds: string[]) {
     if (!toDelete) return;
     setDeleting(true);
     const results = await Promise.all(reportIds.map((id) => deleteReport(id)));
@@ -1196,13 +1197,43 @@ export default function RapportsTable({
           />
         </div>
       ))}
+      {(isSuperAdmin || isTeamManager) && (
+        <Link
+          href="/?adminMode=1"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            marginLeft: "auto",
+            padding: "8px 14px",
+            borderRadius: "10px",
+            border: "1.5px solid rgba(107,26,42,0.15)",
+            background: "#6B1A2A",
+            color: "#fff",
+            fontSize: "0.82rem",
+            fontWeight: 500,
+            cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif",
+            transition: "all 0.15s",
+            textDecoration: "none",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#7e2235";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#6B1A2A";
+          }}
+        >
+          <Plus size={14} /> Ajouter un rapport
+        </Link>
+      )}
       <button
         onClick={() => exportCSV(reports)}
         style={{
           display: "flex",
           alignItems: "center",
           gap: "6px",
-          marginLeft: "auto",
+          marginLeft: isSuperAdmin || isTeamManager ? "0" : "auto",
           padding: "8px 14px",
           borderRadius: "10px",
           border: "1.5px solid rgba(0,0,0,0.08)",

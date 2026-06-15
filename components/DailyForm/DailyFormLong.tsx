@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useReducer } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   sendToSlack,
   checkAlreadySubmitted,
@@ -10,6 +11,8 @@ import {
   getTeammatesByProjects,
   saveEvaluations,
 } from "@/lib/actions";
+import { submitReportAsAdmin } from "@/lib/rapports-actions";
+import { useAuth } from "@/hooks/useAuth";
 import {
   CheckCircle2,
   Loader2,
@@ -23,6 +26,8 @@ import {
   Users,
   Star,
   Languages,
+  ShieldCheck,
+  CalendarDays,
 } from "lucide-react";
 import Confetti from "./Confetti";
 import { type Language, useTranslation } from "./translations";
@@ -31,7 +36,7 @@ type Suggestion = { id: string; full_name: string };
 type Project = { id: string; name: string; description: string; icon: string };
 type Teammate = { id: string; full_name: string };
 type Evaluation = {
-  evaluated_id: number;
+  evaluated_id: string;
   communication: number;
   collaboration: number;
   punctuality: number;
@@ -40,7 +45,7 @@ type Evaluation = {
 
 type EvalState = {
   teammates: Teammate[];
-  evaluations: Record<number, Evaluation>;
+  evaluations: Record<string, Evaluation>;
 };
 
 type EvalAction =
@@ -48,7 +53,7 @@ type EvalAction =
   | { type: "RESET" }
   | {
       type: "UPDATE_EVAL";
-      evaluated_id: number;
+      evaluated_id: string;
       field: keyof Omit<Evaluation, "evaluated_id">;
       value: number | string;
     };
@@ -86,6 +91,15 @@ function evalReducer(state: EvalState, action: EvalAction): EvalState {
 export default function DailyFormLong() {
   const [lang, setLang] = useState<Language>("fr");
   const t = useTranslation(lang);
+
+  const searchParams = useSearchParams();
+  const { role } = useAuth();
+  const adminMode = searchParams.get("adminMode") === "1";
+  const isAdmin = role === "SUPER_ADMIN" || role === "PROJECT_MANAGER";
+  const showAdminPicker = adminMode && isAdmin;
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [reportDate, setReportDate] = useState(todayStr);
 
   const [fullName, setFullName] = useState("");
   const [teamId, setTeamId] = useState<string | null>(null);
@@ -129,7 +143,7 @@ export default function DailyFormLong() {
     };
   }, [selectedProjects, teamId]);
 
-  async function loadProjects(team_id: number) {
+  async function loadProjects(team_id: string) {
     const [projectsResult, tasksResult] = await Promise.all([
       getProjectsByMember(team_id),
       getTasksByMember(team_id),
@@ -170,14 +184,14 @@ export default function DailyFormLong() {
     });
   }
 
-  function handleTaskToggle(taskId: number) {
+  function handleTaskToggle(taskId: string) {
     setSelectedTaskIds((prev) =>
       prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
     );
   }
 
   function handleEvaluationChange(
-    evaluated_id: number,
+    evaluated_id: string,
     field: keyof Omit<Evaluation, "evaluated_id">,
     value: number | string
   ) {
@@ -193,7 +207,10 @@ export default function DailyFormLong() {
       return;
     }
 
-    const alreadySubmitted = await checkAlreadySubmitted(teamId);
+    const alreadySubmitted = await checkAlreadySubmitted(
+      teamId,
+      showAdminPicker ? reportDate : undefined
+    );
     if (alreadySubmitted) {
       setError(t.errorAlreadySubmitted);
       return;
@@ -211,7 +228,7 @@ export default function DailyFormLong() {
       return;
     }
 
-    if (teammates.length > 0) {
+    if (!showAdminPicker && teammates.length > 0) {
       const allEvaluated = teammates.every((m) => {
         const e = evaluations[m.id];
         return e && e.communication > 0 && e.collaboration > 0 && e.punctuality > 0;
@@ -223,6 +240,56 @@ export default function DailyFormLong() {
     }
 
     setSubmitting(true);
+
+    if (showAdminPicker) {
+      // Saisie rétroactive par un admin : un rapport par projet sélectionné,
+      // sans passage Slack ni évaluations (l'admin saisit "à la place" du membre).
+      for (const project of selectedProjects) {
+        const taskTitles = tasks
+          .filter((tk) => tk.project_id === project.id && selectedTaskIds.includes(tk.id))
+          .map((tk) => `• ${tk.title}`)
+          .join("\n");
+
+        const res = await submitReportAsAdmin({
+          memberId: teamId,
+          projectId: project.id,
+          reportDate,
+          inProgress: taskTitles || undefined,
+          blockers: challenges || undefined,
+          learningNeeded: neededLearning || undefined,
+          tomorrowPlan: tomorrowBuild || undefined,
+          extraMessage: extraMessage || undefined,
+        });
+
+        if (!res.success) {
+          setError(res.error);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      setSubmitting(false);
+      setSubmitted(true);
+      setConfetti(true);
+      setTimeout(() => setConfetti(false), 3000);
+
+      setTimeout(() => {
+        setSubmitted(false);
+        setFullName("");
+        setTeamId(null);
+        setProjects([]);
+        setSelectedProjects([]);
+        setTasks([]);
+        setSelectedTaskIds([]);
+        setChallenges("");
+        setNeededLearning("");
+        setTomorrowBuild("");
+        setExtraMessage("");
+        setReportDate(todayStr);
+        dispatch({ type: "RESET" });
+      }, 5000);
+      return;
+    }
 
     const result = await sendToSlack({
       team_id: teamId,
@@ -387,6 +454,53 @@ export default function DailyFormLong() {
           <p style={{ fontSize: "1.1rem", color: "#666", lineHeight: 1.6 }}>{t.pageSubtitle}</p>
         </div>
 
+        {showAdminPicker && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+              padding: "16px 20px",
+              marginBottom: "24px",
+              background: "rgba(107,26,42,0.06)",
+              border: "1px solid rgba(107,26,42,0.2)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#6B1A2A" }}>
+              <ShieldCheck size={20} />
+              <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                Saisie pour un membre de l&apos;équipe
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>
+              <CalendarDays size={18} color="#6B1A2A" />
+              <label
+                htmlFor="admin-report-date"
+                style={{ fontSize: "0.9rem", fontWeight: 600, color: "#444" }}
+              >
+                Date du rapport
+              </label>
+              <input
+                id="admin-report-date"
+                type="date"
+                value={reportDate}
+                max={todayStr}
+                onChange={(e) => setReportDate(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  border: "1px solid #D4CFC5",
+                  background: "#fff",
+                  fontSize: "0.9rem",
+                  fontFamily: "'DM Sans', sans-serif",
+                  color: "#000",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div
             style={{
@@ -396,13 +510,16 @@ export default function DailyFormLong() {
             }}
           >
             {/* 1. Identification */}
-            <Section icon={<UserCheck size={24} color="#6B1A2A" />} title={t.whoAreYou}>
+            <Section
+              icon={<UserCheck size={24} color="#6B1A2A" />}
+              title={showAdminPicker ? "Pour quel membre ?" : t.whoAreYou}
+            >
               <div style={{ position: "relative" }}>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => handleNameSearch(e.target.value)}
-                  placeholder={t.typeName}
+                  placeholder={showAdminPicker ? "Tapez le nom du membre..." : t.typeName}
                   required
                   style={{
                     width: "100%",
@@ -620,7 +737,7 @@ export default function DailyFormLong() {
                 </Section>
 
                 {/* 7. Évaluations */}
-                {teammates.length > 0 && (
+                {!showAdminPicker && teammates.length > 0 && (
                   <Section icon={<Users size={24} color="#6B1A2A" />} title={t.evaluateTeammates}>
                     <div style={{ display: "grid", gap: "24px" }}>
                       {teammates.map((teammate) => (
@@ -792,7 +909,7 @@ function TaskCard({
   selected,
   onToggle,
 }: {
-  task: { id: number; title: string; status: string };
+  task: { id: string; title: string; status: string };
   selected: boolean;
   onToggle: () => void;
 }) {

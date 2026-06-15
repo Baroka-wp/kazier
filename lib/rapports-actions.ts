@@ -141,3 +141,47 @@ export async function getRapportsData(
     projects: allProjects.map((p) => ({ id: p.id, name: p.name })),
   };
 }
+
+// ── submitReportAsAdmin — saisie rétroactive par SA/PM ───────────────────
+//
+// Permet à un SUPER_ADMIN ou PROJECT_MANAGER de saisir un rapport "pour
+// quelqu'un d'autre" (ex : un membre qui a oublié son rapport d'hier).
+// reportDate = la date métier choisie (YYYY-MM-DD), createdAt reste = now.
+
+export type SubmitAdminInput = {
+  memberId: string;
+  projectId?: string;
+  reportDate: string; // YYYY-MM-DD
+  workCompleted?: string;
+  inProgress?: string;
+  blockers?: string;
+  learnings?: string;
+  learningNeeded?: string;
+  tomorrowPlan?: string;
+  extraMessage?: string;
+};
+
+export async function submitReportAsAdmin(
+  input: SubmitAdminInput
+): Promise<{ success: true; reportId: string } | { success: false; error: string }> {
+  try {
+    const actor = await currentActor();
+    if (
+      actor.type !== "HUMAN" ||
+      (actor.role !== "SUPER_ADMIN" && actor.role !== "PROJECT_MANAGER")
+    ) {
+      return {
+        success: false,
+        error: "Seul un Super Admin ou Project Manager peut saisir un rapport pour autrui.",
+      };
+    }
+
+    const res = await reportsCore.submit(actor, input);
+    if (!res.ok) return { success: false, error: res.message };
+
+    return { success: true, reportId: res.data.id };
+  } catch (e) {
+    console.error("[submitReportAsAdmin]", e);
+    return { success: false, error: "Erreur lors de la saisie du rapport." };
+  }
+}

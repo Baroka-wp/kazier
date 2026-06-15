@@ -340,7 +340,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   function addToast(type: Toast["type"], message: string) {
     // ✅ Utilisation d'un compteur incrémenté au lieu de Date.now()
     toastCounterRef.current += 1;
-    const id = toastCounterRef.current;
+    const id = String(toastCounterRef.current);
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }
@@ -360,13 +360,15 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     }
   }
 
-  async function handleUpdate(commentId: number) {
+  async function handleUpdate(commentId: string) {
     if (!editContent.trim()) return;
     setUpdatingId(commentId);
     const res = await updateTaskComment(commentId, editContent);
     setUpdatingId(null);
-    if (res.success && res.comment) {
-      setComments((prev) => prev.map((c) => (c.id === commentId ? res.comment! : c)));
+    if (res.success) {
+      setComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, content: editContent.trim() } : c))
+      );
       setEditingId(null);
       setEditContent("");
       addToast("success", "Commentaire modifié");
@@ -375,7 +377,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     }
   }
 
-  async function handleDelete(commentId: number) {
+  async function handleDelete(commentId: string) {
     setDeletingId(commentId);
     const res = await deleteTaskComment(commentId);
     setDeletingId(null);

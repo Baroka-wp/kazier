@@ -30,19 +30,22 @@ const SCOPE_BY_PERM: Record<Perm, string> = {
   "audit.read": "audit:read",
 };
 
-const HUMAN_PERMS_FOR_ROLE: Record<
-  "SUPER_ADMIN" | "PROJECT_MANAGER" | "MEMBER",
-  Perm[]
-> = {
+const HUMAN_PERMS_FOR_ROLE: Record<"SUPER_ADMIN" | "PROJECT_MANAGER" | "MEMBER", Perm[]> = {
   SUPER_ADMIN: Object.keys(SCOPE_BY_PERM) as Perm[],
   PROJECT_MANAGER: [
     "members.read",
-    "projects.read", "projects.write", "projects.finance",
-    "tasks.read", "tasks.write",
-    "deliverables.read", "deliverables.write",
+    "projects.read",
+    "projects.write",
+    "projects.finance",
+    "tasks.read",
+    "tasks.write",
+    "deliverables.read",
+    "deliverables.write",
     "reports.read",
-    "expenses.read", "expenses.write",
-    "notes.read", "notes.write",
+    "expenses.read",
+    "expenses.write",
+    "notes.read",
+    "notes.write",
     "audit.read",
   ],
   MEMBER: [

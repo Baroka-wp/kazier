@@ -11,11 +11,11 @@ type Props = {
   milestones: Milestone[];
   projectStart: Date | null;
   projectEnd: Date | null;
-  projectId: number;
+  projectId: string;
   teamMembers?: Array<{ id: string; first_name: string; last_name: string }>;
   onAddMilestone?: () => void;
   onEditMilestone?: (milestone: Milestone) => void;
-  onDeleteMilestone?: (id: number) => void;
+  onDeleteMilestone?: (id: string) => void;
   onTaskUpdate?: () => void;
 };
 
@@ -40,7 +40,7 @@ export default function GanttChart({
   onTaskUpdate,
 }: Props) {
   const [zoom, setZoom] = useState(1);
-  const [hoveredTask, setHoveredTask] = useState<number | null>(null);
+  const [hoveredTask, setHoveredTask] = useState<string | null>(null);
   const [draggingTask, setDraggingTask] = useState<{
     task: Task;
     offsetX: number;

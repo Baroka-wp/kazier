@@ -268,9 +268,10 @@ export async function sendToSlack(data: {
 
 // ── checkAlreadySubmitted ───────────────────────────────────────────────
 
-export async function checkAlreadySubmitted(team_id: string) {
+export async function checkAlreadySubmitted(team_id: string, date?: string) {
   const res = await reportsCore.hasSubmittedOn(formMember(team_id), {
     memberId: team_id,
+    date,
   });
   return res.ok && res.data.submitted;
 }

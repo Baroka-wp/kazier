@@ -5,7 +5,7 @@ export type Task = {
   description: string;
   status: "à faire" | "en cours" | "review" | "terminée";
   priority: "low" | "medium" | "high";
-  project_id: number | null;
+  project_id: string | null;
   assigned_to: string[] | null; // ✅ tableau, pas un scalaire
   start_date: string | null;
   due_date: string | null;

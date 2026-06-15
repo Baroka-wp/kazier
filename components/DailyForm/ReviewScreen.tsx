@@ -10,7 +10,7 @@ import type { Project, Evaluation } from "./index";
 type Task = {
   id: string;
   title: string;
-  project_id: number;
+  project_id: string;
   priority: string;
   status: string;
   due_date: string | null;
@@ -21,10 +21,10 @@ type Citation = { quote: string; author: string };
 type Props = {
   answers: Record<string, string>;
   selectedProjects: Project[];
-  selectedTaskIds: number[];
+  selectedTaskIds: string[];
   tasks: Task[];
   teammates: { id: string; full_name: string }[];
-  evaluations: Record<number, Evaluation>;
+  evaluations: Record<string, Evaluation>;
   onEdit: (questionIndex: number) => void;
   onBack: () => void;
   onSubmit: () => Promise<void | { success: boolean }>;

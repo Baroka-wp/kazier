@@ -7,7 +7,7 @@ import type { Project, Evaluation } from "./index";
 type Task = {
   id: string;
   title: string;
-  project_id: number;
+  project_id: string;
   priority: string;
   status: string;
   due_date: string | null;
@@ -29,13 +29,13 @@ type Props = {
   selectedProjects?: Project[];
   onProjectToggle?: (project: Project) => void;
   tasks: Task[];
-  selectedTaskIds?: number[];
-  onTaskToggle?: (taskId: number) => void;
+  selectedTaskIds?: string[];
+  onTaskToggle?: (taskId: string) => void;
   // ── Évaluations ────────────────────────────────────────────────────────────
   teammates?: { id: string; full_name: string }[];
-  evaluations?: Record<number, Evaluation>;
+  evaluations?: Record<string, Evaluation>;
   onEvaluationChange?: (
-    evaluated_id: number,
+    evaluated_id: string,
     field: keyof Omit<Evaluation, "evaluated_id">,
     value: number | string
   ) => void;
@@ -274,8 +274,8 @@ function ProjectTaskAccordion({
 }: {
   project: Project;
   tasks: Task[];
-  selectedTaskIds: number[];
-  onTaskToggle: (id: number) => void;
+  selectedTaskIds: string[];
+  onTaskToggle: (id: string) => void;
   defaultOpen: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -492,8 +492,8 @@ function TasksStep({
 }: {
   tasks: Task[];
   selectedProjects: Project[];
-  selectedTaskIds: number[];
-  onTaskToggle: (id: number) => void;
+  selectedTaskIds: string[];
+  onTaskToggle: (id: string) => void;
   extraMessage: string;
   onExtraMessage: (val: string) => void;
 }) {
@@ -808,9 +808,9 @@ function EvaluationsStep({
   onEvaluationChange,
 }: {
   teammates: { id: string; full_name: string }[];
-  evaluations: Record<number, Evaluation>;
+  evaluations: Record<string, Evaluation>;
   onEvaluationChange: (
-    id: number,
+    id: string,
     field: keyof Omit<Evaluation, "evaluated_id">,
     value: number | string
   ) => void;

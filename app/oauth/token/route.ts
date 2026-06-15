@@ -38,9 +38,7 @@ export async function POST(req: Request) {
       params = new URLSearchParams(body);
     } else if (ct.includes("application/json")) {
       const json = await req.json();
-      params = new URLSearchParams(
-        Object.entries(json).map(([k, v]) => [k, String(v)])
-      );
+      params = new URLSearchParams(Object.entries(json).map(([k, v]) => [k, String(v)]));
     } else {
       return errResp("invalid_request", "Unsupported content type");
     }
@@ -112,13 +110,16 @@ async function handleAuthCode(params: URLSearchParams, clientId: string) {
     resource: boundResource,
   });
 
-  return NextResponse.json({
-    access_token: tokens.accessToken,
-    token_type: "Bearer",
-    expires_in: tokens.accessExpiresIn,
-    refresh_token: tokens.refreshToken,
-    scope: formatScope(effectiveScopes),
-  }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json(
+    {
+      access_token: tokens.accessToken,
+      token_type: "Bearer",
+      expires_in: tokens.accessExpiresIn,
+      refresh_token: tokens.refreshToken,
+      scope: formatScope(effectiveScopes),
+    },
+    { headers: { "cache-control": "no-store" } }
+  );
 }
 
 async function handleRefresh(params: URLSearchParams) {
@@ -133,12 +134,15 @@ async function handleRefresh(params: URLSearchParams) {
   // Pour rester simple, on ne retourne pas le scope (Claude n'en a pas besoin
   // pour refresh, il le sait déjà)
 
-  return NextResponse.json({
-    access_token: tokens.accessToken,
-    token_type: "Bearer",
-    expires_in: tokens.accessExpiresIn,
-    refresh_token: tokens.refreshToken,
-  }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json(
+    {
+      access_token: tokens.accessToken,
+      token_type: "Bearer",
+      expires_in: tokens.accessExpiresIn,
+      refresh_token: tokens.refreshToken,
+    },
+    { headers: { "cache-control": "no-store" } }
+  );
 }
 
 function errResp(error: string, description: string, status = 400) {

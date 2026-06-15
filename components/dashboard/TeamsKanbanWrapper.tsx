@@ -27,7 +27,7 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [pendingDrop, setPendingDrop] = useState<{ taskId: number; status: Task["status"] } | null>(
+  const [pendingDrop, setPendingDrop] = useState<{ taskId: string; status: Task["status"] } | null>(
     null
   ); // 👈 ajouter
 
@@ -50,7 +50,7 @@ export default function TeamsKanbanWrapper({ tasks, teamMemberId }: Props) {
   }
 
   // 👇 Fonction commune pour appliquer le drop
-  async function applyDrop(taskId: number, status: Task["status"]) {
+  async function applyDrop(taskId: string, status: Task["status"]) {
     setLocalTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)));
     const res = await updateTaskStatus(taskId, status);
     if (!res.success) setLocalTasks(tasks);

@@ -413,7 +413,7 @@ export default function TaskDetailPage({
   task,
   onBack,
   onUpdated,
-  teamMemberId = 0,
+  teamMemberId = "",
   isTM = false,
   projects = [],
   teams = [],
@@ -482,7 +482,7 @@ export default function TaskDetailPage({
 
   function addToast(type: Toast["type"], message: string) {
     toastCounter.current += 1;
-    const id = toastCounter.current;
+    const id = String(toastCounter.current);
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   }
@@ -519,13 +519,15 @@ export default function TaskDetailPage({
     }
   }
 
-  async function handleUpdateComment(commentId: number) {
+  async function handleUpdateComment(commentId: string) {
     if (!editContent.trim()) return;
     setUpdatingId(commentId);
     const res = await updateTaskComment(commentId, editContent);
     setUpdatingId(null);
-    if (res.success && res.comment) {
-      setComments((prev) => prev.map((c) => (c.id === commentId ? res.comment! : c)));
+    if (res.success) {
+      setComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, content: editContent.trim() } : c))
+      );
       setEditingId(null);
       setEditContent("");
       addToast("success", "Commentaire modifié");
@@ -534,7 +536,7 @@ export default function TaskDetailPage({
     }
   }
 
-  async function handleDeleteComment(commentId: number) {
+  async function handleDeleteComment(commentId: string) {
     setDeletingId(commentId);
     const res = await deleteTaskComment(commentId);
     setDeletingId(null);

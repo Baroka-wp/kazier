@@ -95,8 +95,7 @@ async function route(client: Client, req: JsonRpcRequest): Promise<unknown> {
         // Négociation de version : on prend la version demandée par le client
         // si on la supporte, sinon la nôtre par défaut (le client peut alors
         // décider de continuer ou abandonner).
-        const requested = (req.params as { protocolVersion?: string } | undefined)
-          ?.protocolVersion;
+        const requested = (req.params as { protocolVersion?: string } | undefined)?.protocolVersion;
         const negotiated =
           requested && SUPPORTED_MCP_PROTOCOL_VERSIONS.includes(requested)
             ? requested
@@ -153,8 +152,7 @@ async function route(client: Client, req: JsonRpcRequest): Promise<unknown> {
  * Format : "<scheme>://<host>/api/mcp" sans trailing slash, sans fragment.
  */
 function canonicalMcpUri(req: Request): string {
-  const proto =
-    req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
+  const proto = req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
   const host =
     req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? new URL(req.url).host;
   return `${proto}://${host}/api/mcp`;
@@ -164,8 +162,7 @@ function jsonRpcAuthError(message: string, req: Request): Response {
   // RFC 9728 — pointer Claude.ai vers la métadonnée du resource server.
   // Derrière Coolify, on doit reconstruire l'URL externe via les headers
   // x-forwarded-* (le url.host est l'IP interne du container).
-  const proto =
-    req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
+  const proto = req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
   const host =
     req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? new URL(req.url).host;
   const base = `${proto}://${host}`;

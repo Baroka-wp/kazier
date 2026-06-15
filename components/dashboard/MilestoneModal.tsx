@@ -7,7 +7,7 @@ import { Milestone } from "@/lib/milestone-actions";
 type Props = {
   mode: "create" | "update";
   milestone?: Milestone | null;
-  projectId: number;
+  projectId: string;
   onClose: () => void;
   onSaved: () => void;
 };

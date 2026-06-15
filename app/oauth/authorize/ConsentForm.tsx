@@ -83,9 +83,9 @@ export default function ConsentForm(props: Props) {
         </p>
 
         <p style={{ fontSize: 14, color: "#666", marginTop: 20 }}>
-          Cette application pourra lire et modifier vos projets, tâches et rapports avec
-          les mêmes droits que vous. Vous pouvez révoquer l&apos;accès à tout moment depuis
-          le tableau de bord.
+          Cette application pourra lire et modifier vos projets, tâches et rapports avec les mêmes
+          droits que vous. Vous pouvez révoquer l&apos;accès à tout moment depuis le tableau de
+          bord.
         </p>
 
         <div

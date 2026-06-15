@@ -8,7 +8,7 @@ type Props = {
   show: boolean;
   mode: "create" | "edit";
   task?: Task | null;
-  projectId: number;
+  projectId: string;
   teamMembers?: Array<{ id: string; first_name: string; last_name: string }>;
   onClose: () => void;
   onSuccess: () => void;

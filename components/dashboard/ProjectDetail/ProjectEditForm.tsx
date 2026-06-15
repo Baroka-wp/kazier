@@ -27,12 +27,12 @@ export default function ProjectEditForm({ project }: { project: ProjectExtended 
     team_ids: project.team_ids || [],
   });
 
-  function setField(key: string, value: string | number[] | null) {
+  function setField(key: string, value: string | string[] | null) {
     setValues((v) => ({ ...v, [key]: value }));
     setServerError("");
   }
 
-  function toggleTeam(id: number) {
+  function toggleTeam(id: string) {
     setValues((v) => ({
       ...v,
       team_ids: v.team_ids.includes(id) ? v.team_ids.filter((x) => x !== id) : [...v.team_ids, id],
