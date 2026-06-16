@@ -13,18 +13,23 @@ import {
   File,
   ImageIcon,
   Settings,
+  StickyNote,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Project } from "@/lib/project-actions";
 import { getTasks, Task } from "@/lib/task-actions";
+import { getProjectNotes, type ProjectNote } from "@/lib/notes-actions";
 import dynamic from "next/dynamic";
 import { ClientOnly } from "@/components/dashboard/ClientOnly";
 import { useSession } from "next-auth/react";
-import { isTeamManager } from "@/lib/permissions";
+import { isTeamManager, isSuperAdmin } from "@/lib/permissions";
 
 const RapportsTable = dynamic(() => import("@/components/dashboard/RapportsTable"), { ssr: false });
 const TasksTable = dynamic(() => import("@/components/dashboard/TasksTable/"), { ssr: false });
 const TeamsTable = dynamic(() => import("@/components/dashboard/TeamsTable"), { ssr: false });
+const ProjectNotes = dynamic(() => import("@/components/dashboard/ProjectDetail/ProjectNotes"), {
+  ssr: false,
+});
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -83,7 +88,7 @@ type GetTasksResult =
   | { success: false; error: string }
   | { data: Task[] };
 
-type Tab = "overview" | "team" | "tasks" | "reports";
+type Tab = "overview" | "team" | "tasks" | "reports" | "notes";
 
 const avatarColors = ["#6B1A2A", "#A0522D", "#2E6B5E", "#2C4A7C", "#5B3A8E"];
 
@@ -313,6 +318,8 @@ export default function ProjectDetailClient({ project }: Props) {
   const [roles, setRoles] = useState<string[]>([]);
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [notes, setNotes] = useState<ProjectNote[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
 
   const completedTasks = tasks.filter((t) => t.status === "terminée" || t.completed).length;
   const inProgressTasks = tasks.filter((t) => t.status !== "terminée" && !t.completed).length;
@@ -330,6 +337,24 @@ export default function ProjectDetailClient({ project }: Props) {
     }
     setLoadingTasks(false);
   }, [project.id]);
+
+  const loadNotes = useCallback(async () => {
+    setLoadingNotes(true);
+    try {
+      const res = await getProjectNotes(project.id);
+      if (res.success && res.notes) setNotes(res.notes);
+    } catch (e) {
+      console.error(e);
+    }
+    setLoadingNotes(false);
+  }, [project.id]);
+
+  useEffect(() => {
+    async function fetchNotes() {
+      await loadNotes();
+    }
+    void fetchNotes();
+  }, [loadNotes]);
 
   //  Scroll effect (inchangé)
   useEffect(() => {
@@ -819,6 +844,51 @@ export default function ProjectDetailClient({ project }: Props) {
                 <ChevronRight size={18} color="#ccc" />
               </div>
 
+              <div
+                onClick={() => setActiveTab("notes")}
+                style={{
+                  background: "#fff",
+                  borderRadius: "14px",
+                  padding: "18px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  cursor: "pointer",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "10px",
+                      background: "#F0EDE8",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#6B1A2A",
+                    }}
+                  >
+                    <StickyNote size={20} />
+                  </div>
+                  <div>
+                    <p
+                      style={{
+                        fontSize: "1.5rem",
+                        fontWeight: 800,
+                        color: "#1A1A1A",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {loadingNotes ? "…" : notes.length}
+                    </p>
+                    <p style={{ fontSize: "0.82rem", color: "#888", marginTop: "2px" }}>Notes</p>
+                  </div>
+                </div>
+                <ChevronRight size={18} color="#ccc" />
+              </div>
+
               {createdAt && (
                 <div
                   style={{
@@ -880,12 +950,13 @@ export default function ProjectDetailClient({ project }: Props) {
                   padding: "0 8px",
                 }}
               >
-                {(["team", "tasks", "reports"] as const).map((tab) => {
+                {(["team", "tasks", "reports", "notes"] as const).map((tab) => {
                   const labels: Record<Tab, string> = {
                     overview: "",
                     team: "Équipe",
                     tasks: "Tâches",
                     reports: "Rapports",
+                    notes: "Notes",
                   };
                   const isActive = tab === activeTab;
                   return (
@@ -973,6 +1044,18 @@ export default function ProjectDetailClient({ project }: Props) {
                       </ClientOnly>
                     )}
                   </div>
+                )}
+
+                {activeTab === "notes" && (
+                  <ClientOnly>
+                    <ProjectNotes
+                      projectId={project.id}
+                      notes={notes}
+                      loading={loadingNotes}
+                      canWrite={isSuperAdmin(userRole) || isTM}
+                      onRefresh={loadNotes}
+                    />
+                  </ClientOnly>
                 )}
               </div>
             </div>
