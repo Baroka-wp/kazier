@@ -9,7 +9,7 @@ import type { Actor } from "@/lib/core";
 
 export function registerMemberTools(server: McpServer, actor: () => Actor): void {
   registerCoreTool(server, {
-    name: "members.list",
+    name: "members_list",
     title: "List members",
     description:
       "List members of the team with pagination, search, role/status filters. " +
@@ -20,7 +20,7 @@ export function registerMemberTools(server: McpServer, actor: () => Actor): void
   });
 
   registerIdTool(server, {
-    name: "members.get",
+    name: "members_get",
     title: "Get a single member",
     description: "Fetch one member by cuid.",
     actor,
@@ -28,7 +28,7 @@ export function registerMemberTools(server: McpServer, actor: () => Actor): void
   });
 
   registerCoreTool(server, {
-    name: "members.create",
+    name: "members_create",
     title: "Create a member",
     description:
       "Create a new team member (no Auth account). Requires members.write scope. " +
@@ -39,7 +39,7 @@ export function registerMemberTools(server: McpServer, actor: () => Actor): void
   });
 
   registerCoreTool(server, {
-    name: "members.update",
+    name: "members_update",
     title: "Update a member",
     description: "Update a member's fields. Pass id + any subset of fields.",
     inputSchema: z.object({ id: Cuid, data: UpdateMemberInput }),
@@ -48,7 +48,7 @@ export function registerMemberTools(server: McpServer, actor: () => Actor): void
   });
 
   registerIdTool(server, {
-    name: "members.deactivate",
+    name: "members_deactivate",
     title: "Deactivate a member (soft delete)",
     description: "Set isActive=false on a member. Auth and references are kept.",
     actor,
@@ -56,7 +56,7 @@ export function registerMemberTools(server: McpServer, actor: () => Actor): void
   });
 
   registerCoreTool(server, {
-    name: "members.search",
+    name: "members_search",
     title: "Autocomplete search by name",
     description: "Find up to N active members by partial first/last name match.",
     inputSchema: z.object({

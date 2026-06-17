@@ -14,7 +14,7 @@ import type { Actor } from "@/lib/core";
 
 export function registerTaskTools(server: McpServer, actor: () => Actor): void {
   registerCoreTool(server, {
-    name: "tasks.list",
+    name: "tasks_list",
     title: "List tasks",
     description:
       "List tasks with rich filters: project, status (TODO|IN_PROGRESS|REVIEW|" +
@@ -25,7 +25,7 @@ export function registerTaskTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerIdTool(server, {
-    name: "tasks.get",
+    name: "tasks_get",
     title: "Get a task",
     description: "Fetch one task with its project + assignees.",
     actor,
@@ -33,7 +33,7 @@ export function registerTaskTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerCoreTool(server, {
-    name: "tasks.create",
+    name: "tasks_create",
     title: "Create a task",
     description:
       "Create a task. assigneeIds[] populates TaskAssignment + emits " +
@@ -44,7 +44,7 @@ export function registerTaskTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerCoreTool(server, {
-    name: "tasks.update",
+    name: "tasks_update",
     title: "Update a task",
     description:
       "Update task fields. If assigneeIds is provided, the assignment set is " +
@@ -56,7 +56,7 @@ export function registerTaskTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerCoreTool(server, {
-    name: "tasks.change_status",
+    name: "tasks_change_status",
     title: "Change task status",
     description:
       "Shortcut to change status only (optionally set actualHours when moving " +
@@ -67,7 +67,7 @@ export function registerTaskTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerCoreTool(server, {
-    name: "tasks.assign",
+    name: "tasks_assign",
     title: "Replace assignees",
     description:
       "Replace the entire set of assignees. Computes added/removed diff and " +
@@ -78,7 +78,7 @@ export function registerTaskTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerIdTool(server, {
-    name: "tasks.delete",
+    name: "tasks_delete",
     title: "Delete a task",
     description: "Hard delete a task (cascade comments + assignments).",
     actor,
@@ -86,7 +86,7 @@ export function registerTaskTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerCoreTool(server, {
-    name: "tasks.add_comment",
+    name: "tasks_add_comment",
     title: "Add a comment to a task",
     description:
       "Append a comment authored by the current actor (memberId required). " +
@@ -97,7 +97,7 @@ export function registerTaskTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerIdTool(server, {
-    name: "tasks.list_comments",
+    name: "tasks_list_comments",
     title: "List comments of a task",
     description: "All comments on a task, oldest first.",
     actor,

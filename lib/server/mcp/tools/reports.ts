@@ -6,7 +6,7 @@ import type { Actor } from "@/lib/core";
 
 export function registerReportTools(server: McpServer, actor: () => Actor): void {
   registerCoreTool(server, {
-    name: "reports.list",
+    name: "reports_list",
     title: "List daily reports",
     description:
       "List daily activity reports (renamed fields: workCompleted, inProgress, " +
@@ -18,7 +18,7 @@ export function registerReportTools(server: McpServer, actor: () => Actor): void
   });
 
   registerCoreTool(server, {
-    name: "reports.submit",
+    name: "reports_submit",
     title: "Submit a daily report",
     description:
       "Submit a daily report for a member. Anti-doublon enforced by " +
@@ -30,7 +30,7 @@ export function registerReportTools(server: McpServer, actor: () => Actor): void
   });
 
   registerCoreTool(server, {
-    name: "reports.has_submitted_on",
+    name: "reports_has_submitted_on",
     title: "Check if a member submitted today/on a date",
     description:
       "Check whether a member has a report for a given date (today if omitted). " +
@@ -41,7 +41,7 @@ export function registerReportTools(server: McpServer, actor: () => Actor): void
   });
 
   registerCoreTool(server, {
-    name: "reports.missing_members",
+    name: "reports_missing_members",
     title: "List members who haven't submitted today",
     description:
       "Return active non-boss members without a report on a given date. " +
@@ -52,7 +52,7 @@ export function registerReportTools(server: McpServer, actor: () => Actor): void
   });
 
   registerCoreTool(server, {
-    name: "reports.weekly_summary",
+    name: "reports_weekly_summary",
     title: "Weekly aggregated summary (per project)",
     description:
       "Aggregates reports of a week (Mon-Sun UTC) by project. Returns reportCount, " +
@@ -64,7 +64,7 @@ export function registerReportTools(server: McpServer, actor: () => Actor): void
   });
 
   registerIdTool(server, {
-    name: "reports.delete",
+    name: "reports_delete",
     title: "Delete a report",
     description: "Hard delete a report. Requires reports.delete scope (admin-grade).",
     actor,

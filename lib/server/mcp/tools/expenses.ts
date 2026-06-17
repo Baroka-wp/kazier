@@ -6,7 +6,7 @@ import type { Actor } from "@/lib/core";
 
 export function registerExpenseTools(server: McpServer, actor: () => Actor): void {
   registerCoreTool(server, {
-    name: "expenses.list",
+    name: "expenses_list",
     title: "List expenses",
     description:
       "List project expenses (categories: SALARY|PURCHASE|SUBCONTRACT|TRAVEL|" +
@@ -17,7 +17,7 @@ export function registerExpenseTools(server: McpServer, actor: () => Actor): voi
   });
 
   registerCoreTool(server, {
-    name: "expenses.add",
+    name: "expenses_add",
     title: "Add an expense",
     description:
       "Add an expense imputed to a project. createdBy = the calling actor's " +
@@ -29,7 +29,7 @@ export function registerExpenseTools(server: McpServer, actor: () => Actor): voi
   });
 
   registerIdTool(server, {
-    name: "expenses.delete",
+    name: "expenses_delete",
     title: "Delete an expense",
     description: "Hard delete an expense.",
     actor,
@@ -37,7 +37,7 @@ export function registerExpenseTools(server: McpServer, actor: () => Actor): voi
   });
 
   registerCoreTool(server, {
-    name: "expenses.budget_status",
+    name: "expenses_budget_status",
     title: "Project budget status (KPI)",
     description:
       "The finance KPI for a project. Returns spent, remaining, ratio " +

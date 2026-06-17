@@ -8,7 +8,7 @@ import type { Actor } from "@/lib/core";
 
 export function registerNoteTools(server: McpServer, actor: () => Actor): void {
   registerCoreTool(server, {
-    name: "notes.list",
+    name: "notes_list",
     title: "List notes of a project",
     description:
       "List project notes (the project's text memory / Confluence-light). " +
@@ -20,7 +20,7 @@ export function registerNoteTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerIdTool(server, {
-    name: "notes.get",
+    name: "notes_get",
     title: "Get a single note",
     description: "Fetch one note (body is TipTap JSON).",
     actor,
@@ -28,7 +28,7 @@ export function registerNoteTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerCoreTool(server, {
-    name: "notes.create",
+    name: "notes_create",
     title: "Create a note",
     description:
       "Append a note to a project. body is free-form JSON (TipTap document). " +
@@ -39,7 +39,7 @@ export function registerNoteTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerCoreTool(server, {
-    name: "notes.update",
+    name: "notes_update",
     title: "Update a note",
     description: "Update title / body / tags / pinned of a note.",
     inputSchema: z.object({ id: Cuid, data: UpdateNoteInput }),
@@ -48,7 +48,7 @@ export function registerNoteTools(server: McpServer, actor: () => Actor): void {
   });
 
   registerIdTool(server, {
-    name: "notes.delete",
+    name: "notes_delete",
     title: "Delete a note",
     description: "Hard delete a note.",
     actor,

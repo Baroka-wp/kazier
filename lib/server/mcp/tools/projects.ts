@@ -13,7 +13,7 @@ import type { Actor } from "@/lib/core";
 
 export function registerProjectTools(server: McpServer, actor: () => Actor): void {
   registerCoreTool(server, {
-    name: "projects.list",
+    name: "projects_list",
     title: "List projects",
     description:
       "List projects with pagination, search, status filter, or filtered by " +
@@ -25,7 +25,7 @@ export function registerProjectTools(server: McpServer, actor: () => Actor): voi
   });
 
   registerIdTool(server, {
-    name: "projects.get",
+    name: "projects_get",
     title: "Get project details",
     description:
       "Fetch one project with its full member list. Finance fields masked unless " +
@@ -35,7 +35,7 @@ export function registerProjectTools(server: McpServer, actor: () => Actor): voi
   });
 
   registerCoreTool(server, {
-    name: "projects.create",
+    name: "projects_create",
     title: "Create a project",
     description:
       "Create a new project. memberIds list will be added as ProjectMembers. " +
@@ -46,7 +46,7 @@ export function registerProjectTools(server: McpServer, actor: () => Actor): voi
   });
 
   registerCoreTool(server, {
-    name: "projects.update",
+    name: "projects_update",
     title: "Update a project",
     description:
       "Update project fields. Touching budgetAmount/contractValue requires " +
@@ -57,7 +57,7 @@ export function registerProjectTools(server: McpServer, actor: () => Actor): voi
   });
 
   registerIdTool(server, {
-    name: "projects.delete",
+    name: "projects_delete",
     title: "Delete a project",
     description: "Hard delete a project and all its children (cascade).",
     actor,
@@ -65,7 +65,7 @@ export function registerProjectTools(server: McpServer, actor: () => Actor): voi
   });
 
   registerCoreTool(server, {
-    name: "projects.add_member",
+    name: "projects_add_member",
     title: "Add a member to a project",
     description: "Add (or update roleLabel of) a member on a project. Idempotent.",
     inputSchema: AddProjectMemberInput,
@@ -74,7 +74,7 @@ export function registerProjectTools(server: McpServer, actor: () => Actor): voi
   });
 
   registerCoreTool(server, {
-    name: "projects.remove_member",
+    name: "projects_remove_member",
     title: "Remove a member from a project",
     description: "Remove a project membership.",
     inputSchema: projects.RemoveMemberInput,

@@ -12,7 +12,7 @@ import type { Actor } from "@/lib/core";
 
 export function registerDeliverableTools(server: McpServer, actor: () => Actor): void {
   registerCoreTool(server, {
-    name: "deliverables.list",
+    name: "deliverables_list",
     title: "List deliverables",
     description:
       "List deliverables (cadence: DAILY|WEEKLY|MONTHLY|MILESTONE). Includes " +
@@ -23,7 +23,7 @@ export function registerDeliverableTools(server: McpServer, actor: () => Actor):
   });
 
   registerIdTool(server, {
-    name: "deliverables.get",
+    name: "deliverables_get",
     title: "Get a deliverable",
     description: "Fetch one deliverable with its task counts.",
     actor,
@@ -31,7 +31,7 @@ export function registerDeliverableTools(server: McpServer, actor: () => Actor):
   });
 
   registerCoreTool(server, {
-    name: "deliverables.create",
+    name: "deliverables_create",
     title: "Create a deliverable",
     description:
       "Create a deliverable. parentId can point to another deliverable (must be " +
@@ -42,7 +42,7 @@ export function registerDeliverableTools(server: McpServer, actor: () => Actor):
   });
 
   registerCoreTool(server, {
-    name: "deliverables.update",
+    name: "deliverables_update",
     title: "Update a deliverable",
     description:
       "Update fields. Setting status=DONE auto-sets completedAt (and reverts on " +
@@ -53,7 +53,7 @@ export function registerDeliverableTools(server: McpServer, actor: () => Actor):
   });
 
   registerIdTool(server, {
-    name: "deliverables.delete",
+    name: "deliverables_delete",
     title: "Delete a deliverable",
     description: "Delete (rejected if it has children — delete children first).",
     actor,
@@ -61,7 +61,7 @@ export function registerDeliverableTools(server: McpServer, actor: () => Actor):
   });
 
   registerCoreTool(server, {
-    name: "deliverables.tree",
+    name: "deliverables_tree",
     title: "Get deliverable hierarchy for a project",
     description:
       "Returns the deliverables of a project as a tree (roots → children). " +

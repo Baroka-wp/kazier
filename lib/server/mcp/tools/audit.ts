@@ -12,7 +12,7 @@ import { z } from "zod";
 
 export function registerAuditTools(server: McpServer, actor: () => Actor): void {
   server.registerTool(
-    "audit.timeline",
+    "audit_timeline",
     {
       title: "Get audit log for an entity",
       description:
@@ -50,7 +50,7 @@ export function registerAuditTools(server: McpServer, actor: () => Actor): void 
   );
 
   server.registerTool(
-    "audit.recent",
+    "audit_recent",
     {
       title: "Recent system-wide activity",
       description:
